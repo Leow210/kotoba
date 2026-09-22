@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kotoba 詞 · Offline dictionary and flashcards</title>
+<meta name="description" content="An offline Android dictionary and flashcard app for the MDict dictionaries you already own. Japanese, Korean, Chinese, Thai and Russian, with an on-device text scanner for games and comics.">
+<meta property="og:title" content="Kotoba 詞">
+<meta property="og:description" content="Offline dictionary + flashcards for your own MDict dictionaries, with an on-device scanner for games and comics.">
+<meta property="og:image" content="images/scan-lookup.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f6f3ee;--surface:#fffdf9;--ink:#1d211f;--ink2:#4a514d;--muted:#7a817c;--line:#e4ded4;--accent:#2f6b55;--accent-soft:#e3eee8;--on-accent:#fff;--shadow:0 18px 40px -22px rgba(30,40,35,.35)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141816;--surface:#1c211e;--ink:#e9ece9;--ink2:#bcc4bf;--muted:#8c958f;--line:#2c332f;--accent:#7cc3a4;--accent-soft:#1f3129;--on-accent:#0f1a15;--shadow:0 18px 40px -22px rgba(0,0,0,.8)}}
+:root[data-theme="dark"]{--bg:#141816;--surface:#1c211e;--ink:#e9ece9;--ink2:#bcc4bf;--muted:#8c958f;--line:#2c332f;--accent:#7cc3a4;--accent-soft:#1f3129;--on-accent:#0f1a15}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 Inter,system-ui,sans-serif}
+a{color:var(--accent)}
+.wrap{max-width:1080px;margin:0 auto;padding:0 16px}
+header.hero{padding:64px 0 36px;text-align:center}
+.mark{font:700 64px/1 "Noto Serif JP",serif;color:var(--accent)}
+h1{font:700 clamp(34px,6vw,52px)/1.1 "Noto Serif JP",serif;margin:14px 0 10px;letter-spacing:-.01em}
+.lede{max-width:640px;margin:0 auto;color:var(--ink2);font-size:18px}
+.langs{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:22px 0 0;padding:0;list-style:none}
+.langs li{padding:5px 12px;border:1px solid var(--line);border-radius:999px;background:var(--surface);font-size:14px}
+.cta{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:26px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:11px 18px;border-radius:12px;font-weight:600;text-decoration:none;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.videos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin:26px 0 12px}
+figure{margin:0}
+.phone{border-radius:22px;overflow:hidden;background:#000;box-shadow:var(--shadow);border:1px solid var(--line);aspect-ratio:540/1092}
+.phone video,.phone img{display:block;width:100%;height:100%;object-fit:cover}
+figcaption{margin-top:10px;font-size:14.5px;color:var(--ink2);text-align:center}
+figcaption b{display:block;color:var(--ink);font-size:15.5px}
+section{padding:56px 0 8px;border-top:1px solid var(--line);margin-top:48px}
+section:first-of-type{margin-top:24px}
+.feature{display:grid;grid-template-columns:1.1fr 1fr;gap:40px;align-items:center}
+.feature.flip .text{order:2}
+h2{font:700 30px/1.2 "Noto Serif JP",serif;margin:0 0 12px}
+h2 small{display:block;font:600 13px/1.4 Inter,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:8px}
+.text p{color:var(--ink2);margin:0 0 12px}
+.text ul{margin:0;padding-left:20px;color:var(--ink2)}
+.text li{margin:4px 0}
+.shots{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.shots .phone{border-radius:18px}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:22px}
+.grid4 .phone{border-radius:16px}
+.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:10px}
+.fact{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.fact b{display:block;font-size:15.5px;margin-bottom:4px}
+.fact span{color:var(--ink2);font-size:14.5px}
+pre{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;overflow-x:auto;font:13.5px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace}
+.note{font-size:14px;color:var(--muted)}
+footer{padding:40px 0 60px;color:var(--muted);font-size:14px;text-align:center;border-top:1px solid var(--line);margin-top:56px}
+@media (max-width:820px){
+  .videos{grid-template-columns:1fr;max-width:340px;margin-left:auto;margin-right:auto}
+  .feature{grid-template-columns:1fr;gap:22px}
+  .feature.flip .text{order:0}
+  .grid4{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .facts{grid-template-columns:1fr}
+  header.hero{padding-top:44px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <div class="mark">詞</div>
+    <h1>Kotoba</h1>
+    <p class="lede">An offline dictionary and flashcard app for Android, built on the MDict dictionaries you already own. Look words up in their original typography, scan the text in games and comics, and turn everything you find into spaced-repetition cards.</p>
+    <ul class="langs"><li>日本語</li><li>한국어</li><li>中文</li><li>ไทย</li><li>Русский</li></ul>
+    <div class="cta">
+      <a class="btn primary" href="https://github.com/Leow210/kotoba">Source on GitHub</a>
+      <a class="btn" href="#build">Build it</a>
+    </div>
+  </header>
+
+  <div class="videos">
+    <figure><div class="phone"><video src="media/scan.mp4" poster="media/scan-poster.jpg" autoplay muted loop playsinline preload="metadata"></video></div>
+      <figcaption><b>Scan a game</b>Photograph the screen, tap a word, save a card.</figcaption></figure>
+    <figure><div class="phone"><video src="media/lists.mp4" poster="media/lists-poster.jpg" autoplay muted loop playsinline preload="metadata"></video></div>
+      <figcaption><b>Dictionary word lists</b>Categories with counts; hanja under Korean words.</figcaption></figure>
+    <figure><div class="phone"><video src="media/kanji.mp4" poster="media/kanji-poster.jpg" autoplay muted loop playsinline preload="metadata"></video></div>
+      <figcaption><b>Kanji grid</b>Radicals by stroke count; filters carry across dictionaries.</figcaption></figure>
+  </div>
+
+  <section>
+    <div class="feature">
+      <div class="text">
+        <h2><small>Scanner</small>Read the text on any screen</h2>
+        <p>Visual novels on a PC, games on a tablet, a screenshot someone sent you. Take a photo with the phone's camera, or share an image to Kotoba, and the text is read on the phone.</p>
+        <ul>
+          <li>Tap a text box, then any word, to look it up. Conjugations are explained.</li>
+          <li><b>Select area</b> reads just the dialogue box, in about 0.2 seconds.</li>
+          <li>Japanese, Chinese (simplified and traditional), Korean, Thai and Russian.</li>
+          <li>Save a card with the line as its example sentence.</li>
+        </ul>
+      </div>
+      <div class="shots">
+        <div class="phone"><img src="images/scan.png" alt="A photo of a game screen with its text box outlined" loading="lazy"></div>
+        <div class="phone"><img src="images/scan-lookup.png" alt="The word 遺跡 looked up from the scanned text" loading="lazy"></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="feature flip">
+      <div class="text">
+        <h2><small>Dictionaries</small>Your dictionaries, as they were printed</h2>
+        <p>Kotoba reads MDict <code>.mdx</code> and <code>.mdd</code> files, such as Monokakido exports, and shows each dictionary with its own styles, images and audio, vertical ones included.</p>
+        <ul>
+          <li>Headword, contains, in-definitions and in-examples search.</li>
+          <li>Dictionary-form lookup: 食べさせられなかった → 食べる, 추웠어요 → 춥다.</li>
+          <li>Each dictionary's appendix (付録) with its original Japanese titles.</li>
+          <li>Browse a whole dictionary like a paper one, with an index rail.</li>
+        </ul>
+      </div>
+      <div class="shots">
+        <div class="phone"><img src="images/entry.png" alt="A dictionary entry in its original styling" loading="lazy"></div>
+        <div class="phone"><img src="images/furoku-vertical.png" alt="A vertical appendix page" loading="lazy"></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="feature">
+      <div class="text">
+        <h2><small>Word lists</small>Every list your dictionaries come with</h2>
+        <p>大辞林's 地名, 人名 and 季語, 新明解's 最重要語 and 重要語, 漢検's 四字熟語 and levels, the Korean dictionary's 最重要語, 品詞 and 専門用語, and more. Each opens as a grid of categories.</p>
+        <ul>
+          <li>List or grid, in the dictionary's order or あいう order.</li>
+          <li>Hanja under Korean words, readings under Japanese ones.</li>
+          <li>Turn any list or category into a flashcard deck in one tap.</li>
+        </ul>
+      </div>
+      <div class="shots">
+        <div class="phone"><img src="images/categories.png" alt="Categories of a Korean word list with word counts" loading="lazy"></div>
+        <div class="phone"><img src="images/hanja-grid.png" alt="Korean words with hanja underneath" loading="lazy"></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><small>And more</small>Reading, reviewing, kanji</h2>
+    <div class="grid4">
+      <figure><div class="phone"><img src="images/card-audio.png" alt="A flashcard with NHK pitch-accent audio" loading="lazy"></div><figcaption>Cards with NHK pitch accent</figcaption></figure>
+      <figure><div class="phone"><img src="images/review.png" alt="The review screen" loading="lazy"></div><figcaption>FSRS-5 review</figcaption></figure>
+      <figure><div class="phone"><img src="images/radicals.png" alt="Radicals grouped by stroke count" loading="lazy"></div><figcaption>Radicals by stroke count</figcaption></figure>
+      <figure><div class="phone"><img src="images/furoku.png" alt="A dictionary's appendix pages" loading="lazy"></div><figcaption>付録 with original titles</figcaption></figure>
+    </div>
+    <div class="facts" style="margin-top:26px">
+      <div class="fact"><b>Books and comics</b><span>EPUB and TXT, vertical or horizontal. CBZ and Mihon downloads, with tap-to-look-up text in speech bubbles.</span></div>
+      <div class="fact"><b>Spaced repetition</b><span>FSRS-5 scheduling, folders as decks, Anki (TSV) and CSV export, JSON backup.</span></div>
+      <div class="fact"><b>Completely offline</b><span>No account and no internet permission. Text recognition runs on the phone.</span></div>
+    </div>
+  </section>
+
+  <section id="build">
+    <h2><small>Build</small>Build it yourself</h2>
+    <p class="text">Needs the Android SDK (build-tools 35, platform 35) and JDK 21. No Gradle, no network access during the build.</p>
+<pre>python3 android/build.py                 # → android/build/kotoba.apk
+adb install -r android/build/kotoba.apk
+android/tests/run.sh                     # desktop tests</pre>
+    <p class="note">Kotoba includes no dictionaries: it works with MDict files you own. On first run, go to Library → Import from a folder…</p>
+  </section>
+
+  <footer>
+    Kotoba · OCR by <a href="https://github.com/PaddlePaddle/PaddleOCR">PaddleOCR</a> on <a href="https://github.com/microsoft/onnxruntime">ONNX Runtime</a> · Traditional → simplified table from <a href="https://github.com/BYVoid/OpenCC">OpenCC</a><br>
+    The demo scene in the scanner video is made up for this page.
+  </footer>
+</div>
+</body>
+</html>

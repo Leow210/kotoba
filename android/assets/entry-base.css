@@ -1,0 +1,28 @@
+/* Base styles for dictionary pages; each dictionary's own CSS loads after this from the entry itself. */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%;background:transparent}
+body.kotoba-entry{margin:0;padding:6px 18px 28px;color:#1d211f;background:transparent;font-family:"Noto Serif CJK JP","Noto Serif JP","Noto Serif",serif;line-height:1.75;word-wrap:break-word;overflow-wrap:anywhere;-webkit-tap-highlight-color:rgba(47,107,85,.15)}
+body.kotoba-entry.kotoba-card{padding:4px 2px 12px}
+img{max-width:100%;height:auto}
+table{max-width:100%}
+a{color:#2f6b55}
+[data-name="entry-index"],M-entry-index,m-entry-index,#index{display:none!important}
+.kotoba-hidden{display:none!important}
+.kotoba-flash{animation:kotoba-flash 1.6s ease-out}
+@keyframes kotoba-flash{0%{background:rgba(214,170,60,.45)}100%{background:transparent}}
+mark.kotoba-hit{background:rgba(222,184,74,.45);color:inherit;border-radius:2px}
+::selection{background:rgba(47,107,85,.25)}
+.kotoba-plain{white-space:normal;font-size:1rem}
+html.kotoba-vertical{writing-mode:vertical-rl;-webkit-writing-mode:vertical-rl;height:100%}
+html.kotoba-vertical body.kotoba-entry{padding:18px 10px;height:calc(100% - 36px);line-height:1.9}
+html.kotoba-vertical img{max-height:60vh;max-width:none}
+html.kotoba-dark img{filter:invert(1) hue-rotate(180deg)}
+a.kotoba-audio{display:inline-flex;align-items:center;justify-content:center;width:1.6em;height:1.6em;margin:0 .25em;border-radius:50%;background:rgba(47,107,85,.12);color:#2f6b55!important;text-decoration:none!important;vertical-align:middle;font-size:.9em;line-height:1}
+a.kotoba-audio svg{width:1em;height:1em}
+/* Tables (appendices, conjugation charts): keep words whole; wide tables scroll sideways instead of squashing. */
+td,th{overflow-wrap:normal;word-break:keep-all;vertical-align:top}
+html.kotoba-appendix{overflow-x:auto}
+html.kotoba-appendix body.kotoba-entry{overflow-wrap:normal;padding:10px 14px 30px;line-height:1.6}
+html.kotoba-appendix table{max-width:none;border-collapse:collapse;margin:8px 0}
+html.kotoba-appendix td,html.kotoba-appendix th{padding:5px 8px;border-bottom:1px solid rgba(0,0,0,.08);white-space:nowrap}
+html.kotoba-appendix td:last-child{white-space:normal;min-width:8em}
+html.kotoba-appendix img{max-width:100%}

@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
+<title>Kotoba</title>
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<div id="app">
+  <section class="screen" id="screen-search">
+    <div class="search-head" id="search-head">
+      <div class="field">
+        <svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+        <input id="q" type="search" enterkeyhint="search" placeholder="Search your dictionaries" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+        <button class="icon-btn" id="q-clear" aria-label="Clear" hidden><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      </div>
+      <div class="modes" id="modes" role="tablist">
+        <button class="chip on" data-mode="headword">Headword</button>
+        <button class="chip" data-mode="contains">Contains</button>
+        <button class="chip" data-mode="definition">In definitions</button>
+        <button class="chip" data-mode="examples">In examples</button>
+      </div>
+      <div class="chips" id="dict-chips"></div>
+    </div>
+    <div class="scroll" id="search-scroll">
+      <div class="kanji-strip" id="kanji-strip" hidden></div>
+      <div class="forms" id="forms" hidden></div>
+      <div class="list" id="results"></div>
+      <button class="more-btn" id="more" hidden>Show more</button>
+      <div id="search-empty"></div>
+    </div>
+  </section>
+
+  <section class="screen" id="screen-reader" hidden>
+    <div class="head head-row"><div><h1>Reader</h1><p class="sub" id="reader-sub">Books you’re reading</p></div><button class="btn small primary" id="add-books">＋ Add</button></div>
+    <div class="scroll" id="shelf"></div>
+  </section>
+
+  <section class="screen" id="screen-folders" hidden>
+    <div class="head"><h1>Vocabulary</h1><p class="sub" id="folders-sub">Folders of words you’ve kept</p></div>
+    <div class="scroll"><div id="folder-list"></div></div>
+  </section>
+
+  <section class="screen" id="screen-review" hidden>
+    <div class="head"><h1>Review</h1><p class="sub" id="review-sub">Spaced repetition · FSRS</p></div>
+    <div class="scroll" id="review-home"></div>
+  </section>
+
+  <section class="screen" id="screen-library" hidden>
+    <div class="head"><h1>Library</h1><p class="sub" id="library-sub">Dictionaries and settings</p></div>
+    <div class="scroll" id="library-home"></div>
+  </section>
+
+  <div id="pages"></div>
+
+  <nav class="tabbar" id="tabbar">
+    <button data-tab="search" class="on"><svg class="i" viewBox="0 0 24 24"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5z"/><path d="M13 4h5.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H13z"/></svg>Dictionary</button>
+    <button data-tab="reader"><svg class="i" viewBox="0 0 24 24"><path d="M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5z"/><path d="M12 6.5v13"/></svg>Reader</button>
+    <button data-tab="folders"><svg class="i" viewBox="0 0 24 24"><path d="M7 3h10a1 1 0 0 1 1 1v17l-6-4-6 4V4a1 1 0 0 1 1-1z"/></svg>Vocabulary</button>
+    <button data-tab="review"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="6" width="14" height="14" rx="2"/><path d="M7 3h12a2 2 0 0 1 2 2v12"/></svg>Review<span class="badge" id="due-badge"></span></button>
+    <button data-tab="library"><svg class="i" viewBox="0 0 24 24"><path d="M4 19V5M8 19V5M12 19l3-14M17 19l3-14"/></svg>Library</button>
+  </nav>
+  <div id="sheets"></div>
+  <div id="selbar" hidden></div>
+  <div id="toast" role="status"></div>
+</div>
+<script src="/app.js"></script>
+<script src="/reader.js"></script>
+<script src="/comics.js"></script>
+<script src="/extras.js"></script>
+<script src="/scan.js"></script>
+</body>
+</html>

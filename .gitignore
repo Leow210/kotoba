@@ -1,0 +1,9 @@
+# Build output
+android/build/
+*.apk
+*.log
+__pycache__/
+.DS_Store
+
+# The old Mac preview and its 1.6 GB of dictionary data (not used by the app)
+legacy-preview/

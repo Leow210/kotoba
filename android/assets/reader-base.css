@@ -1,0 +1,12 @@
+/* Injected into every book chapter; the reader adds a settings stylesheet after load. */
+img,svg,video{max-width:100%;height:auto}
+::highlight(kotoba-tap){background-color:rgba(222,184,74,.55)}
+mark.kotoba-hl{background:rgba(255,214,0,.42);color:inherit;border-radius:2px;padding:0}
+mark.kotoba-hl.green{background:rgba(110,200,120,.42)}
+mark.kotoba-hl.blue{background:rgba(110,170,240,.42)}
+mark.kotoba-hl.pink{background:rgba(250,130,170,.42)}
+mark.kotoba-hl.note{text-decoration:underline dotted rgba(0,0,0,.5)}
+.kotoba-flash{animation:kotoba-flash 1.6s ease-out}
+@keyframes kotoba-flash{0%{background:rgba(214,170,60,.45)}100%{background:transparent}}
+body.kotoba-txt p{margin:0 0 .6em;text-indent:0}
+body.kotoba-txt p.blank{margin:0;height:.6em}
