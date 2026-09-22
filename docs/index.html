@@ -69,7 +69,7 @@ footer{padding:40px 0 60px;color:var(--muted);font-size:14px;text-align:center;b
   <header class="hero">
     <div class="mark">詞</div>
     <h1>Kotoba</h1>
-    <p class="lede">Kotoba is an offline Android app I made for the MDict dictionaries I already own. It keeps their original layout and media, can read text from games and comics, and lets me save useful words as flashcards.</p>
+    <p class="lede">Kotoba is my personal project: an offline Android app built around the MDict dictionaries I already own. It keeps their original layout and media, reads text from games and comics, and turns the words I look up into flashcards. I'm working toward a version anyone can install; for now you can build it yourself and import your own dictionaries.</p>
     <ul class="langs"><li>日本語</li><li>한국어</li><li>中文</li><li>ไทย</li><li>Русский</li></ul>
     <div class="cta">
       <a class="btn primary" href="https://github.com/Leow210/kotoba">Source on GitHub</a>
@@ -85,6 +85,33 @@ footer{padding:40px 0 60px;color:var(--muted);font-size:14px;text-align:center;b
     <figure><div class="phone"><video src="media/kanji.mp4" poster="media/kanji-poster.jpg" autoplay muted loop playsinline preload="metadata"></video></div>
       <figcaption><b>Kanji grid</b>Filter by radical or stroke count, then switch dictionaries without starting over.</figcaption></figure>
   </div>
+
+  <section id="flashcards">
+    <div class="feature">
+      <div class="text">
+        <h2><small>Flashcards</small>Every word you look up can become a card</h2>
+        <p>Save a word from a dictionary entry, a scanned game line or a comic bubble. The card keeps the dictionary's own formatting, so it looks like the page you learned it from.</p>
+        <ul>
+          <li>Keep only the meanings you need, like just ② of 言葉, or write your own back.</li>
+          <li>Attach pronunciation. NHK clips show pitch accent: コトバ＼.</li>
+          <li>The sentence you found it in comes along as context.</li>
+          <li>FSRS-5 scheduling with learning steps, undo, a 7-day forecast and a streak.</li>
+          <li>Folders are decks. A whole dictionary list or one category becomes a deck in one tap.</li>
+          <li>Export to Anki (TSV with formatting) or CSV.</li>
+        </ul>
+      </div>
+      <div class="shots">
+        <figure><div class="phone"><video src="media/cards.mp4" poster="media/cards-poster.jpg" autoplay muted loop playsinline preload="metadata"></video></div><figcaption>Look up, keep ②, add audio, review</figcaption></figure>
+        <figure><div class="phone"><img src="images/card-meaning.png" alt="Choosing which meanings go on the card" loading="lazy"></div><figcaption>Choose the meanings</figcaption></figure>
+      </div>
+    </div>
+    <div class="grid4">
+      <figure><div class="phone"><img src="images/card-front.png" alt="The front of a flashcard" loading="lazy"></div><figcaption>Front</figcaption></figure>
+      <figure><div class="phone"><img src="images/card-back.png" alt="The answer with NHK pitch accent" loading="lazy"></div><figcaption>Answer with pitch accent</figcaption></figure>
+      <figure><div class="phone"><img src="images/review-home.png" alt="Decks, a streak and the 7-day forecast" loading="lazy"></div><figcaption>Decks and forecast</figcaption></figure>
+      <figure><div class="phone"><img src="images/folder-grid.png" alt="A flashcard folder as a grid" loading="lazy"></div><figcaption>Folders as a grid</figcaption></figure>
+    </div>
+  </section>
 
   <section>
     <div class="feature">

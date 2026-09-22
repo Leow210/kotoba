@@ -12,6 +12,11 @@ Tap a preview to play the video. Each one is silent and about 15–25 seconds lo
 | [![Scan demo](docs/media/scan-poster.jpg)](docs/media/scan.mp4) | [![Word lists demo](docs/media/lists-poster.jpg)](docs/media/lists.mp4) | [![Kanji demo](docs/media/kanji-poster.jpg)](docs/media/kanji.mp4) |
 | Photograph a screen, select a text box, then tap a word | Browse 専門用語 by category, with hanja shown below each word | Pick radicals by stroke count and keep the same filters when switching dictionaries |
 
+| Flashcards |
+|---|
+| [![Flashcards demo](docs/media/cards-poster.jpg)](docs/media/cards.mp4) |
+| Look up 言葉, keep only meaning ②, attach NHK audio, then review it |
+
 ### Screenshots
 | Search | Entry | Flashcard with NHK audio | Review |
 |---|---|---|---|
