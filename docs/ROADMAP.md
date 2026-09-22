@@ -1,6 +1,6 @@
 # Kotoba roadmap
 
-Kotoba's core is **lookup → choose meaning → folder → spaced repetition**. Every new reading feature feeds that same pipeline. A word found in a Korean manhwa, a Japanese novel, a Thai EPUB or a dictionary search ends up in one vocabulary database with its source sentence.
+Kotoba is built around one simple path: **look up a word → choose a meaning → save it to a folder → review it later**. It does not matter whether the word came from a dictionary search, a Japanese novel, a Korean manhwa or a Thai EPUB; it ends up in the same vocabulary database with the original sentence attached.
 
 ```
 Dictionary + SRS (done)
@@ -16,11 +16,11 @@ OCR text layer over comic pages (Korean first)    ← phase 4 ✓
 Dictionary / flashcard actions on comic text
 ```
 
-## Phase 1 — Book reader (EPUB, TXT)
+## Phase 1 — Book reader (EPUB, TXT) ✓
 
-**Languages:** Japanese, Korean, Thai, Russian. Test books are in the project folder.
+The book reader supports Japanese, Korean, Thai and Russian. Test books are kept outside the repository.
 
-**Library.** A new **Reader** tab shows a shelf of books with covers, progress and last-read time. Books are imported with the Android file picker (several at once) and copied into app storage; books are small. Books can be deleted, and sorted by recent or title.
+The **Reader** tab shows book covers, progress and the last-read time. You can import several books at once with Android's file picker, then sort them by title or recency. Imported books are copied into app storage and can be removed from the shelf later.
 
 **Parsing (Java, no dependencies)**
 - `container.xml` → OPF → metadata (title, author, language, cover), manifest and spine, and `page-progression-direction`.
@@ -47,9 +47,9 @@ Dictionary / flashcard actions on comic text
 - **Bookmarks** with a list per book.
 - **Lookup history per book** ("words I looked up in this book"), which can be saved to a folder in one go.
 
-**Done when:** all five test books open with correct direction, chapters and TOC; position survives restarts and font changes; selection and tap lookups work in all four languages; highlights and bookmarks persist.
+This phase is complete: the five test books open with the correct direction, chapters and table of contents; reading position survives restarts and font changes; lookups work in all four languages; and highlights and bookmarks persist.
 
-## Phase 2 — Comic / manhwa reader
+## Phase 2 — Comic / manhwa reader ✓
 
 Comics share the Reader tab (Books | Comics). The structure is series → chapters → pages.
 
@@ -65,10 +65,10 @@ Comics share the Reader tab (Books | Comics). The structure is series → chapte
 
 **Tracking:** progress per chapter (page or scroll offset), read/unread chapters, chapter and page bookmarks, favourites, and "continue reading" on the shelf.
 
-## Phase 3 — Mihon integration
-- **Downloads scanner (first):** pick Mihon's storage folder once. Kotoba lists `downloads/<source>/<series>/<chapter>` (image folders or CBZ) and the `local/` source, and reads them in place.
-- **Backup import (later):** parse `.tachibk` / `.proto.gz`, i.e. gzip plus protobuf, with a small hand-written protobuf reader. That brings in titles, categories as folders, chapter lists and read status, matched to scanned downloads. Backups contain no images.
-- **Not planned:** running Mihon extensions/sources. That's a large, constantly-breaking surface and isn't needed to read what Mihon already downloaded.
+## Phase 3 — Mihon integration ✓
+- Choose Mihon's storage folder once and Kotoba will list downloaded series and chapters, whether they are image folders or CBZ files. They are read in place rather than copied.
+- Importing a `.tachibk` backup adds titles, categories, chapter lists and read status, matched against the downloaded files. Backups themselves contain no images.
+- Kotoba does not run Mihon extensions or sources. It only reads material Mihon has already downloaded.
 
 ## Phase 4 — OCR text layer ✓
 - **Engine:** PaddleOCR PP-OCRv5 mobile models on ONNX Runtime (`Ocr.java`). This replaces the ML Kit plan: it needs no Play Services and works without Gradle.
@@ -80,13 +80,10 @@ Comics share the Reader tab (Books | Comics). The structure is series → chapte
   - The floating 文 button toggles outlined boxes over the speech bubbles. They're positioned in image coordinates, so they follow webtoon and paged layouts.
   - Tapping a bubble opens its text: tap a word to look it up (with conjugation lookup), fix mistakes, copy, translate, or save a card with the bubble as context.
   - ☰ lists all text on the page.
-- **Next:**
-  - a Thai recognition model;
-  - handling bubbles whose text is broken into separate lines;
-  - including the OCR cache in backups.
+- **Still to improve:** handling bubbles whose text is broken across separate lines, and including the OCR cache in backups. Thai recognition has since been added.
 
 ## Cross-cutting
-- **Scope:** everything stays offline.
+- **Scope:** everything stays offline; this is a design constraint, not just a current limitation.
 - **Personal data:**
   - Books, highlights, bookmarks, comic progress and the OCR cache live in the personal database, so they're covered by backup/restore.
   - Dictionaries stay replaceable.

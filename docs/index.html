@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Kotoba 詞 · Offline dictionary and flashcards</title>
-<meta name="description" content="An offline Android dictionary and flashcard app for the MDict dictionaries you already own. Japanese, Korean, Chinese, Thai and Russian, with an on-device text scanner for games and comics.">
+<meta name="description" content="A private, offline Android app for reading MDict dictionaries, looking up text in books and comics, and making flashcards.">
 <meta property="og:title" content="Kotoba 詞">
-<meta property="og:description" content="Offline dictionary + flashcards for your own MDict dictionaries, with an on-device scanner for games and comics.">
+<meta property="og:description" content="An offline MDict reader, scanner and flashcard app for Android.">
 <meta property="og:image" content="images/scan-lookup.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -69,7 +69,7 @@ footer{padding:40px 0 60px;color:var(--muted);font-size:14px;text-align:center;b
   <header class="hero">
     <div class="mark">詞</div>
     <h1>Kotoba</h1>
-    <p class="lede">An offline dictionary and flashcard app for Android, built on the MDict dictionaries you already own. Look words up in their original typography, scan the text in games and comics, and turn everything you find into spaced-repetition cards.</p>
+    <p class="lede">Kotoba is an offline Android app I made for the MDict dictionaries I already own. It keeps their original layout and media, can read text from games and comics, and lets me save useful words as flashcards.</p>
     <ul class="langs"><li>日本語</li><li>한국어</li><li>中文</li><li>ไทย</li><li>Русский</li></ul>
     <div class="cta">
       <a class="btn primary" href="https://github.com/Leow210/kotoba">Source on GitHub</a>
@@ -79,23 +79,23 @@ footer{padding:40px 0 60px;color:var(--muted);font-size:14px;text-align:center;b
 
   <div class="videos">
     <figure><div class="phone"><video src="media/scan.mp4" poster="media/scan-poster.jpg" autoplay muted loop playsinline preload="metadata"></video></div>
-      <figcaption><b>Scan a game</b>Photograph the screen, tap a word, save a card.</figcaption></figure>
+      <figcaption><b>Scan a game</b>Take a photo, tap a word and look it up.</figcaption></figure>
     <figure><div class="phone"><video src="media/lists.mp4" poster="media/lists-poster.jpg" autoplay muted loop playsinline preload="metadata"></video></div>
-      <figcaption><b>Dictionary word lists</b>Categories with counts; hanja under Korean words.</figcaption></figure>
+      <figcaption><b>Dictionary word lists</b>Browse built-in categories and see the hanja for Korean words.</figcaption></figure>
     <figure><div class="phone"><video src="media/kanji.mp4" poster="media/kanji-poster.jpg" autoplay muted loop playsinline preload="metadata"></video></div>
-      <figcaption><b>Kanji grid</b>Radicals by stroke count; filters carry across dictionaries.</figcaption></figure>
+      <figcaption><b>Kanji grid</b>Filter by radical or stroke count, then switch dictionaries without starting over.</figcaption></figure>
   </div>
 
   <section>
     <div class="feature">
       <div class="text">
-        <h2><small>Scanner</small>Read the text on any screen</h2>
-        <p>Visual novels on a PC, games on a tablet, a screenshot someone sent you. Take a photo with the phone's camera, or share an image to Kotoba, and the text is read on the phone.</p>
+        <h2><small>Scanner</small>Look up text from another screen</h2>
+        <p>Take a photo of a visual novel or game, or share a screenshot with Kotoba. The image stays on the phone while Kotoba finds the text.</p>
         <ul>
-          <li>Tap a text box, then any word, to look it up. Conjugations are explained.</li>
-          <li><b>Select area</b> reads just the dialogue box, in about 0.2 seconds.</li>
-          <li>Japanese, Chinese (simplified and traditional), Korean, Thai and Russian.</li>
-          <li>Save a card with the line as its example sentence.</li>
+          <li>Tap a text box and then a word to look it up, including conjugated forms.</li>
+          <li><b>Select area</b> is handy when you only want the dialogue box.</li>
+          <li>It works with Japanese, simplified and traditional Chinese, Korean, Thai and Russian.</li>
+          <li>You can save the whole line with a card for context.</li>
         </ul>
       </div>
       <div class="shots">
@@ -108,13 +108,13 @@ footer{padding:40px 0 60px;color:var(--muted);font-size:14px;text-align:center;b
   <section>
     <div class="feature flip">
       <div class="text">
-        <h2><small>Dictionaries</small>Your dictionaries, as they were printed</h2>
-        <p>Kotoba reads MDict <code>.mdx</code> and <code>.mdd</code> files, such as Monokakido exports, and shows each dictionary with its own styles, images and audio, vertical ones included.</p>
+        <h2><small>Dictionaries</small>Keep the layout of the original dictionary</h2>
+        <p>Kotoba opens MDict <code>.mdx</code> and <code>.mdd</code> files, including Monokakido exports. It preserves each dictionary's styles, images and audio, and supports vertical layouts too.</p>
         <ul>
-          <li>Headword, contains, in-definitions and in-examples search.</li>
-          <li>Dictionary-form lookup: 食べさせられなかった → 食べる, 추웠어요 → 춥다.</li>
-          <li>Each dictionary's appendix (付録) with its original Japanese titles.</li>
-          <li>Browse a whole dictionary like a paper one, with an index rail.</li>
+          <li>Search headwords, definitions or examples.</li>
+          <li>Find dictionary forms such as 食べさせられなかった → 食べる and 추웠어요 → 춥다.</li>
+          <li>Open the dictionary's appendix (付録) with its original Japanese titles.</li>
+          <li>Or browse from one entry to the next, using an index rail to jump around.</li>
         </ul>
       </div>
       <div class="shots">
@@ -127,12 +127,12 @@ footer{padding:40px 0 60px;color:var(--muted);font-size:14px;text-align:center;b
   <section>
     <div class="feature">
       <div class="text">
-        <h2><small>Word lists</small>Every list your dictionaries come with</h2>
-        <p>大辞林's 地名, 人名 and 季語, 新明解's 最重要語 and 重要語, 漢検's 四字熟語 and levels, the Korean dictionary's 最重要語, 品詞 and 専門用語, and more. Each opens as a grid of categories.</p>
+        <h2><small>Word lists</small>Browse the lists built into a dictionary</h2>
+        <p>Kotoba exposes lists that are easy to miss in the original files: 大辞林's 地名, 人名 and 季語, 新明解's 最重要語 and 重要語, 漢検's 四字熟語 and levels, and the Korean dictionary's 品詞 and 専門用語, among others.</p>
         <ul>
-          <li>List or grid, in the dictionary's order or あいう order.</li>
-          <li>Hanja under Korean words, readings under Japanese ones.</li>
-          <li>Turn any list or category into a flashcard deck in one tap.</li>
+          <li>Choose a list or grid, and keep the original order or sort by reading.</li>
+          <li>Korean words can show hanja underneath; Japanese words can show readings.</li>
+          <li>Any list or category can become a flashcard deck.</li>
         </ul>
       </div>
       <div class="shots">
@@ -143,27 +143,33 @@ footer{padding:40px 0 60px;color:var(--muted);font-size:14px;text-align:center;b
   </section>
 
   <section>
-    <h2><small>And more</small>Reading, reviewing, kanji</h2>
+    <h2><small>Also included</small>Readers, reviews and kanji tools</h2>
     <div class="grid4">
       <figure><div class="phone"><img src="images/card-audio.png" alt="A flashcard with NHK pitch-accent audio" loading="lazy"></div><figcaption>Cards with NHK pitch accent</figcaption></figure>
       <figure><div class="phone"><img src="images/review.png" alt="The review screen" loading="lazy"></div><figcaption>FSRS-5 review</figcaption></figure>
       <figure><div class="phone"><img src="images/radicals.png" alt="Radicals grouped by stroke count" loading="lazy"></div><figcaption>Radicals by stroke count</figcaption></figure>
       <figure><div class="phone"><img src="images/furoku.png" alt="A dictionary's appendix pages" loading="lazy"></div><figcaption>付録 with original titles</figcaption></figure>
     </div>
+    <div class="grid4">
+      <figure><div class="phone"><img src="images/library-books.png" alt="The book shelf" loading="lazy"></div><figcaption>Books</figcaption></figure>
+      <figure><div class="phone"><img src="images/reader-book.png" alt="A Japanese novel in vertical text" loading="lazy"></div><figcaption>E-reader (縦書き)</figcaption></figure>
+      <figure><div class="phone"><img src="images/comic-ocr.png" alt="Speech bubbles outlined in a manhwa" loading="lazy"></div><figcaption>Manhwa OCR</figcaption></figure>
+      <figure><div class="phone"><img src="images/manga-ocr.png" alt="Vertical speech bubbles outlined in a manga" loading="lazy"></div><figcaption>Manga OCR</figcaption></figure>
+    </div>
     <div class="facts" style="margin-top:26px">
-      <div class="fact"><b>Books and comics</b><span>EPUB and TXT, vertical or horizontal. CBZ and Mihon downloads, with tap-to-look-up text in speech bubbles.</span></div>
-      <div class="fact"><b>Spaced repetition</b><span>FSRS-5 scheduling, folders as decks, Anki (TSV) and CSV export, JSON backup.</span></div>
-      <div class="fact"><b>Completely offline</b><span>No account and no internet permission. Text recognition runs on the phone.</span></div>
+      <div class="fact"><b>Books and comics</b><span>Read EPUB, TXT and CBZ files, including Mihon downloads. In comics, tap recognized text inside a speech bubble to look it up.</span></div>
+      <div class="fact"><b>Spaced repetition</b><span>Reviews use FSRS-5. Folders work as decks, and cards can be exported to Anki or CSV.</span></div>
+      <div class="fact"><b>Stays offline</b><span>There is no account or internet permission. Even text recognition runs on the phone.</span></div>
     </div>
   </section>
 
   <section id="build">
     <h2><small>Build</small>Build it yourself</h2>
-    <p class="text">Needs the Android SDK (build-tools 35, platform 35) and JDK 21. No Gradle, no network access during the build.</p>
+    <p class="text">To build Kotoba, you need Android SDK build-tools 35, platform 35 and JDK 21. The build does not use Gradle or require a network connection.</p>
 <pre>python3 android/build.py                 # → android/build/kotoba.apk
 adb install -r android/build/kotoba.apk
 android/tests/run.sh                     # desktop tests</pre>
-    <p class="note">Kotoba includes no dictionaries: it works with MDict files you own. On first run, go to Library → Import from a folder…</p>
+    <p class="note">Dictionaries are not included. On first run, go to Library → Import from a folder… and choose a folder containing your own MDict files.</p>
   </section>
 
   <footer>

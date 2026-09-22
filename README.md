@@ -1,16 +1,16 @@
 # Kotoba 詞
 
-**A personal, offline dictionary and flashcard app for Android.** Kotoba runs on the MDict (`.mdx`/`.mdd`) dictionaries you already own, e.g. Monokakido exports. It shows them in their original typography and turns anything you look up into spaced-repetition flashcards. It works without an account or internet connection, and nothing leaves the phone.
+Kotoba is a personal Android dictionary and flashcard app that I built around my own MDict (`.mdx`/`.mdd`) files, including Monokakido exports. It keeps the dictionaries' original typography, images and audio, and makes it easy to save a lookup as a spaced-repetition card. It does not need an account or an internet connection.
 
-Languages it's built around: **Japanese, Korean, Chinese, Thai, Russian**. There's also a [project page](https://leow210.github.io/kotoba/) with the videos playing inline.
+I mainly use it for **Japanese, Korean, Chinese, Thai and Russian**. The [project page](https://leow210.github.io/kotoba/) has short videos of the main features.
 
 ### Demos
-Tap a picture to play the video (15–25 s, no sound).
+Tap a preview to play the video. Each one is silent and about 15–25 seconds long.
 
 | Scan a game on another screen | Dictionary word lists | Kanji grid and radicals |
 |---|---|---|
 | [![Scan demo](docs/media/scan-poster.jpg)](docs/media/scan.mp4) | [![Word lists demo](docs/media/lists-poster.jpg)](docs/media/lists.mp4) | [![Kanji demo](docs/media/kanji-poster.jpg)](docs/media/kanji.mp4) |
-| Photograph the screen, tap the text box, tap a word | 専門用語 → 56 categories → 医学, with hanja | Radicals by stroke count; filters kept across 漢検 and 漢辞海 |
+| Photograph a screen, select a text box, then tap a word | Browse 専門用語 by category, with hanja shown below each word | Pick radicals by stroke count and keep the same filters when switching dictionaries |
 
 ### Screenshots
 | Search | Entry | Flashcard with NHK audio | Review |
@@ -29,49 +29,57 @@ Tap a picture to play the video (15–25 s, no sound).
 |---|---|---|
 | ![Browse](docs/images/browse.png) | ![Vertical](docs/images/vertical.png) | ![Lookup](docs/images/lookup.png) |
 
+| Books | E-reader (縦書き) | Comics & manhwa |
+|---|---|---|
+| ![Books](docs/images/library-books.png) | ![E-reader](docs/images/reader-book.png) | ![Comics](docs/images/library-comics.png) |
+
+| Manhwa OCR | Look up from a bubble | Manga OCR | Look up from manga |
+|---|---|---|---|
+| ![Manhwa OCR](docs/images/comic-ocr.png) | ![Manhwa lookup](docs/images/comic-lookup.png) | ![Manga OCR](docs/images/manga-ocr.png) | ![Manga lookup](docs/images/manga-lookup.png) |
+
 ## Features
 
 ### Dictionaries
-- **Import from a phone folder:** point Kotoba at a folder of `.mdx` files with their `.mdd` media (e.g. `Download/Monokakido_Ciyue`). The files stay in place and are indexed on the phone. A 13-dictionary Monokakido set takes about 3 minutes and 350 MB.
-- **Reads MDict** versions 1 and 2, with zlib/LZO compression and encrypted key indexes. Images, audio, CSS and cross-references come from the `.mdd`.
-- **Dictionary groups:** All · Japanese 国語 · Kanji 漢字 · Pronunciation 発音 · Korean · Chinese · Thai · Russian, or a single dictionary. Groups are assigned automatically and can be edited.
-- **Order and settings:** dictionaries can be reordered, renamed, turned off, or marked as kanji dictionaries.
+- Import a folder of `.mdx` files and their `.mdd` media from the phone. The files stay where they are; Kotoba builds its index locally. My 13-dictionary Monokakido set takes about three minutes to import and uses roughly 350 MB for the index.
+- MDict versions 1 and 2 are supported, including zlib/LZO compression and encrypted key indexes. Images, audio, CSS and cross-references are read from the `.mdd` files.
+- Kotoba sorts dictionaries into useful groups—Japanese 国語, Kanji 漢字, Pronunciation 発音, Korean, Chinese, Thai and Russian—but those assignments can be changed.
+- Dictionaries can also be reordered, renamed, hidden or marked as kanji dictionaries.
 
 ### Search
-- **Headword search** by prefix. It ignores kana vs katakana (男 / おとこ / オトコ), Russian stress marks and ё, and Daijirin's ▽▼ marks.
-- **Contains**, **In definitions** and **In examples** modes. Definitions and examples are indexed separately, and matches are substring matches, so Thai works without spaces.
-- **Dictionary form lookup** for conjugated words, with the grammar explained:
+- Headword search uses prefixes and ignores differences that usually get in the way, such as hiragana versus katakana, Russian stress marks and Daijirin's ▽▼ marks.
+- There are separate modes for text contained in a headword, a definition or an example. Substring matching also makes the search usable for Thai text without spaces.
+- Conjugated words are traced back to their dictionary form, with a short grammar breakdown:
   - `食べさせられなかった` → **食べる** + させられる + ない + かった · causative-passive · negative · past
   - `추웠어요` → **춥다** + 았/었 + 어요 · past · polite, ㅂ-irregular
   - `공부했어요` → **공부** + 하다 + 았/었 + 어요 · 하다 verb · past · polite
   - `занимаюсь` → **заниматься** · 1st person singular · reflexive
 
-  Only real headwords are shown, at most three, so the list stays short.
-- **Kanji strip:** every kanji in the query links to your kanji dictionaries (漢辞海, 漢検).
-- **Browse a whole dictionary** like a paper one:
+  Kotoba only suggests forms that actually exist as headwords, and shows at most three.
+- Every kanji in a query links to the installed kanji dictionaries, such as 漢辞海 and 漢検.
+- You can also browse a dictionary from beginning to end:
   - scroll through every headword in both directions;
   - jump with the index rail (あかさ… / 가나다 / ก / А–Я / A–Z) or the "Jump to…" box;
   - 🎲 opens a random word.
 
 ### Entries
-- **Original styling:** each dictionary's own CSS, images and audio. Text size is adjustable (125% by default).
-- **Focused entries:** you see the word you asked for (言葉), not the 60 compounds on the same page. Those are listed under "On this page", and "Show whole page" shows everything.
-- **Navigation:**
+- Entries keep the dictionary's own CSS, images and audio. Text size is adjustable and defaults to 125%.
+- When a dictionary puts many words on one page, Kotoba opens at the word you searched for instead of dropping you at the top. The other entries remain available under "On this page" or "Show whole page."
+- To move around:
   - tabs switch between dictionaries that have the same word;
   - ‹ › browses to the previous or next word;
   - cross-references open the linked entry.
-- **Vertical text (縦書き)** is available for any dictionary. Dictionaries that are vertical by design switch to it automatically.
-- **Audio:** one consistent 🔊 button in every dictionary that has audio: NHK, 新明解, Thai, Korean, Russian and 中日. Auto-play is optional.
-- **Text selection:** select any text to get Look up · Search · Copy · Card · Share. Look up and Save card are also added to Android's selection menu, and "Look up in Kotoba" works from other apps.
+- Any dictionary can be switched to vertical text (縦書き), and dictionaries designed that way open vertically by default.
+- Dictionaries with audio use the same 🔊 control throughout the app. Audio can optionally play as soon as an entry opens.
+- Selecting text brings up Look up, Search, Copy, Card and Share. Android's selection menu also gets Look up and Save card actions, including from other apps.
 
 ### Vocabulary & flashcards
-- **Bookmarks and cards:** ☆ bookmarks and ＋ makes a flashcard. Sub-words save separately from their parent word.
-- **Keep only the meanings you want,** e.g. just ② of 言葉. Cards keep the dictionary's formatting.
-- **Mix sources:** the definition can come from one dictionary and the audio from another, e.g. Daijirin's definition with NHK's pronunciation. NHK clips show pitch accent (タベ＼ル drawn with a line over the high morae) and include NHK's conjugated forms.
-- **Editing:** every field is editable, and you can add a note and an example sentence.
-- **Folders** with filters, sorting, multi-select move/copy/delete, and review per folder.
-- **FSRS-5 scheduling** with learning steps, interval previews, undo, daily new-card limits, target recall, a 7-day forecast and a streak.
-- **Export** to Anki (TSV with HTML and folder tags) and CSV. JSON backup/restore merges and skips duplicates.
+- Use ☆ for a bookmark or ＋ for a flashcard. A sub-entry can be saved separately from its parent word.
+- A card can keep only the meaning you need—for example, just sense ② of 言葉—without losing the dictionary's formatting.
+- Definitions and audio can come from different dictionaries. I often pair a Daijirin definition with NHK pronunciation; NHK audio also includes its pitch-accent display and conjugated forms.
+- Every field is editable, with room for a note and an example sentence.
+- Cards live in folders that can be filtered, sorted and reviewed separately. Multi-select actions cover moving, copying and deleting.
+- Reviews use FSRS-5, with learning steps, interval previews, undo, daily new-card limits, target recall, a seven-day forecast and a streak.
+- Cards export to Anki (TSV with HTML and folder tags) or CSV. JSON backups merge with existing data and skip duplicates when restored.
 
 ### Kanji, word lists, furoku
 - **Kanji grid:** every kanji in 漢辞海 and 漢検 as a grid you can filter by Kanken level, stroke count, radical and 常用/教育/人名. Old and variant forms (舊 → 旧) find their main entry.
@@ -138,7 +146,7 @@ On first run: **Library → Import from a folder…** → choose your dictionary
 | `android/assets/` | The interface (HTML/CSS/JS) |
 | `docs/ROADMAP.md` | What's being built next and how |
 
-## Limits
+## Current limits
 - MDict files with registration-code encryption and MDict 3.0 can't be opened.
 - Splitting an entry into individual meanings depends on Monokakido-style markup. Other MDX files show and save as whole entries.
 - Dictionary-form lookup covers common conjugations, not every rare or classical form.
@@ -149,7 +157,7 @@ On first run: **Library → Import from a folder…** → choose your dictionary
 - [OpenCC](https://github.com/BYVoid/OpenCC) traditional → simplified character table, `assets/t2s.txt` (Apache-2.0).
 
 ## Roadmap
-Phases 1–4 are done: the book reader, the comic reader, Mihon support and OCR. See [docs/ROADMAP.md](docs/ROADMAP.md).
+The book reader, comic reader, Mihon support and OCR are all working. [The roadmap](docs/ROADMAP.md) records how those pieces fit together and what is still unfinished.
 
 ## Development notes (handoff)
 
@@ -283,4 +291,3 @@ This section holds the context needed to keep developing Kotoba in a new session
   - a frequency-rank badge on entries;
   - desktop tests for the `MihonBackup` and `WordLists` parsers.
 - **`legacy-preview/`:** the old Mac preview (1.6 GB of data). It isn't used by the app.
-
