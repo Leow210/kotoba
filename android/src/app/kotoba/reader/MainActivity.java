@@ -49,9 +49,7 @@ public class MainActivity extends Activity {
     Scans scans;
     PermissionRequest pendingCamera;
     final ExecutorService pool=Executors.newFixedThreadPool(3);
-    final ExecutorService importer=Executors.newSingleThreadExecutor();
-    final AtomicBoolean cancelImport=new AtomicBoolean(false);
-    volatile boolean importing=false;
+    Routes routes;
     byte[] pendingExport;
 
     /** WebView whose text-selection menu gains Look up and Save card. */
@@ -103,6 +101,10 @@ public class MainActivity extends Activity {
         ocr=new Ocr(this,store.db);
         wordlists=new WordLists(store.db);
         extras=new Extras(library,new File(getExternalFilesDir(null),"extras"));
+        routes=new Routes(library,store,wordlists,extras,new Routes.Host(){
+            @Override public void event(String type,Object data){MainActivity.this.event(type,data);}
+            @Override public void keepAwake(boolean on){runOnUiThread(()->{if(on)getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);});}
+        });
         web=new KotobaWebView(this);
         setContentView(web);
         web.setBackgroundColor(Color.rgb(247,244,238));
@@ -210,19 +212,11 @@ public class MainActivity extends Activity {
             try{
                 JSONObject data=body==null||body.isEmpty()?new JSONObject():new JSONObject(body);
                 String text;String mime;
-                switch(route){
-                    case "backup":text=store.backup().toString(1);mime="application/json";break;
-                    case "tsv":text=store.exportTsv(data.optLong("folder",0),data.optBoolean("html",true));mime="text/tab-separated-values";break;
-                    case "csv":text=store.exportCsv(data.optLong("folder",0));mime="text/csv";break;
-                    case "pleco":{
-                        java.util.Set<Long> zh=new java.util.HashSet<>();
-                        JSONArray all=library.dictionaries();
-                        for(int i=0;i<all.length();i++){JSONObject x=all.getJSONObject(i);if(x.getString("grp").equals("Chinese")||x.getString("grp").startsWith("Chinese/"))zh.add(x.getLong("id"));}
-                        text=store.exportPleco(data.optLong("folder",0),zh);mime="text/plain";break;
-                    }
-                    case "text":text=data.optString("text","");mime="text/plain";break;
-                    case "highlights":text=books.exportHighlights(data.getLong("book"));mime="text/markdown";break;
-                    default:throw new Exception("Unknown export");
+                if(route.equals("highlights")){text=books.exportHighlights(data.getLong("book"));mime="text/markdown";}
+                else{
+                    String[] r=routes.export(route,data);
+                    if(r==null)throw new Exception("Unknown export");
+                    text=r[0];mime=r[1];
                 }
                 byte[] bytes=text.getBytes(StandardCharsets.UTF_8);
                 runOnUiThread(()->{
@@ -315,51 +309,12 @@ public class MainActivity extends Activity {
 
     Object route(String route,JSONObject d) throws Exception {
         switch(route){
-            case "dicts":return library.dictionaries();
-            case "search":{
-                String q=d.optString("q","");
-                JSONObject result=library.search(q,d.optString("mode","headword"),d.optString("dict",""),d.optInt("offset",0));
-                if(d.optInt("offset",0)==0&&!q.trim().isEmpty()){
-                    result.put("kanji",library.kanji(q));
-                    if(d.optString("mode","headword").equals("headword"))result.put("forms",library.forms(q));
-                }
-                return result;
-            }
-            case "forms":return library.forms(d.getString("q"));
-            case "audio":return library.audioFor(d.getString("key"),d.optString("reading",""),d.optLong("dict",0));
-            case "exact":return library.exact(d.getString("key"),null);
-            case "freq":return library.frequencies(d.getString("key"),d.optString("reading",""));
-            case "freq.list":return library.freqList(d.getLong("dict"),d.optLong("from",0),d.optInt("offset",0),d.optInt("limit",150));
-            case "lookup":return library.lookup(d.getString("text"),d.optString("lang",""));
-            case "record":{
-                JSONObject r=library.record(d.getLong("rec"));
-                r.put("saved",store.savedFor(r.getLong("dict"),r.getString("key")));
-                return r;
-            }
-            case "resolve":{
-                long rec=library.findRecord(d.getLong("dict"),d.getString("page"));
-                return new JSONObject().put("rec",rec==0?JSONObject.NULL:rec);
-            }
-            case "browse":return library.browse(d.getLong("dict"),d.optString("dir","from"),d.optString("norm",""),d.optLong("id",0),d.optString("prefix",""),d.optInt("limit",120),d.optBoolean("kanji",false));
-            case "kanji.grid":return library.kanjiGrid(d.getLong("dict"),d.optString("level",""),d.optInt("strokes",0),d.optString("radical",""),d.optString("flag",""));
-            case "random":return library.random(d.optLong("dict",0));
-            case "neighbors":return library.neighbors(d.getLong("rec"));
-            case "reference":return library.reference(d.getLong("dict"),d.getString("ref"));
-            case "history":return store.history();
-            case "history.add":store.remember(d.optString("q",""));return null;
-            case "history.clear":store.clearHistory();return null;
-            case "dict.update":library.updateDictionary(d);return null;
-            case "dict.reorder":library.reorder(d.getJSONArray("ids"));return null;
-            case "dict.delete":{
-                if(importing)throw new Exception("Wait for the current import to finish.");
-                library.delete(d.getLong("id"));return null;
-            }
             case "library.scan":return scan(Uri.parse(d.getString("tree")));
             case "library.relink":return relink(d.getString("tree"));
             case "library.scanLocal":{
                 JSONArray found=new JSONArray();
                 File root=getExternalFilesDir(null);
-                if(root!=null)scanFiles(root,"",0,found,library.dictionaries());
+                if(root!=null)routes.scanFiles(root,"",0,found,library.dictionaries(),this::openChannel);
                 return new JSONObject().put("items",found).put("path",root==null?"":root.getPath());
             }
             case "library.folders":{
@@ -367,9 +322,6 @@ public class MainActivity extends Activity {
                 for(android.content.UriPermission p:getContentResolver().getPersistedUriPermissions())out.put(p.getUri().toString());
                 return out;
             }
-            case "library.import":startImport(d.getJSONArray("items"),d.optBoolean("fulltext",true));return null;
-            case "library.cancel":cancelImport.set(true);return null;
-            case "library.status":return new JSONObject().put("importing",importing);
             case "books":return books.list();
             case "book.open":return books.open(d.getLong("id"));
             case "book.position":books.savePosition(d.getLong("id"),d.getString("position"),d.optDouble("progress",0));return null;
@@ -408,18 +360,6 @@ public class MainActivity extends Activity {
                 java.io.File f=new java.io.File(getExternalFilesDir(null),d.getString("name"));
                 return wordlists.importText(f.getName(),BookParser.decode(read(new java.io.FileInputStream(f),50_000_000))[0]);
             }
-            case "wordlists":return wordlists.lists();
-            case "wordlist.items":if("abc".equals(d.optString("sort")))wordlists.fillSortKeys(d.getLong("id"),library::readingOf);
-                return wordlists.items(d.getLong("id"),d.optInt("offset",0),d.optInt("limit",200),d.optString("q",""),d.optString("sort",""));
-            case "wordlist.delete":wordlists.delete(d.getLong("id"));return null;
-            case "wordlist.rename":wordlists.rename(d.getLong("id"),d.getString("name"));return null;
-            case "wordlist.toFolder":return wordListToFolder(d.getLong("id"),d.getLong("folder"));
-            case "gloss":{
-                JSONArray words=d.getJSONArray("words"),out=new JSONArray();
-                for(int i=0;i<words.length()&&i<200;i++)out.put(library.gloss(words.getString(i)));
-                return out;
-            }
-            case "rank":{JSONObject r=wordlists.rank(d.getString("word"));return r==null?JSONObject.NULL:r;}
             case "scan.read":return scans().read(d.getString("name"),d.optString("lang","ja"),d.optJSONArray("crop"));
             case "scan.list":return scans().list();
             case "scan.delete":scans().delete(d.getString("name"));return null;
@@ -428,38 +368,13 @@ public class MainActivity extends Activity {
                 byte[] b=android.util.Base64.decode(d.getString("data"),android.util.Base64.DEFAULT);
                 return new JSONObject().put("name",scans().importStream(new ByteArrayInputStream(b),d.optString("mime","image/jpeg")));
             }
-            case "appendix":return extras.appendix(d.getLong("dict"));
-            case "appendix.counts":return extras.counts();
-            case "dictlists":return extras.lists();
-            case "dictlist":return extras.list(d.getLong("dict"),d.getInt("index"));
-            case "dictlist.toFolder":return extras.toFolder(store,d.getLong("dict"),d.getInt("index"),d.optString("section",""),d.getLong("folder"),n->event("toast","Added "+n+" cards…"));
-            case "dictlist.resolve":return extras.resolve(d.getLong("dict"),d.optString("anchor"),d.optString("word"));
             case "highlights":return books.highlights(d.getLong("book"));
             case "highlight.save":return books.saveHighlight(d);
             case "highlight.delete":books.deleteHighlight(d.getLong("id"));return null;
             case "bookmarks":return books.bookmarks(d.getLong("book"));
             case "bookmark.save":return books.saveBookmark(d);
             case "bookmark.delete":books.deleteBookmark(d.getLong("id"));return null;
-            case "folders":return store.folders();
-            case "folder.save":return store.saveFolder(d);
-            case "folder.study":store.setStudy(d.getLong("id"),d.getBoolean("study"));return null;
-            case "folder.delete":store.deleteFolder(d.getLong("id"),d.optBoolean("items",false));return null;
-            case "folder.reorder":store.reorderFolders(d.getJSONArray("ids"));return null;
-            case "items":return store.items(d);
-            case "item.similar":return store.similar(d.getString("headword"),d.optString("reading",""));
-            case "item":return store.item(d.getLong("id"));
-            case "item.save":return store.saveItem(d);
-            case "item.delete":store.deleteItems(d.getJSONArray("ids"));return null;
-            case "item.move":store.moveItems(d.getJSONArray("ids"),d.getLong("folder"),d.optBoolean("copy",false));return null;
-            case "item.review":store.setReview(d.getJSONArray("ids"),d.getBoolean("review"));return null;
-            case "item.reset":store.resetProgress(d.getJSONArray("ids"));return null;
-            case "queue":return store.queue(d.optLong("folder",0));
-            case "answer":return store.answer(d.getLong("id"),d.getInt("rating"));
-            case "undo":return store.undo();
-            case "stats":return store.stats().put("library",library.stats());
-            case "settings":return store.settings();
-            case "setting":store.setSetting(d.getString("key"),d.getString("value"));return null;
-            default:throw new Exception("Unknown request: "+route);
+            default:return routes.route(route,d);
         }
     }
 
@@ -549,7 +464,7 @@ public class MainActivity extends Activity {
             String name=f[1];
             if(name.toLowerCase(Locale.ROOT).endsWith(".zip")){
                 String uri=DocumentsContract.buildDocumentUriUsingTree(tree,f[0]).toString();
-                addYomitan(uri,name,path,Long.parseLong(f[3]),found,imported);
+                routes.addYomitan(uri,name,path,Long.parseLong(f[3]),found,imported,this::openChannel);
                 continue;
             }
             if(!name.toLowerCase(Locale.ROOT).endsWith(".mdx"))continue;
@@ -574,86 +489,6 @@ public class MainActivity extends Activity {
             found.put(new JSONObject().put("name",base).put("title",title).put("folder",path).put("mdx",uri).put("mdd",mdd).put("size",size).put("imported",already));
         }
         if(depth<3)for(String[] dir:dirs)scanDirectory(tree,dir[0],path.isEmpty()?dir[1]:path+"/"+dir[1],depth+1,found,imported);
-    }
-
-    /** A Yomitan dictionary ZIP (index.json + banks); other ZIPs are ignored. */
-    void addYomitan(String uri,String file,String folder,long size,JSONArray found,JSONArray imported) throws Exception {
-        String title;
-        try(ZipSource z=new ZipSource(openChannel(uri))){title=Library.yomitanTitle(z);}catch(Exception e){return;}
-        if(title==null)return;
-        boolean already=false;
-        for(int i=0;i<imported.length();i++){JSONObject d=imported.getJSONObject(i);if(d.getString("mdx").equals(uri)||d.getString("title").equals(title))already=true;}
-        String base=file.replaceFirst("(?i)\\.zip$","");
-        found.put(new JSONObject().put("name",base).put("title",title).put("folder",folder).put("mdx",uri).put("mdd",new JSONArray()).put("size",size).put("imported",already).put("format","yomitan"));
-    }
-
-    /** Dictionaries copied into the app's own folder (Android/data/app.kotoba.reader/files) over USB. */
-    void scanFiles(File dir,String path,int depth,JSONArray found,JSONArray imported) throws Exception {
-        File[] files=dir.listFiles();if(files==null)return;
-        java.util.Arrays.sort(files);
-        for(File f:files){
-            if(f.isDirectory()){if(depth<3)scanFiles(f,path.isEmpty()?f.getName():path+"/"+f.getName(),depth+1,found,imported);continue;}
-            String name=f.getName();
-            if(name.toLowerCase(Locale.ROOT).endsWith(".zip")){addYomitan(f.getPath(),name,path,f.length(),found,imported);continue;}
-            if(!name.toLowerCase(Locale.ROOT).endsWith(".mdx"))continue;
-            String base=name.substring(0,name.length()-4);
-            JSONArray mdd=new JSONArray();long size=f.length();
-            for(File g:files){
-                String n=g.getName().toLowerCase(Locale.ROOT),b=base.toLowerCase(Locale.ROOT);
-                if(n.equals(b+".mdd")||(n.startsWith(b+".")&&n.endsWith(".mdd")&&n.substring(b.length()+1,n.length()-4).matches("\\d+"))){mdd.put(g.getPath());size+=g.length();}
-            }
-            String title=base;
-            try(MdictFile m=new MdictFile(openChannel(f.getPath()),false)){if(!m.title().isEmpty())title=m.title();}catch(Exception e){title=base+" — "+e.getMessage();}
-            boolean already=false;
-            for(int i=0;i<imported.length();i++){JSONObject d=imported.getJSONObject(i);if(d.getString("mdx").equals(f.getPath())||d.getString("title").equals(title))already=true;}
-            found.put(new JSONObject().put("name",base).put("title",title).put("folder",path).put("mdx",f.getPath()).put("mdd",mdd).put("size",size).put("imported",already));
-        }
-    }
-
-    void startImport(JSONArray items,boolean fulltext) throws Exception {
-        if(importing)throw new Exception("An import is already running.");
-        importing=true;cancelImport.set(false);
-        runOnUiThread(()->getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON));
-        importer.execute(()->{
-            int done=0,failed=0;
-            try{
-                for(int i=0;i<items.length();i++){
-                    if(cancelImport.get())break;
-                    JSONObject item=items.getJSONObject(i);
-                    String title=item.optString("title",item.optString("name"));
-                    final int index=i;
-                    long started=System.currentTimeMillis();
-                    try{
-                        ArrayList<String> mdd=new ArrayList<>();
-                        JSONArray m=item.optJSONArray("mdd");
-                        if(m!=null)for(int k=0;k<m.length();k++)mdd.add(m.getString(k));
-                        Library.Progress progress=new Library.Progress(){
-                            long last=0;
-                            @Override public void update(String stage,long a,long b){
-                                long t=System.currentTimeMillis();
-                                if(t-last<250&&a<b)return;
-                                last=t;
-                                try{event("import",new JSONObject().put("title",title).put("index",index).put("count",items.length()).put("stage",stage).put("done",a).put("total",b));}catch(Exception ignored){}
-                            }
-                            @Override public boolean cancelled(){return cancelImport.get();}
-                        };
-                        if("yomitan".equals(item.optString("format")))library.importYomitan(item.getString("name"),item.getString("mdx"),fulltext,progress);
-                        else library.importDictionary(item.getString("name"),item.getString("mdx"),mdd,fulltext,progress);
-                        done++;
-                        android.util.Log.i("Kotoba","Imported "+title+" in "+(System.currentTimeMillis()-started)+"ms");
-                    }catch(Throwable e){
-                        failed++;
-                        android.util.Log.w("Kotoba","Import failed "+title,e);
-                        event("import-error",new JSONObject().put("title",title).put("error",e.getMessage()==null?e.toString():e.getMessage()));
-                    }
-                }
-                event("import-done",new JSONObject().put("done",done).put("failed",failed).put("cancelled",cancelImport.get()));
-            }catch(Exception e){event("import-error",e.getMessage());}
-            finally{
-                importing=false;
-                runOnUiThread(()->getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON));
-            }
-        });
     }
 
     @Override public void onRequestPermissionsResult(int request,String[] permissions,int[] results){
@@ -761,26 +596,6 @@ public class MainActivity extends Activity {
         });
     }
 
-    /** Every word of a list becomes a card in a folder, with a short definition from the dictionaries. */
-    JSONObject wordListToFolder(long list,long folder) throws Exception {
-        int added=0,missing=0,offset=0;
-        while(true){
-            JSONArray items=wordlists.items(list,offset,300,"");
-            if(items.length()==0)break;
-            for(int i=0;i<items.length();i++){
-                JSONObject it=items.getJSONObject(i);offset=it.getInt("pos");
-                JSONObject g=library.gloss(it.getString("word"));
-                String back=!it.optString("note").isEmpty()?it.getString("note"):g.optString("text","");
-                if(back.isEmpty()){missing++;continue;}
-                JSONObject data=new JSONObject().put("folder_id",folder).put("headword",it.getString("word")).put("reading",it.optString("reading")).put("back",back)
-                    .put("dict",g.optLong("dict",0)).put("dict_name",g.optString("dictionary")).put("page",g.optString("page")).put("kind","wordlist").put("review",true);
-                store.saveItem(data);added++;
-            }
-            if(offset%50==0)event("toast","Added "+added+"…");
-        }
-        return new JSONObject().put("added",added).put("missing",missing);
-    }
-
     synchronized Scans scans(){if(scans==null)scans=new Scans(new File(getExternalFilesDir(null),"scans"),ocr);return scans;}
 
     String displayName(Uri uri){
@@ -841,31 +656,9 @@ public class MainActivity extends Activity {
                 String rest=path.substring(3);
                 int slash=rest.indexOf('/');
                 if(slash<0)return response("text/plain",new byte[0],404,null);
-                long dict=Long.parseLong(rest.substring(0,slash));
-                String name=rest.substring(slash+1);
-                if(name.startsWith("item-")&&name.endsWith(".card")){
-                    JSONObject item=store.item(Long.parseLong(name.substring(5,name.length()-5)));
-                    String body=item.getString("back_html").isEmpty()?"<div class=\"kotoba-plain\">"+Store.escape(item.getString("back")).replace("\n","<br>")+"</div>":item.getString("back_html");
-                    String page="<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><link rel=\"stylesheet\" href=\"/entry-base.css\"></head><body class=\"kotoba-entry kotoba-card\">"+body+"</body></html>";
-                    return response("text/html",page.getBytes(StandardCharsets.UTF_8),200,ENTRY_CSP);
-                }
-                if(name.endsWith(".entry")){
-                    long rec=Long.parseLong(name.substring(0,name.length()-6));
-                    return response("text/html",entryPage(rec).getBytes(StandardCharsets.UTF_8),200,ENTRY_CSP);
-                }
-                byte[] bytes=name.startsWith("files/")?extras.file(dict,name):library.resource(dict,name);
-                if(bytes==null)bytes=extras.file(dict,"files/"+name.substring(name.lastIndexOf('/')+1));
-                if(bytes==null)return response("text/plain",("Missing: "+name).getBytes(StandardCharsets.UTF_8),404,null);
-                String mime=Library.mime(name);
-                if(mime.equals("text/css")&&!library.isYomitan(dict))bytes=MarkupFix.css(new String(bytes,StandardCharsets.UTF_8)).getBytes(StandardCharsets.UTF_8);
-                if(mime.equals("text/html")){
-                    // Appendix pages: same treatment as entries (no scripts, renderable markup, base styles).
-                    String h=MarkupFix.html(new String(bytes,StandardCharsets.UTF_8));
-                    h=h.replaceAll("(?is)<script\\b.*?</script>","");
-                    if(!h.contains("entry-base.css"))h="<link rel=\"stylesheet\" href=\"/entry-base.css\">"+h.replaceFirst("(?i)<body([^>]*)>","<body$1 class=\"kotoba-entry\">");
-                    return response(mime,h.getBytes(StandardCharsets.UTF_8),200,ENTRY_CSP);
-                }
-                return response(mime,bytes,200,null);
+                Object[] f=routes.dictFile(Long.parseLong(rest.substring(0,slash)),rest.substring(slash+1));
+                if(f==null)return response("text/plain",("Missing: "+rest).getBytes(StandardCharsets.UTF_8),404,null);
+                return response((String)f[0],(byte[])f[1],200,f[2]!=null?ENTRY_CSP:null);
             }
             String asset=path.equals("/")?"index.html":path.substring(1);
             if(!asset.matches("[a-zA-Z0-9_.-]+"))return response("text/plain",new byte[0],404,null);
@@ -875,12 +668,6 @@ public class MainActivity extends Activity {
             android.util.Log.w("Kotoba","serve "+path,e);
             return response("text/plain",String.valueOf(e.getMessage()).getBytes(StandardCharsets.UTF_8),404,null);
         }
-    }
-
-    String entryPage(long rec) throws Exception {
-        String html=MarkupFix.html(library.recordHtml(rec));
-        return "<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
-            +"<link rel=\"stylesheet\" href=\"/entry-base.css\"></head><body class=\"kotoba-entry\">"+html+"</body></html>";
     }
 
     static byte[] read(InputStream in,int limit) throws IOException {
@@ -896,7 +683,7 @@ public class MainActivity extends Activity {
     }
 
     @Override protected void onDestroy(){
-        if(importing)cancelImport.set(true);
+        if(routes!=null&&routes.importing)routes.cancelImport.set(true);
         super.onDestroy();
     }
 }
