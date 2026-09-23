@@ -87,22 +87,13 @@ public class Sync {
         int added=0,updated=0,deleted=0,reviews=0;
         db.beginTransaction();
         try{
-            // Deletions newer than the local copy win.
+            // Deleted cards newer than the local copy go first. Deleted folders wait until the cards are merged: a card
+            // moved out of a folder just before the folder was deleted (Jp → JP, then delete Jp) must arrive in its new
+            // folder, not be swept into the Inbox with the folder.
             JSONArray dels=in.optJSONArray("deleted");
             if(dels!=null)for(int i=0;i<dels.length();i++){
                 JSONObject d=dels.getJSONObject(i);
-                String uid=d.getString("uid"),kind=d.getString("kind");long at=d.getLong("at");
-                if(!kind.equals("items")&&!kind.equals("folders"))continue;
-                JSONArray local=Store.rows(db,"SELECT id,changed FROM "+kind+" WHERE uid=?",uid);
-                if(local.length()>0&&local.getJSONObject(0).getLong("changed")<=at){
-                    long id=local.getJSONObject(0).getLong("id");
-                    if(kind.equals("folders")){
-                        if(id==1)continue;// the Inbox stays
-                        db.execSQL("UPDATE items SET folder_id=1 WHERE folder_id=?",new Object[]{id});
-                    }else db.execSQL("DELETE FROM reviews WHERE item_id=?",new Object[]{id});
-                    db.execSQL("DELETE FROM "+kind+" WHERE id=?",new Object[]{id});deleted++;
-                }
-                db.execSQL("INSERT OR IGNORE INTO sync_deleted(uid,kind,at) VALUES(?,?,?)",new Object[]{uid,kind,at});
+                if(d.getString("kind").equals("items"))deleted+=applyDeletion(d);
             }
             java.util.Set<String> gone=new java.util.HashSet<>();
             try(Cursor c=db.rawQuery("SELECT uid FROM sync_deleted",null)){while(c.moveToNext())gone.add(c.getString(0));}
@@ -162,6 +153,11 @@ public class Sync {
                 }
             }
 
+            if(dels!=null)for(int i=0;i<dels.length();i++){
+                JSONObject d=dels.getJSONObject(i);
+                if(d.getString("kind").equals("folders"))deleted+=applyDeletion(d);
+            }
+
             // Review history: every answer from every device, once.
             JSONArray revs=in.optJSONArray("reviews");
             if(revs!=null)for(int i=0;i<revs.length();i++){
@@ -175,6 +171,26 @@ public class Sync {
             db.setTransactionSuccessful();
         }finally{db.endTransaction();}
         return new JSONObject().put("added",added).put("updated",updated).put("deleted",deleted).put("reviews",reviews);
+    }
+
+    /** Applies one of another device's deletions if it's newer than the local copy; returns 1 when something went. */
+    int applyDeletion(JSONObject d) throws Exception {
+        String uid=d.getString("uid"),kind=d.getString("kind");long at=d.getLong("at");
+        if(!kind.equals("items")&&!kind.equals("folders"))return 0;
+        int n=0;
+        JSONArray local=Store.rows(db,"SELECT id,changed FROM "+kind+" WHERE uid=?",uid);
+        if(local.length()>0&&local.getJSONObject(0).getLong("changed")<=at){
+            long id=local.getJSONObject(0).getLong("id");
+            if(kind.equals("folders")){
+                if(id==1)return 0;// the Inbox stays
+                // Cards still in it go to the Inbox. That isn't an edit of the card: its time moves on by 1 ms only, so a
+                // real change made elsewhere (moving it to another folder) still wins.
+                db.execSQL("UPDATE items SET folder_id=1,changed=changed+1 WHERE folder_id=?",new Object[]{id});
+            }else db.execSQL("DELETE FROM reviews WHERE item_id=?",new Object[]{id});
+            db.execSQL("DELETE FROM "+kind+" WHERE id=?",new Object[]{id});n=1;
+        }
+        db.execSQL("INSERT OR IGNORE INTO sync_deleted(uid,kind,at) VALUES(?,?,?)",new Object[]{uid,kind,at});
+        return n;
     }
 
     /**
