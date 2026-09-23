@@ -214,72 +214,137 @@ function leaveSubs(){
 function resumeAfterHover(){if(st.pausedByHover){st.pausedByHover=false;send({cmd:'play'});}}
 function hidePop(){
   pop.el.hidden=true;pop.pinned=false;pop.key=null;
+  closeFrom(1);
   document.querySelectorAll('.ch.hl').forEach(x=>x.classList.remove('hl'));
 }
+// Popups stack: stack[0] is the subtitle word's; a word hovered inside a definition opens the next one.
+const stack=[pop];pop.level=0;
+function closeFrom(level){while(stack.length>level){const P=stack.pop();P.el.remove();}}
+function popupAt(level){
+  closeFrom(level+1);
+  if(stack[level])return stack[level];
+  const el=document.createElement('div');el.className='kpop child';el.hidden=true;$('stage').appendChild(el);
+  const P={el,level,key:null,res:null,cue:null};stack[level]=P;wire(P);return P;
+}
 const shortName=(n)=>String(n).replace(/\s*[\[(（][\d\-. v]+[\])）]\s*$/,'').replace(/^(小学館|三省堂|研究社|大修館|旺文社)\s*/,'').replace(/\s*第.版$/,'').slice(0,14);
-async function showPop(res,cue,r1,r2){
+async function showPop(res,cue,r1,r2,P=pop){
   const key=res.key+'|'+res.matched;
-  pop.res=res;pop.cue=cue;
-  if(pop.key!==key){
-    pop.key=key;
+  P.res=res;P.cue=cue;
+  if(P.key!==key){
+    P.key=key;closeFrom(P.level+1);
     // One definition per dictionary, in your dictionary order.
     const byDict=[];for(const it of res.items)if(!byDict.some(x=>x.dict===it.dict)&&it.kind!=='kanji')byDict.push(it);
     const items=byDict.slice(0,4);
     // The word as the subtitle writes it (門口), with the dictionary's form when that differs (门口, 食べる).
     const shown=res.written&&res.written!==res.key?res.written:res.key;
-    pop.el.innerHTML=`<div class="p-head"><b class="p-word">${esc(shown)}</b>${shown!==res.key?`<span class="p-key">${esc(res.key)}</span>`:''}<span class="p-freq"></span><span class="p-saved"></span></div>
+    P.el.innerHTML=`<div class="p-head"><b class="p-word">${esc(shown)}</b>${shown!==res.key?`<span class="p-key">${esc(res.key)}</span>`:''}<span class="p-freq"></span><span class="p-saved"></span><button class="p-size" data-p="size" title="Bigger / smaller popup"></button></div>
       ${res.explain?`<div class="p-explain">${esc(res.explain)}</div>`:''}
       <div class="p-defs">${items.map((it,n)=>`<div class="p-def" data-n="${n}"><div class="p-dict">${esc(shortName(it.dictionary))}${it.page&&it.page!==it.key?` · ${esc(it.page)}`:''}</div><div class="p-text">…</div></div>`).join('')}</div>
       <div class="p-full" hidden></div>
       <div class="p-actions"><button data-p="card">＋ Card</button><button data-p="full">Full entry</button><button data-p="main">Open in Kotoba</button><button data-p="copy">Copy</button></div>`;
-    pop.items=items;
+    P.items=items;
     api('gloss.rec',{recs:items.map(x=>x.rec),max:360}).then(g=>{
-      if(pop.key!==key)return;
-      g.forEach((x,n)=>{const el=pop.el.querySelector(`.p-def[data-n="${n}"] .p-text`);if(el)el.textContent=x.text||'—';});
-      place(r1,r2);
+      if(P.key!==key)return;
+      // Definitions are drawn a character at a time, so a word in them can be looked up too.
+      g.forEach((x,n)=>{const el=P.el.querySelector(`.p-def[data-n="${n}"] .p-text`);if(el)el.innerHTML=x.text?chars(x.text,'dch'):'—';});
+      place(P);
     }).catch(()=>{});
     Promise.all([api('freq',{key:res.key,reading:''}),dictGroups()]).then(([f,groups])=>{
-      if(pop.key!==key)return;
+      if(P.key!==key)return;
       // Only frequency lists in the subtitle's language (JPDB ranks mean nothing for a Cantonese word).
-      const want={ja:'Japanese',zh:'Chinese',ko:'Korean',th:'Thai',ru:'Russian'}[st.lang];
+      const want={ja:'Japanese',zh:'Chinese',ko:'Korean',th:'Thai',ru:'Russian'}[P.level?P.lang:st.lang];
       const fq=f.find(x=>x.mode==='freq'&&want&&(groups[x.dict]||'').split('/')[0]===want);
-      if(fq)pop.el.querySelector('.p-freq').innerHTML=`${bars(fq.value)}<span>${esc(fq.display)}</span>`;
+      if(fq)P.el.querySelector('.p-freq').innerHTML=`${bars(fq.value)}<span>${esc(fq.display)}</span>`;
     }).catch(()=>{});
     api('item.similar',{headword:res.key,reading:''}).then(s=>{
-      if(pop.key!==key||!s.length)return;
-      pop.el.querySelector('.p-saved').textContent='★ '+s[0].folder;
+      if(P.key!==key||!s.length)return;
+      P.el.querySelector('.p-saved').textContent='★ '+s[0].folder;
     }).catch(()=>{});
   }
-  pop.el.hidden=false;
-  place(r1,r2);
+  P.el.classList.toggle('big',!!store.get('player.popBig',false));
+  P.el.hidden=false;
+  P.r1=r1;P.r2=r2;
+  place(P);
 }
 let groupsCache=null;
 function dictGroups(){return groupsCache||(groupsCache=api('dicts').then(ds=>Object.fromEntries(ds.map(d=>[d.id,d.grp||'Japanese']))));}
 function bars(rank){const l=!rank?0:rank<=2000?4:rank<=8000?3:rank<=25000?2:1;return `<span class="fbars l${l}"><i></i><i></i><i></i><i></i></span>`;}
-function place(r1,r2){
-  const el=pop.el,W=innerWidth,H=innerHeight;
+function place(P){
+  const {el,r1,r2}=P;if(!r1)return;
+  const W=innerWidth,H=innerHeight;
   const w=el.offsetWidth,h=el.offsetHeight;
+  if(P.level){
+    // A popup from a definition sits beside the word, below it when there's room.
+    let left=Math.min(W-w-12,Math.max(12,r1.left-20));
+    let top=r2.bottom+8;if(top+h>H-12)top=Math.max(12,r1.top-h-8);
+    el.style.left=left+'px';el.style.top=top+'px';return;
+  }
   const cx=(r1.left+r2.right)/2;
   let left=Math.min(W-w-12,Math.max(12,cx-w/2));
   let top=r1.top-h-14;if(top<12)top=Math.min(H-h-12,r1.bottom+14);
   el.style.left=left+'px';el.style.top=top+'px';
 }
-pop.el.addEventListener('mouseenter',()=>clearTimeout(pop.hideT));
-pop.el.addEventListener('mouseleave',()=>{if(!pop.pinned)leaveSubs();});
-pop.el.addEventListener('click',async(e)=>{
+/** The language of a word in a definition (朝鮮語辞典 explains Korean in Japanese), for its lookup and frequency. */
+function textLang(t){
+  const c=t.trim()[0]||'';
+  if(/[\uac00-\ud7a3]/.test(c))return 'ko';
+  if(/[\u3040-\u30ff]/.test(c))return 'ja';
+  if(/[\u0e00-\u0e7f]/.test(c))return 'th';
+  if(/[\u0400-\u04ff]/.test(c))return 'ru';
+  if(/[\u4e00-\u9fff]/.test(c))return st.lang==='zh'?'zh':'ja';
+  return '';
+}
+let defT=0,defAt=null,lastPopPoint=null;
+function wire(P){
+  const el=P.el;
+  el.addEventListener('mouseenter',()=>clearTimeout(pop.hideT));
+  el.addEventListener('mouseleave',(e)=>{if(!pop.pinned&&!(e.relatedTarget&&e.relatedTarget.closest&&e.relatedTarget.closest('.kpop')))leaveSubs();});
+  el.addEventListener('mousemove',(e)=>{
+    lastPopPoint={x:e.clientX,y:e.clientY};
+    if(!KotobaHover.matches(e))return;
+    const span=e.target.closest('.dch');if(!span)return;
+    const box=span.closest('.p-text');const at=P.level+':'+box.parentElement.dataset.n+':'+span.dataset.i;
+    if(at===defAt)return;defAt=at;
+    clearTimeout(defT);defT=setTimeout(()=>lookupInDef(P,box,+span.dataset.i,at),90);
+  });
+  el.addEventListener('click',(e)=>onPopClick(P,e));
+}
+async function lookupInDef(P,box,i,at){
+  const spans=[...box.querySelectorAll('.dch')];
+  const text=spans.slice(i,i+24).map(x=>x.textContent).join('');
+  if(!text.trim()||/^[\s\p{P}\d]/u.test(text))return;
+  const lang=textLang(text);
+  let res;try{res=await api('lookup',{text,lang:lang==='zh'||lang==='th'?lang:''});}catch(e){return;}
+  if(defAt!==at||!res.items.length)return;
+  P.el.querySelectorAll('.dch.hl').forEach(x=>x.classList.remove('hl'));
+  const n=Array.from(res.matched||text[0]).length;
+  const hit=spans.slice(i,i+n);hit.forEach(x=>x.classList.add('hl'));
+  res.written=hit.map(x=>x.textContent).join('');
+  const C=popupAt(P.level+1);C.lang=lang;C.cue=P.cue;
+  showPop(res,P.cue,hit[0].getBoundingClientRect(),hit[hit.length-1].getBoundingClientRect(),C);
+}
+wire(pop);
+async function onPopClick(P,e){
   pop.pinned=true;
   const b=e.target.closest('[data-p]');if(!b)return;
-  const res=pop.res,it=pop.items&&pop.items[0];
+  const res=P.res,it=P.items&&P.items[0];
+  if(b.dataset.p==='size'){
+    // Compact by default (first dictionary, two lines); ⤢ shows every dictionary and the other actions.
+    const big=!P.el.classList.contains('big');
+    store.set('player.popBig',big);
+    for(const Q of stack){Q.el.classList.toggle('big',big);if(!big)Q.el.querySelector('.p-full')&&(Q.el.querySelector('.p-full').hidden=true);place(Q);}
+    return;
+  }
   if(b.dataset.p==='copy'){navigator.clipboard.writeText(res.key).catch(()=>{});osd('Copied');}
   if(b.dataset.p==='main')send({cmd:'lookupInMain',word:res.key});
   if(b.dataset.p==='full'&&it){
-    const full=pop.el.querySelector('.p-full');
+    const full=P.el.querySelector('.p-full');
     full.hidden=!full.hidden;
-    if(!full.hidden)full.innerHTML=pop.items.map((x,n)=>`<button class="p-tab ${n===0?'on':''}" data-rec="${x.rec}" data-dict="${x.dict}">${esc(shortName(x.dictionary))}</button>`).join('')+`<iframe src="/d/${it.dict}/${it.rec}.entry"></iframe>`;
+    if(!full.hidden)full.innerHTML=P.items.map((x,n)=>`<button class="p-tab ${n===0?'on':''}" data-rec="${x.rec}" data-dict="${x.dict}">${esc(shortName(x.dictionary))}</button>`).join('')+`<iframe src="/d/${it.dict}/${it.rec}.entry"></iframe>`;
   }
   if(b.classList.contains('p-tab')){
-    pop.el.querySelectorAll('.p-tab').forEach(x=>x.classList.toggle('on',x===b));
-    pop.el.querySelector('.p-full iframe').src=`/d/${b.dataset.dict}/${b.dataset.rec}.entry`;
+    P.el.querySelectorAll('.p-tab').forEach(x=>x.classList.toggle('on',x===b));
+    P.el.querySelector('.p-full iframe').src=`/d/${b.dataset.dict}/${b.dataset.rec}.entry`;
   }
   if(b.dataset.p==='card'&&it){
     try{
@@ -287,25 +352,30 @@ pop.el.addEventListener('click',async(e)=>{
       const reading=it.page&&it.page!==res.key&&/^[぀-ヿ가-힣a-zāáǎàēéěèīíǐìōóǒòūúǔùü\s]+$/i.test(it.page)?it.page:'';
       const similar=await api('item.similar',{headword:res.key,reading});
       if(similar.length&&!confirm(`“${res.key}” is already a card (${similar[0].dict_name||'notes'} · ${similar[0].folder}). Save another?`))return;
-      await api('item.save',{folder_id:store.get('player.folder',1),headword:st.lang==='zh'&&res.written?res.written:res.key,reading,back:g.text,dict:it.dict,dict_name:it.dictionary,page:it.page||res.key,
-        kind:'entry',context:(pop.cue?pop.cue.text:'').replace(/\n/g,' '),note:`${videoName} · ${fmt(pop.cue?pop.cue.start:st.t)}`,review:true});
-      pop.el.querySelector('.p-saved').textContent='★ saved';osd('Saved “'+res.key+'”');
+      await api('item.save',{folder_id:store.get('player.folder',1),headword:st.lang==='zh'&&res.written&&!P.level?res.written:res.key,reading,back:g.text,dict:it.dict,dict_name:it.dictionary,page:it.page||res.key,
+        kind:'entry',context:(P.cue?P.cue.text:'').replace(/\n/g,' '),note:`${videoName} · ${fmt(P.cue?P.cue.start:st.t)}`,review:true});
+      P.el.querySelector('.p-saved').textContent='★ saved';osd('Saved “'+res.key+'”');
     }catch(err){osd(err.message);}
   }
-});
+}
 for(const id of ['sub-main','t-list']){
   $(id).addEventListener('mousemove',onHover);
   $(id).addEventListener('mouseleave',leaveSubs);
 }
 document.addEventListener('keydown',(e)=>{
-  if(!KotobaHover.isKey(e)||!lastHoverPoint)return;
+  if(!KotobaHover.isKey(e))return;
+  // Pressing the key over a popup's definition looks up the word under the pointer there.
+  const inPop=lastPopPoint&&document.elementFromPoint(lastPopPoint.x,lastPopPoint.y);
+  if(inPop&&inPop.closest('.kpop')){inPop.dispatchEvent(new MouseEvent('mousemove',{bubbles:true,clientX:lastPopPoint.x,clientY:lastPopPoint.y,shiftKey:e.shiftKey,altKey:e.altKey,ctrlKey:e.ctrlKey,metaKey:e.metaKey}));return;}
+  if(!lastHoverPoint)return;
   const target=document.elementFromPoint(lastHoverPoint.x,lastHoverPoint.y);
   if(target)onHover({target,clientX:lastHoverPoint.x,clientY:lastHoverPoint.y,
     shiftKey:e.shiftKey,altKey:e.altKey,ctrlKey:e.ctrlKey,metaKey:e.metaKey});
 });
-document.addEventListener('keyup',(e)=>{if(KotobaHover.isKey(e))cancelHover();});
+// Letting go of the key closes the popup, unless the pointer is in one (reading it, or looking up inside it).
+document.addEventListener('keyup',(e)=>{if(KotobaHover.isKey(e)&&!document.querySelector('.kpop:hover'))cancelHover();});
 window.addEventListener('blur',cancelHover);
-document.addEventListener('mousedown',(e)=>{if(!pop.el.hidden&&!e.target.closest('#pop')&&!e.target.closest('.ch')){hidePop();resumeAfterHover();}});
+document.addEventListener('mousedown',(e)=>{if(!pop.el.hidden&&!e.target.closest('.kpop')&&!e.target.closest('.ch')){hidePop();resumeAfterHover();}});
 
 // ---------- transcript ----------
 function renderTranscript(){

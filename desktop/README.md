@@ -46,13 +46,22 @@ categories, read chapters) by itself. Covers come from `mihon-covers/` in the da
 
 ## Player
 
+![Hovering a Korean subtitle: the compact popup](../docs/images/mac-player.jpg)
+
 - Opens anything mpv plays. Subtitles are found beside the video (`Name.srt`, `Name.zh-HK.srt`, `subtitles/Name.srt`)
   and inside it (text tracks, extracted with ffmpeg and cached). For hardcoded subtitles, choose
   **OCR hardcoded subtitles** in the 字幕 menu. It reads the bottom of the local video every two seconds and displays
   recognized text for lookup. OCR accuracy depends on the video and language; picture subtitle tracks are not read as tracks.
+- No subtitles in the spoken language? [Subtitle Generator](https://github.com/Leow210/Subtitle_Generator) transcribes
+  the audio into an `.srt`. Save it beside the video as `Name.srt` (or `Name.ko.srt`, `Name.zh-HK.srt`) and the player
+  picks it up.
 - Hold Shift and hover over the main line or transcript to open a lookup popup. Settings › Reading can change
   the key to Option, Control, Command, or no key. A second line (e.g. English) can show underneath. The lookup language follows the
   track (ja, zh, ko, th, ru) and can be changed in the 字幕 menu. Chinese is tried as written, then simplified.
+- The popup is compact by default: the word, its grammar breakdown, the first dictionary's definition in two lines and
+  ＋ Card. ⤢ expands it to every dictionary, Full entry, Open in Kotoba and Copy; the size you pick is remembered.
+- Words inside a definition can be looked up too: hold Shift over one and a second popup opens beside it (and so on).
+  Releasing Shift while the pointer is over a popup keeps it open; clicking elsewhere closes them all.
 - Keys: Space play/pause · ←/→ 5 s (⇧ 1 s) · A/D previous/next line · S replay line · P pause after each line ·
   T transcript · Z/X subtitle delay · [ ] speed · −/= subtitle size · F full screen · M mute.
 - ＋ Card saves the word with the subtitle line as its example and the episode and time as a note.
@@ -64,7 +73,8 @@ Firefox with Tampermonkey installed and accept the install. On YouTube and GagaO
 the helper redraws the current caption as text, and holding **Shift** over a word asks Kotoba for Mac for it. The
 popup shows your dictionaries' definitions (in your order), frequency, whether it's already a card, ＋ Card (the
 caption line becomes the example, the video title and time the note) and Open in Kotoba. The video pauses while a
-word is shown (⏸ on lookup in the helper's toolbar). Kotoba for Mac must be open.
+word is shown (⏸ on lookup in the helper's toolbar). Kotoba for Mac must be open. The popup is compact with ⤢ to
+expand, as in the player (helper 0.3.0; reinstall from the Video tab to update an older copy).
 
 The helper talks to Kotoba on 127.0.0.1:47823 through Tampermonkey (`GM_xmlhttpRequest`) with a key built into the
 installed script; that address only answers lookups, definitions, frequency and card saves. Reinstall the helper

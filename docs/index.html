@@ -51,12 +51,17 @@ h2 small{display:block;font:600 13px/1.4 Inter,sans-serif;letter-spacing:.08em;t
 .fact{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
 .fact b{display:block;font-size:15.5px;margin-bottom:4px}
 .fact span{color:var(--ink2);font-size:14.5px}
+.screen{border-radius:14px;overflow:hidden;box-shadow:var(--shadow);border:1px solid var(--line);background:#000}
+.screen img{display:block;width:100%;height:auto}
+.mac-wide{margin-top:22px}
+.mac-two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:14px}
 pre{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;overflow-x:auto;font:13.5px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace}
 .note{font-size:14px;color:var(--muted)}
 footer{padding:40px 0 60px;color:var(--muted);font-size:14px;text-align:center;border-top:1px solid var(--line);margin-top:56px}
 @media (max-width:820px){
   .videos{grid-template-columns:1fr;max-width:340px;margin-left:auto;margin-right:auto}
   .feature{grid-template-columns:1fr;gap:22px}
+  .mac-two{grid-template-columns:1fr}
   .feature.flip .text{order:0}
   .grid4{grid-template-columns:repeat(2,minmax(0,1fr))}
   .facts{grid-template-columns:1fr}
@@ -187,6 +192,20 @@ footer{padding:40px 0 60px;color:var(--muted);font-size:14px;text-align:center;b
       <div class="fact"><b>Books and comics</b><span>Read EPUB, TXT and CBZ files, including Mihon downloads. In comics, tap recognized text inside a speech bubble to look it up.</span></div>
       <div class="fact"><b>Spaced repetition</b><span>Reviews use FSRS-5. Folders work as decks, and cards can be exported to Anki or CSV.</span></div>
       <div class="fact"><b>Stays offline</b><span>There is no account or internet permission. Even text recognition runs on the phone.</span></div>
+    </div>
+  </section>
+
+  <section id="mac">
+    <h2><small>Kotoba for Mac</small>Watch with subtitles you can look up</h2>
+    <div class="text">
+      <p>The Mac app runs the same Java code as the phone, with the same dictionaries, search and cards, and syncs cards and reviews with the phone through a shared folder (Syncthing). Its video player is built on mpv. Hold Shift over a word in the subtitles to look it up; conjugations are broken down (영혼까지 → 영혼 + 까지), and ＋ Card saves the word with the line as context.</p>
+      <p>The popup stays small by default so it doesn't cover the scene; ⤢ expands it to every dictionary, and words inside a definition can be looked up in a second popup. The Firefox helper uses the same popup for YouTube and other streaming captions.</p>
+      <p>Most videos have no subtitles in the spoken language. <a href="https://github.com/Leow210/Subtitle_Generator">Subtitle Generator</a>, my companion project, creates them: save its <code>.srt</code> next to the video with the same name (<code>Episode.srt</code> or <code>Episode.ko.srt</code>) and Kotoba loads it automatically. Embedded subtitle tracks work as well.</p>
+    </div>
+    <figure class="mac-wide"><div class="screen"><img src="images/mac-player.jpg" alt="A Korean drama paused on a subtitle, with a small popup explaining 영혼까지 as 영혼 + 까지" loading="lazy"></div><figcaption>Hover a subtitle: the compact popup</figcaption></figure>
+    <div class="mac-two">
+      <figure><div class="screen"><img src="images/mac-player-expanded.jpg" alt="The same popup expanded to show four dictionaries" loading="lazy"></div><figcaption>⤢ shows every dictionary</figcaption></figure>
+      <figure><div class="screen"><img src="images/mac-search.png" alt="Search results for けんのう with a row for each word: 権能, 献納, 賢能, 検納" loading="lazy"></div><figcaption>Homophones get their own rows</figcaption></figure>
     </div>
   </section>
 

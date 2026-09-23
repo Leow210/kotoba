@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kotoba Video Text
 // @namespace    app.kotoba.desktop
-// @version      0.2.0
+// @version      0.3.0
 // @description  Look up YouTube and GagaOOLala subtitles in Kotoba for Mac: hold Shift over a word.
 // @match        https://www.youtube.com/watch*
 // @match        https://www.gagaoolala.com/*/videos/*
@@ -59,20 +59,31 @@
     #kotoba-video-text:empty { display: none; }
     #kotoba-video-text .k-ch { border-radius: 4px; }
     #kotoba-video-text .k-ch.k-hl { background: rgba(124,194,160,.5); box-shadow: 0 0 0 2px rgba(124,194,160,.5); }
-    #kotoba-video-pop { position: fixed; z-index: 2147483646; width: min(440px, 86vw); max-height: min(62vh, 520px); overflow: auto; pointer-events: auto;
-      background: rgba(252,250,245,.98); color: #1d211f; border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.45); padding: 13px 15px 11px;
-      font: 14px/1.55 -apple-system,BlinkMacSystemFont,sans-serif; user-select: text; -webkit-user-select: text; text-align: left; }
+    #kotoba-video-pop { position: fixed; z-index: 2147483646; width: min(300px, 80vw); max-height: min(62vh, 520px); overflow: auto; pointer-events: auto;
+      background: rgba(252,250,245,.98); color: #1d211f; border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,.45); padding: 9px 12px 9px;
+      font: 13px/1.5 -apple-system,BlinkMacSystemFont,sans-serif; user-select: text; -webkit-user-select: text; text-align: left; }
     #kotoba-video-pop[hidden] { display: none; }
-    #kotoba-video-pop .k-head { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; }
-    #kotoba-video-pop .k-word { font: 600 25px/1.3 "Hiragino Mincho ProN","Songti TC","AppleMyungjo",serif; }
-    #kotoba-video-pop .k-key { font: 15px "Hiragino Mincho ProN","Songti TC",serif; color: #72766f; }
-    #kotoba-video-pop .k-freq { font-size: 12px; color: #72766f; }
-    #kotoba-video-pop .k-saved { margin-left: auto; color: #a8841e; font-size: 12.5px; font-weight: 600; }
-    #kotoba-video-pop .k-explain { color: #2f6b55; font-size: 12.5px; }
-    #kotoba-video-pop .k-dict { font-size: 11.5px; font-weight: 700; color: #2f6b55; margin-top: 8px; }
-    #kotoba-video-pop .k-text { font: 15px/1.6 "Hiragino Mincho ProN","Songti TC","AppleMyungjo",serif; color: #2c302d; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
-    #kotoba-video-pop .k-actions { display: flex; gap: 6px; margin-top: 11px; flex-wrap: wrap; }
-    #kotoba-video-pop .k-actions button { font: 600 12.5px -apple-system,BlinkMacSystemFont,sans-serif; border: 0; background: #e2ece5; color: #2f6b55; border-radius: 9px; padding: 6px 11px; cursor: pointer; }
+    /* Compact by default (first dictionary, two lines, ＋ Card); .k-big shows everything. */
+    #kotoba-video-pop.k-big { width: min(440px, 86vw); padding: 13px 15px 11px; font-size: 14px; line-height: 1.55; }
+    #kotoba-video-pop .k-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+    #kotoba-video-pop .k-word { font: 600 19px/1.3 "Hiragino Mincho ProN","Songti TC","AppleMyungjo",serif; }
+    #kotoba-video-pop.k-big .k-word { font-size: 25px; }
+    #kotoba-video-pop .k-key { font: 13px "Hiragino Mincho ProN","Songti TC",serif; color: #72766f; }
+    #kotoba-video-pop.k-big .k-key { font-size: 15px; }
+    #kotoba-video-pop .k-freq { font-size: 11.5px; color: #72766f; }
+    #kotoba-video-pop .k-saved { margin-left: auto; color: #a8841e; font-size: 12px; font-weight: 600; }
+    #kotoba-video-pop .k-size { align-self: center; margin-left: auto; border: 0; background: #ece7dc; color: #3d433f; border-radius: 7px; width: 26px; height: 26px; font-size: 17px; line-height: 26px; padding: 0; cursor: pointer; }
+    #kotoba-video-pop .k-saved:not(:empty) + .k-size { margin-left: 6px; }
+    #kotoba-video-pop .k-explain { color: #2f6b55; font-size: 12px; }
+    #kotoba-video-pop .k-dict { font-size: 11px; font-weight: 700; color: #2f6b55; margin-top: 5px; }
+    #kotoba-video-pop.k-big .k-dict { margin-top: 8px; }
+    #kotoba-video-pop:not(.k-big) .k-more { display: none; }
+    #kotoba-video-pop .k-text { font: 13.5px/1.5 "Hiragino Mincho ProN","Songti TC","AppleMyungjo",serif; color: #2c302d; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    #kotoba-video-pop.k-big .k-text { font-size: 15px; line-height: 1.6; -webkit-line-clamp: 5; }
+    #kotoba-video-pop .k-actions { display: flex; gap: 6px; margin-top: 7px; flex-wrap: wrap; }
+    #kotoba-video-pop.k-big .k-actions { margin-top: 11px; }
+    #kotoba-video-pop .k-actions button { font: 600 12px -apple-system,BlinkMacSystemFont,sans-serif; border: 0; background: #e2ece5; color: #2f6b55; border-radius: 8px; padding: 4px 10px; cursor: pointer; }
+    #kotoba-video-pop.k-big .k-actions button { font-size: 12.5px; border-radius: 9px; padding: 6px 11px; }
     #kotoba-video-pop .k-actions button:first-child { background: #2f6b55; color: #fff; }
     #kotoba-video-pop .k-note { color: #72766f; font-size: 13px; }
   `;
@@ -187,8 +198,8 @@
     showPop(res, spans[0]);
   }
   function showMessage(message, anchor) {
-    pop.innerHTML = `<div class="k-note">${esc(message)}</div>`;
-    pop.hidden = false; place(anchor);
+    pop.innerHTML = `<div class="k-note">${esc(message)}</div>`; pop.classList.remove('k-big');
+    pop.hidden = false; pop.anchor = anchor; place(anchor);
   }
   const shortName = n => String(n).replace(/\s*[\[(（][\d\-. v]+[\])）]\s*$/, '').replace(/^(小学館|三省堂|研究社|大修館|旺文社)\s*/, '').replace(/\s*第.版$/, '').slice(0, 16);
   let groups = null;
@@ -197,12 +208,13 @@
     const byDict = []; for (const it of res.items) if (!byDict.some(x => x.dict === it.dict) && it.kind !== 'kanji') byDict.push(it);
     const items = byDict.slice(0, 4);
     const written = res.written && res.written !== res.key ? res.written : res.key;
-    pop.innerHTML = `<div class="k-head"><b class="k-word">${esc(written)}</b>${written !== res.key ? `<span class="k-key">${esc(res.key)}</span>` : ''}<span class="k-freq"></span><span class="k-saved"></span></div>
+    pop.innerHTML = `<div class="k-head"><b class="k-word">${esc(written)}</b>${written !== res.key ? `<span class="k-key">${esc(res.key)}</span>` : ''}<span class="k-freq"></span><span class="k-saved"></span><button class="k-size" data-k="size" title="Bigger / smaller popup">${big() ? '⤡' : '⤢'}</button></div>
       ${res.explain ? `<div class="k-explain">${esc(res.explain)}</div>` : ''}
-      ${items.map((it, n) => `<div class="k-dict">${esc(shortName(it.dictionary))}${it.page && it.page !== it.key ? ' · ' + esc(it.page) : ''}</div><div class="k-text" data-n="${n}">…</div>`).join('')}
-      <div class="k-actions"><button data-k="card">＋ Card</button><button data-k="open">Open in Kotoba</button><button data-k="copy">Copy</button></div>`;
+      ${items.map((it, n) => `<div class="${n ? 'k-more' : ''}"><div class="k-dict">${esc(shortName(it.dictionary))}${it.page && it.page !== it.key ? ' · ' + esc(it.page) : ''}</div><div class="k-text" data-n="${n}">…</div></div>`).join('')}
+      <div class="k-actions"><button data-k="card">＋ Card</button><button class="k-more" data-k="open">Open in Kotoba</button><button class="k-more" data-k="copy">Copy</button></div>`;
+    pop.classList.toggle('k-big', big());
     pop.items = items;
-    pop.hidden = false; place(anchor);
+    pop.hidden = false; pop.anchor = anchor; place(anchor);
     const v = videoEl();
     if (pauseOnLookup && v && !v.paused) { v.pause(); pausedByUs = true; }
     kotoba('gloss.rec', { recs: items.map(x => x.rec), max: 360 }).then(g => {
@@ -219,6 +231,7 @@
     }).catch(() => {});
     kotoba('item.similar', { headword: written, reading: '' }).then(s => { if (shown === res && s.length) pop.querySelector('.k-saved').textContent = '★ ' + s[0].folder; }).catch(() => {});
   }
+  const big = () => store.get('kotoba.popBig', '0') === '1';
   function place(anchor) {
     if (!anchor) return;
     const r = anchor.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
@@ -248,6 +261,11 @@
     pinned = true;
     const b = e.target.closest('[data-k]'); if (!b || !shown) return;
     const res = shown, it = pop.items && pop.items[0];
+    if (b.dataset.k === 'size') {
+      store.set('kotoba.popBig', big() ? '0' : '1');
+      pop.classList.toggle('k-big', big()); b.textContent = big() ? '⤡' : '⤢';
+      place(pop.anchor); return;
+    }
     if (b.dataset.k === 'copy') { navigator.clipboard.writeText(res.written || res.key).catch(() => {}); b.textContent = 'Copied'; }
     if (b.dataset.k === 'open') kotoba('show', { word: res.key }).catch(err => showMessage(err.message, text));
     if (b.dataset.k === 'card' && it) {

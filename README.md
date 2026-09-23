@@ -137,9 +137,20 @@ Tap a preview to play the video. Each one is silent and about 15–25 seconds lo
 
 ## Kotoba for Mac
 [`desktop/`](desktop/README.md) is a Mac companion app. It runs this app's own Java classes, so it has the same dictionaries, search and cards, plus:
-- a video player (mpv) whose subtitles (SRT files or embedded tracks) you hover to look words up;
+- a video player (mpv) whose subtitles (SRT/VTT/ASS files or embedded tracks) you hover with Shift to look words up. The popup is compact so it doesn't cover the scene, with ⤢ to show every dictionary; words inside a definition can be looked up the same way (a second popup opens beside it); and ＋ Card saves the word with the line as its example;
 - the book reader and the comic reader, with the Mihon webtoons mirrored from the phone;
-- a Firefox (Tampermonkey) helper that looks up streaming captions in Kotoba instead of Yomitan.
+- a Firefox (Tampermonkey) helper that looks up YouTube and other streaming captions in Kotoba instead of Yomitan.
+
+| Subtitle lookup | Expanded popup |
+|---|---|
+| ![Hovering 영혼까지 in a Korean drama](docs/images/mac-player.jpg) | ![The popup expanded to every dictionary](docs/images/mac-player-expanded.jpg) |
+
+| Search: one row per word | Entry with NHK audio and frequency |
+|---|---|
+| ![けんのう: 権能, 献納, 賢能, 検納](docs/images/mac-search.png) | ![権能 in 日本国語大辞典](docs/images/mac-entry.png) |
+
+### Subtitles for any video
+Most shows don't come with subtitles in the language being spoken. My other project, [Subtitle Generator](https://github.com/Leow210/Subtitle_Generator), transcribes a video's audio into native-language subtitles. Save the `.srt` next to the video with the same name (`Episode.srt`, or `Episode.ko.srt`) and Kotoba for Mac loads it, so every line can be looked up and turned into cards.
 
 ## Sync
 **Library › Sync** keeps cards, bookmarks, folders and reviews the same on the phone and the Mac, with no account or server. Each device writes `kotoba-<device>.json` to a folder that a sync tool (Syncthing) mirrors between them, and merges the other devices' files: the newest change wins and deletions carry over. Dictionaries are matched by title, so both devices need the same dictionaries. The phone syncs every minute while open and when you leave the app.
