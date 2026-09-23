@@ -178,8 +178,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
             }
         case "pickFile":
             let panel = NSOpenPanel()
-            panel.canChooseFiles = true
-            panel.canChooseDirectories = false
+            let folder = m["folder"] as? Bool ?? false
+            panel.canChooseFiles = !folder
+            panel.canChooseDirectories = folder
+            panel.canCreateDirectories = folder
+            if folder { panel.message = "Choose the folder your sync tool (Syncthing, Google Drive…) keeps in step with the phone" }
             if let ext = m["extensions"] as? [String] { panel.allowedContentTypes = ext.compactMap { .init(filenameExtension: $0) } }
             let purpose = m["purpose"] as? String ?? ""
             panel.beginSheetModal(for: window) { [weak self] r in

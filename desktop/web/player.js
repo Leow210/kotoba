@@ -163,6 +163,7 @@ async function lookupAt(lineEl,cue,i){
   const n=Array.from(res.matched||text[0]).length;
   const spans=[...lineEl.querySelectorAll('.ch')].slice(i,i+n);
   spans.forEach(x=>x.classList.add('hl'));
+  res.written=spans.map(x=>x.textContent).join('');
   showPop(res,cue,spans[0].getBoundingClientRect(),spans[spans.length-1].getBoundingClientRect());
 }
 function leaveSubs(){
@@ -184,7 +185,9 @@ async function showPop(res,cue,r1,r2){
     // One definition per dictionary, in your dictionary order.
     const byDict=[];for(const it of res.items)if(!byDict.some(x=>x.dict===it.dict)&&it.kind!=='kanji')byDict.push(it);
     const items=byDict.slice(0,4);
-    pop.el.innerHTML=`<div class="p-head"><b class="p-word">${esc(res.key)}</b><span class="p-freq"></span><span class="p-saved"></span></div>
+    // The word as the subtitle writes it (門口), with the dictionary's form when that differs (门口, 食べる).
+    const shown=res.written&&res.written!==res.key?res.written:res.key;
+    pop.el.innerHTML=`<div class="p-head"><b class="p-word">${esc(shown)}</b>${shown!==res.key?`<span class="p-key">${esc(res.key)}</span>`:''}<span class="p-freq"></span><span class="p-saved"></span></div>
       ${res.explain?`<div class="p-explain">${esc(res.explain)}</div>`:''}
       <div class="p-defs">${items.map((it,n)=>`<div class="p-def" data-n="${n}"><div class="p-dict">${esc(shortName(it.dictionary))}${it.page&&it.page!==it.key?` · ${esc(it.page)}`:''}</div><div class="p-text">…</div></div>`).join('')}</div>
       <div class="p-full" hidden></div>
@@ -240,7 +243,7 @@ pop.el.addEventListener('click',async(e)=>{
       const reading=it.page&&it.page!==res.key&&/^[぀-ヿ가-힣a-zāáǎàēéěèīíǐìōóǒòūúǔùü\s]+$/i.test(it.page)?it.page:'';
       const similar=await api('item.similar',{headword:res.key,reading});
       if(similar.length&&!confirm(`“${res.key}” is already a card (${similar[0].dict_name||'notes'} · ${similar[0].folder}). Save another?`))return;
-      await api('item.save',{folder_id:store.get('player.folder',1),headword:res.key,reading,back:g.text,dict:it.dict,dict_name:it.dictionary,page:it.page||res.key,
+      await api('item.save',{folder_id:store.get('player.folder',1),headword:st.lang==='zh'&&res.written?res.written:res.key,reading,back:g.text,dict:it.dict,dict_name:it.dictionary,page:it.page||res.key,
         kind:'entry',context:(pop.cue?pop.cue.text:'').replace(/\n/g,' '),note:`${videoName} · ${fmt(pop.cue?pop.cue.start:st.t)}`,review:true});
       pop.el.querySelector('.p-saved').textContent='★ saved';osd('Saved “'+res.key+'”');
     }catch(err){osd(err.message);}
@@ -341,6 +344,8 @@ $('hit').addEventListener('dblclick',()=>send({cmd:'fullscreen'}));
 let idleT=0;
 function wake(){document.body.classList.remove('idle');clearTimeout(idleT);idleT=setTimeout(()=>{if(!st.paused&&!$('bar').matches(':hover')&&$('menu').hidden)document.body.classList.add('idle');},2400);}
 document.addEventListener('mousemove',wake);wake();
+
+send({cmd:'ready'});
 
 document.addEventListener('keydown',(e)=>{
   if(e.target.tagName==='INPUT'&&e.target.type!=='range')return;

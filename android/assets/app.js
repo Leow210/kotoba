@@ -1776,6 +1776,8 @@ async function renderLibrary(){
       <div class="switch-row"><div><b>Export as spreadsheet</b><small>CSV for Excel, Sheets or Numbers</small></div><button class="btn small" id="export-csv">Export…</button></div>
       <div class="switch-row"><div><b>Export Chinese cards for Pleco</b><small>Pleco flashcard text file; each folder becomes a category (Import Cards in Pleco)</small></div><button class="btn small" id="export-pleco">Export…</button></div>
     </div>
+    <div class="section-label">Sync with your other devices</div>
+    <div class="settings" id="sync-box"><div class="switch-row"><div><b>Sync folder</b><small>Loading…</small></div></div></div>
     <p class="hint" style="text-align:center;padding:10px 20px 30px">Kotoba 0.3 · works fully offline · nothing leaves your phone</p>`;
   renderImportProgress();
   if(status.importing&&!importState)$('import-progress').innerHTML='<div class="import-card"><b>Import in progress…</b></div>';
@@ -1792,6 +1794,7 @@ async function renderLibrary(){
   $('restore').onclick=()=>Kotoba.restoreBackup();
   $('export-all').onclick=()=>Kotoba.exportFile('kotoba-anki.txt','tsv',JSON.stringify({folder:0,html:true}));
   $('export-csv').onclick=()=>Kotoba.exportFile('kotoba-vocabulary.csv','csv','{}');
+  renderSync();
   $('export-pleco').onclick=()=>Kotoba.exportFile('kotoba-pleco.txt','pleco','{}');
 }
 // ---------- dictionary groups in Library ----------
@@ -1906,6 +1909,25 @@ async function chooseGroup(d){
   if(!c.v){const n=await prompt2('New group','','e.g. Classical, Slang');return n&&!n.includes('/')?n.trim():null;}
   return c.v;
 }
+/**
+ * Sync: each device keeps its own file in a folder that Syncthing, Google Drive, iCloud… shares between them,
+ * and reads the others'. Kotoba itself never goes online.
+ */
+async function renderSync(status){
+  const box=$('sync-box');if(!box)return;
+  let st=status;try{st=st||await api('sync.status');}catch(e){box.innerHTML=`<div class="switch-row"><div><b>Sync</b><small>${esc(e.message)}</small></div></div>`;return;}
+  const when=st.last?new Date(st.last).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'never';
+  box.innerHTML=`<div class="switch-row"><div><b>Sync folder</b><small>${st.folder?esc(st.folder):'Not set. Choose a folder that a sync tool (e.g. Syncthing) shares between this device and the other.'}</small></div><button class="btn small" id="sync-pick">${st.folder?'Change…':'Choose…'}</button></div>`+
+    (st.folder?`<div class="switch-row"><div><b>${st.devices.length?`Syncing with ${st.devices.length} other ${st.devices.length===1?'device':'devices'}`:'No other device yet'}</b><small>This device: ${esc(st.name)} · last synced ${esc(when)}${st.devices.length?'':' · the other device’s file appears here once it has synced'}</small></div><button class="btn small" id="sync-now">Sync now</button></div>`:'');
+  $('sync-pick').onclick=()=>Kotoba.pickSyncFolder();
+  const now=$('sync-now');if(now)now.onclick=handle(async()=>{now.disabled=true;try{const r=await api('sync.now');toast(r.changed?`Synced: ${r.added} new, ${r.updated} updated${r.deleted?`, ${r.deleted} removed`:''}`:'Up to date');renderSync(r.status);}finally{now.disabled=false;}});
+}
+on('sync-status',s=>{if(tab==='library')renderSync(s);});
+on('synced',r=>{
+  if(r.added||r.updated||r.deleted)toast(`Synced from your other device: ${r.added} new${r.updated?`, ${r.updated} updated`:''}${r.deleted?`, ${r.deleted} removed`:''}`,3500);
+  refreshBadge();if(tab==='folders')renderFolders();if(tab==='review')renderReviewHome();if(tab==='library')renderSync();
+});
+
 async function dictMenu(id){
   const d=dictById(id);if(!d)return;
   const inGroup=dicts.filter(x=>(x.grp||'Japanese')===(d.grp||'Japanese'));

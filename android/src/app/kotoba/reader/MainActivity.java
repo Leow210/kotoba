@@ -36,7 +36,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class MainActivity extends Activity {
     static final String HOST="appassets.androidplatform.net";
     static final String ORIGIN="https://"+HOST;
-    static final int PICK_FOLDER=51,EXPORT=52,RESTORE=53,PICK_BOOKS=54,PICK_COMIC_TREE=55,PICK_COMIC_FILES=56,PICK_WORDLIST=57,PICK_MIHON=58,PICK_COVER=59,SCAN_PICK=61,CAMERA_PERMISSION=62;
+    static final int PICK_FOLDER=51,EXPORT=52,RESTORE=53,PICK_BOOKS=54,PICK_COMIC_TREE=55,PICK_COMIC_FILES=56,PICK_WORDLIST=57,PICK_MIHON=58,PICK_COVER=59,SCAN_PICK=61,CAMERA_PERMISSION=62,SYNC_FOLDER=63;
     long coverSeries;
 
     KotobaWebView web;
@@ -50,6 +50,8 @@ public class MainActivity extends Activity {
     PermissionRequest pendingCamera;
     final ExecutorService pool=Executors.newFixedThreadPool(3);
     Routes routes;
+    Sync sync;
+    final android.os.Handler syncTimer=new android.os.Handler(android.os.Looper.getMainLooper());
     byte[] pendingExport;
 
     /** WebView whose text-selection menu gains Look up and Save card. */
@@ -101,6 +103,7 @@ public class MainActivity extends Activity {
         ocr=new Ocr(this,store.db);
         wordlists=new WordLists(store.db);
         extras=new Extras(library,new File(getExternalFilesDir(null),"extras"));
+        sync=new Sync(store);
         routes=new Routes(library,store,wordlists,extras,new Routes.Host(){
             @Override public void event(String type,Object data){MainActivity.this.event(type,data);}
             @Override public void keepAwake(boolean on){runOnUiThread(()->{if(on)getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);});}
@@ -197,6 +200,12 @@ public class MainActivity extends Activity {
         }
         @JavascriptInterface public void copy(String text){runOnUiThread(()->{((ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("Kotoba",text));});}
         @JavascriptInterface public void share(String text){runOnUiThread(()->startActivity(Intent.createChooser(new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT,text),"Share")));}
+        /** The folder a sync tool (Syncthing…) shares with the Mac. */
+        @JavascriptInterface public void pickSyncFolder(){runOnUiThread(()->{
+            Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+            i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_GRANT_WRITE_URI_PERMISSION|Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+            startActivityForResult(i,SYNC_FOLDER);
+        });}
         @JavascriptInterface public void pickFolder(){pickFolderAt("Download/Monokakido_Ciyue");}
         /** Folder picker opening at a folder under shared storage (e.g. Download/Yomitan). */
         @JavascriptInterface public void pickFolderAt(String start){runOnUiThread(()->{
@@ -309,6 +318,8 @@ public class MainActivity extends Activity {
 
     Object route(String route,JSONObject d) throws Exception {
         switch(route){
+            case "sync.status":return syncStatus();
+            case "sync.now":return syncNow();
             case "library.scan":return scan(Uri.parse(d.getString("tree")));
             case "library.relink":return relink(d.getString("tree"));
             case "library.scanLocal":{
@@ -376,6 +387,66 @@ public class MainActivity extends Activity {
             case "bookmark.delete":books.deleteBookmark(d.getLong("id"));return null;
             default:return routes.route(route,d);
         }
+    }
+
+    // ---------- sync ----------
+
+    /** The shared sync folder, reached through the document tree the user picked. */
+    Sync.Folder syncFolder(Uri tree){
+        String root=DocumentsContract.getTreeDocumentId(tree);
+        return new Sync.Folder(){
+            Map<String,String[]> list() throws Exception {// name → {document id, last modified}
+                Map<String,String[]> out=new HashMap<>();
+                Uri children=DocumentsContract.buildChildDocumentsUriUsingTree(tree,root);
+                try(Cursor c=getContentResolver().query(children,new String[]{DocumentsContract.Document.COLUMN_DOCUMENT_ID,DocumentsContract.Document.COLUMN_DISPLAY_NAME,DocumentsContract.Document.COLUMN_LAST_MODIFIED},null,null,null)){
+                    while(c!=null&&c.moveToNext())out.put(c.getString(1),new String[]{c.getString(0),Long.toString(c.isNull(2)?0:c.getLong(2))});
+                }
+                return out;
+            }
+            @Override public List<String> names() throws Exception {return new ArrayList<>(list().keySet());}
+            @Override public long modified(String name) throws Exception {String[] d=list().get(name);return d==null?0:Long.parseLong(d[1]);}
+            @Override public byte[] read(String name) throws Exception {
+                String[] d=list().get(name);if(d==null)throw new FileNotFoundException(name);
+                return MainActivity.read(getContentResolver().openInputStream(DocumentsContract.buildDocumentUriUsingTree(tree,d[0])),200_000_000);
+            }
+            @Override public void write(String name,byte[] data) throws Exception {
+                String[] d=list().get(name);
+                Uri doc=d!=null?DocumentsContract.buildDocumentUriUsingTree(tree,d[0])
+                    :DocumentsContract.createDocument(getContentResolver(),DocumentsContract.buildDocumentUriUsingTree(tree,root),"application/json",name);
+                if(doc==null)throw new IOException("Couldn’t create "+name+" in the sync folder");
+                try(OutputStream o=getContentResolver().openOutputStream(doc,"wt")){o.write(data);}
+            }
+        };
+    }
+
+    synchronized JSONObject syncNow() throws Exception {
+        String folder=store.setting("sync_folder","");
+        if(folder.isEmpty())return new JSONObject().put("skipped",true);
+        JSONObject r=sync.run(syncFolder(Uri.parse(folder)),android.os.Build.MODEL,library.syncDicts());
+        if(r.optBoolean("changed"))event("synced",r);
+        return r.put("status",syncStatus());
+    }
+
+    JSONObject syncStatus() throws Exception {
+        String folder=store.setting("sync_folder","");
+        JSONArray devices=new JSONArray();
+        if(!folder.isEmpty())try{for(String n:syncFolder(Uri.parse(folder)).names())if(n.matches("kotoba-[0-9a-f]+\\.json")&&!n.equals(sync.fileName()))devices.put(new JSONObject().put("file",n));}catch(Exception ignored){}
+        String shown=folder.isEmpty()?"":Uri.decode(folder).replaceFirst("^.*tree/primary:","").replaceFirst("^.*tree/","");
+        return new JSONObject().put("folder",shown).put("device",sync.deviceId()).put("name",android.os.Build.MODEL)
+            .put("last",Long.parseLong(store.setting("sync_last","0"))).put("devices",devices);
+    }
+
+    /** While Kotoba is open, sync every minute (it only reads or writes when something changed). */
+    final Runnable syncTick=new Runnable(){@Override public void run(){
+        pool.execute(()->{try{syncNow();}catch(Exception e){android.util.Log.w("Kotoba","sync",e);}});
+        syncTimer.postDelayed(this,60_000);
+    }};
+    @Override protected void onResume(){super.onResume();syncTimer.removeCallbacks(syncTick);syncTimer.postDelayed(syncTick,3000);}
+    @Override protected void onPause(){
+        syncTimer.removeCallbacks(syncTick);
+        // One last write so the Mac sees what was just done here.
+        pool.execute(()->{try{syncNow();}catch(Exception ignored){}});
+        super.onPause();
     }
 
     // ---------- importing ----------
@@ -577,6 +648,13 @@ public class MainActivity extends Activity {
         }
         if(result!=RESULT_OK||intent==null||intent.getData()==null){pendingExport=null;event("picker-cancelled",request);return;}
         Uri uri=intent.getData();
+        if(request==SYNC_FOLDER){
+            try{getContentResolver().takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_GRANT_WRITE_URI_PERMISSION);}
+            catch(SecurityException e){event("toast","Could not keep access to that folder: "+e.getMessage());return;}
+            store.setSetting("sync_folder",uri.toString());
+            pool.execute(()->{try{syncNow();event("sync-status",syncStatus());event("toast","Sync folder set");}catch(Exception e){event("toast","Sync: "+e.getMessage());}});
+            return;
+        }
         if(request==PICK_FOLDER){
             try{getContentResolver().takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION);}catch(SecurityException e){event("toast","Could not keep access to that folder: "+e.getMessage());}
             event("folder",uri.toString());

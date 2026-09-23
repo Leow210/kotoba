@@ -811,6 +811,21 @@ public class Library {
         if(v.size()>0)db.update("dicts",v,"id=?",new String[]{Long.toString(id)});
     }
 
+    /** Dictionary ids by title and back, for sync (ids differ between devices, titles don't). */
+    public Sync.Dicts syncDicts(){
+        return new Sync.Dicts(){
+            @Override public long idFor(String title){
+                try{
+                    JSONArray r=Store.rows(db,"SELECT id FROM dicts WHERE title=? UNION ALL SELECT id FROM dict_ids WHERE title=? LIMIT 1",title,title);
+                    return r.length()==0?0:r.getJSONObject(0).getLong("id");
+                }catch(Exception e){return 0;}
+            }
+            @Override public String titleFor(long id){
+                try{JSONArray r=Store.rows(db,"SELECT title FROM dicts WHERE id=?",Long.toString(id));return r.length()==0?null:r.getJSONObject(0).getString("title");}catch(Exception e){return null;}
+            }
+        };
+    }
+
     /** Sizes of a dictionary's files, recorded the first time they can be opened. Unknown sizes are -1. */
     public JSONArray fileSizes(long id) throws Exception {
         JSONObject d=dictRow(id);
@@ -1420,9 +1435,9 @@ public class Library {
             JSONArray g=Store.rows(db,"SELECT id FROM dicts WHERE (grp=? OR grp LIKE ?) AND enabled=1 AND kind!='freq'",group,group+"/%");
             for(int i=0;i<g.length();i++)ids.add(g.getJSONObject(i).getLong("id"));
             int[] cps=clean.codePoints().limit(24).toArray();
-            // Traditional text (Taiwan/Hong Kong games) also matches simplified headwords: 穿過 → 穿过.
+            // Traditional text (Taiwan/Hong Kong games, Cantonese subtitles) is tried as written first, then as simplified: 穿過 → 穿过.
             int[] simp="zh".equals(lang)?simplified(new String(cps,0,cps.length)).codePoints().toArray():cps;
-            for(int len=cps.length;len>0&&!ids.isEmpty();len--)for(int[] form:simp.length==cps.length&&!java.util.Arrays.equals(simp,cps)?new int[][]{simp,cps}:new int[][]{cps}){
+            for(int len=cps.length;len>0&&!ids.isEmpty();len--)for(int[] form:simp.length==cps.length&&!java.util.Arrays.equals(simp,cps)?new int[][]{cps,simp}:new int[][]{cps}){
                 String prefix=new String(form,0,len);
                 JSONArray rows=exact(prefix,null),mine=new JSONArray();
                 for(int i=0;i<rows.length();i++)if(ids.contains(rows.getJSONObject(i).getLong("dict")))mine.put(rows.get(i));

@@ -39,6 +39,7 @@ public class DesktopServer {
     final Library library;
     final String token;
     final List<OutputStream> listeners=new CopyOnWriteArrayList<>();
+    final Sync sync;
 
     DesktopServer(File data,File assets,File web){
         this.data=data;this.assets=assets;this.web=web;
@@ -50,6 +51,7 @@ public class DesktopServer {
         routes=new Routes(library,store,wordlists,extras,new Routes.Host(){
             @Override public void event(String type,Object payload){DesktopServer.this.event(type,payload);}
         });
+        sync=new Sync(store);
         byte[] t=new byte[18];new SecureRandom().nextBytes(t);
         StringBuilder b=new StringBuilder();for(byte x:t)b.append(String.format("%02x",x));
         token=b.toString();
@@ -76,6 +78,9 @@ public class DesktopServer {
             }
             case "library.relink":return new JSONObject().put("fixed",0).put("missing",0);
             case "library.folders":return new JSONArray();
+            case "sync.status":return syncStatus();
+            case "sync.setFolder":routes.store.setSetting("sync_folder",d.getString("path"));return syncNow();
+            case "sync.now":return syncNow();
             case "video.tracks":return videoTracks(new File(d.getString("path")));
             case "video.sub":return new JSONObject().put("text",videoSub(new File(d.getString("path")),d.optInt("stream",-1),d.optString("file","")));
             case "wordlist.importPath":{
@@ -99,6 +104,40 @@ public class DesktopServer {
             }
             default:return routes.route(route,d);
         }
+    }
+
+    // ---------- sync ----------
+
+    JSONObject syncStatus() throws Exception {
+        String folder=routes.store.setting("sync_folder","");
+        JSONArray devices=new JSONArray();
+        File[] files=folder.isEmpty()?null:new File(folder).listFiles((dir,n)->n.matches("kotoba-[0-9a-f]+\\.json")&&!n.equals(sync.fileName()));
+        if(files!=null)for(File f:files)devices.put(new JSONObject().put("file",f.getName()).put("modified",f.lastModified()));
+        return new JSONObject().put("folder",folder).put("device",sync.deviceId()).put("name",deviceName())
+            .put("last",Long.parseLong(routes.store.setting("sync_last","0"))).put("devices",devices);
+    }
+
+    static String deviceName(){
+        try{String h=InetAddress.getLocalHost().getHostName().replaceFirst("\\.local$","");return h.isEmpty()?"Mac":h;}catch(Exception e){return "Mac";}
+    }
+
+    synchronized JSONObject syncNow() throws Exception {
+        String path=routes.store.setting("sync_folder","");
+        if(path.isEmpty())return new JSONObject().put("skipped",true);
+        File dir=new File(path);
+        if(!dir.isDirectory())throw new Exception("The sync folder isn’t there: "+path);
+        JSONObject r=sync.run(new Sync.Folder(){
+            @Override public java.util.List<String> names(){String[] n=dir.list();return n==null?new java.util.ArrayList<>():java.util.Arrays.asList(n);}
+            @Override public long modified(String name){return new File(dir,name).lastModified();}
+            @Override public byte[] read(String name) throws Exception {return Files.readAllBytes(new File(dir,name).toPath());}
+            @Override public void write(String name,byte[] data) throws Exception {
+                // Written beside and renamed, so a sync tool never picks up half a file.
+                File tmp=new File(dir,"."+name+".tmp");Files.write(tmp.toPath(),data);
+                Files.move(tmp.toPath(),new File(dir,name).toPath(),java.nio.file.StandardCopyOption.REPLACE_EXISTING,java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+            }
+        },deviceName(),library.syncDicts());
+        if(r.optBoolean("changed"))event("synced",r);
+        return r.put("status",syncStatus());
     }
 
     // ---------- video subtitles ----------
@@ -282,6 +321,9 @@ public class DesktopServer {
         http.createContext("/",s::handle);
         http.setExecutor(Executors.newFixedThreadPool(16));
         http.start();
+        // Sync every 30 seconds while the app is open (only reads/writes when something changed).
+        java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r->{Thread th=new Thread(r,"sync");th.setDaemon(true);return th;})
+            .scheduleWithFixedDelay(()->{try{s.syncNow();}catch(Exception e){System.err.println("sync: "+e.getMessage());}},5,30,java.util.concurrent.TimeUnit.SECONDS);
         System.out.println("KOTOBA PORT "+http.getAddress().getPort()+" TOKEN "+s.token);
         System.out.flush();
         // The Mac app holds our stdin open; when it quits or crashes, stdin closes and the core goes with it.

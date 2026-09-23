@@ -26,11 +26,13 @@
     openResource(dict,name){mac({type:'open',url:location.origin+'/d/'+dict+'/'+encodeURI(name)});},
     setBars(){},exitApp(){},
     pickBooks:phoneOnly,pickComicFolder:phoneOnly,pickComicFiles:phoneOnly,pickComicCover:phoneOnly,pickMihonBackup:phoneOnly,scanPick:phoneOnly,
+    pickSyncFolder(){mac({type:'pickFile',purpose:'sync',folder:true});},
     pickWordList(){mac({type:'pickFile',purpose:'wordlist',extensions:['txt','csv','tsv']});},
   };
   // The Mac app answers pickers with these.
   window.desktopPicked=(purpose,path)=>{
     if(purpose==='restore')post('restore',JSON.stringify({path})).then(t=>{const r=JSON.parse(t);if(r.error)say(r.error);else window.__event(JSON.stringify({type:'restored',data:r.data}));});
+    if(purpose==='sync')post('sync.setFolder',JSON.stringify({path})).then(t=>{const r=JSON.parse(t);if(r.error)say(r.error);else{say('Sync folder set');window.__event(JSON.stringify({type:'sync-status',data:r.data}));}});
     if(purpose==='wordlist')post('wordlist.importPath',JSON.stringify({path})).then(t=>{const r=JSON.parse(t);if(r.error)say(r.error);else window.__event(JSON.stringify({type:'wordlist-imported',data:r.data}));});
   };
   // Events from the core (import progress, toasts) arrive as Server-Sent Events.

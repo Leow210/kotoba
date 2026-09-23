@@ -11,6 +11,8 @@ final class PlayerWindow: NSWindowController, NSWindowDelegate, WKScriptMessageH
     var timer: Timer?
     weak var app: AppDelegate?
     var onClose: (() -> Void)?
+    /// The page and the file load independently; the page hears about the file once both are ready.
+    var pageReady = false, fileLoaded = false
 
     init(url: URL, base: URL, app: AppDelegate) {
         self.url = url
@@ -69,7 +71,8 @@ final class PlayerWindow: NSWindowController, NSWindowDelegate, WKScriptMessageH
                 win.setContentSize(NSSize(width: width, height: height))
                 win.center()
             }
-            js("window.playerLoaded&&window.playerLoaded(\(tracksJSON()))")
+            fileLoaded = true
+            if pageReady { js("window.playerLoaded&&window.playerLoaded(\(tracksJSON()))") }
         case MPV_EVENT_END_FILE:
             js("window.playerEnded&&window.playerEnded()")
         default: break
@@ -102,6 +105,9 @@ final class PlayerWindow: NSWindowController, NSWindowDelegate, WKScriptMessageH
     func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
         guard let m = message.body as? [String: Any], let cmd = m["cmd"] as? String else { return }
         switch cmd {
+        case "ready":
+            pageReady = true
+            if fileLoaded { js("window.playerLoaded&&window.playerLoaded(\(tracksJSON()))") }
         case "toggle": video.command(["cycle", "pause"])
         case "pause": video.set("pause", "yes")
         case "play": video.set("pause", "no")
