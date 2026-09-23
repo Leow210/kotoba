@@ -237,7 +237,7 @@ async function showPop(res,cue,r1,r2,P=pop){
     const items=byDict.slice(0,4);
     // The word as the subtitle writes it (門口), with the dictionary's form when that differs (门口, 食べる).
     const shown=res.written&&res.written!==res.key?res.written:res.key;
-    P.el.innerHTML=`<div class="p-head"><b class="p-word">${esc(shown)}</b>${shown!==res.key?`<span class="p-key">${esc(res.key)}</span>`:''}<span class="p-freq"></span><span class="p-saved"></span><button class="p-size" data-p="size" title="Bigger / smaller popup"></button></div>
+    P.el.innerHTML=`<div class="p-head"><b class="p-word">${esc(shown)}</b>${shown!==res.key?`<span class="p-key">${esc(res.key)}</span>`:''}<span class="p-freq"></span><span class="p-saved"></span><button class="p-size" data-p="size" title="Bigger / smaller popup"></button><button class="p-close" data-p="close" title="Close (Esc)">×</button></div>
       ${res.explain?`<div class="p-explain">${esc(res.explain)}</div>`:''}
       <div class="p-defs">${items.map((it,n)=>`<div class="p-def" data-n="${n}"><div class="p-dict">${esc(shortName(it.dictionary))}${it.page&&it.page!==it.key?` · ${esc(it.page)}`:''}</div><div class="p-text">…</div></div>`).join('')}</div>
       <div class="p-full" hidden></div>
@@ -328,6 +328,12 @@ async function onPopClick(P,e){
   pop.pinned=true;
   const b=e.target.closest('[data-p]');if(!b)return;
   const res=P.res,it=P.items&&P.items[0];
+  if(b.dataset.p==='close'){
+    // × closes this popup and the ones opened from it; the first one also resumes the video.
+    if(P.level){closeFrom(P.level);stack[P.level-1].el.querySelectorAll('.dch.hl').forEach(x=>x.classList.remove('hl'));defAt=null;}
+    else{hidePop();resumeAfterHover();}
+    return;
+  }
   if(b.dataset.p==='size'){
     // Compact by default (first dictionary, two lines); ⤢ shows every dictionary and the other actions.
     const big=!P.el.classList.contains('big');

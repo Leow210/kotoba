@@ -61,7 +61,8 @@ categories, read chapters) by itself. Covers come from `mihon-covers/` in the da
 - The popup is compact by default: the word, its grammar breakdown, the first dictionary's definition in two lines and
   ＋ Card. ⤢ expands it to every dictionary, Full entry, Open in Kotoba and Copy; the size you pick is remembered.
 - Words inside a definition can be looked up too: hold Shift over one and a second popup opens beside it (and so on).
-  Releasing Shift while the pointer is over a popup keeps it open; clicking elsewhere closes them all.
+  Releasing Shift while the pointer is over a popup keeps it open. × closes a popup (and any opened from it); Esc or
+  clicking elsewhere closes them all. The Firefox helper's popup has the same ⤢ and ×.
 - Keys: Space play/pause · ←/→ 5 s (⇧ 1 s) · A/D previous/next line · S replay line · P pause after each line ·
   T transcript · Z/X subtitle delay · [ ] speed · −/= subtitle size · F full screen · M mute.
 - ＋ Card saves the word with the subtitle line as its example and the episode and time as a note.

@@ -74,6 +74,8 @@
     #kotoba-video-pop .k-saved { margin-left: auto; color: #a8841e; font-size: 12px; font-weight: 600; }
     #kotoba-video-pop .k-size { align-self: center; margin-left: auto; border: 0; background: #ece7dc; color: #3d433f; border-radius: 7px; width: 26px; height: 26px; font-size: 17px; line-height: 26px; padding: 0; cursor: pointer; }
     #kotoba-video-pop .k-saved:not(:empty) + .k-size { margin-left: 6px; }
+    #kotoba-video-pop .k-close { align-self: center; margin-left: 4px; border: 0; background: transparent; color: #72766f; border-radius: 7px; width: 26px; height: 26px; font-size: 21px; line-height: 24px; padding: 0; cursor: pointer; }
+    #kotoba-video-pop .k-close:hover { background: #ece7dc; color: #1d211f; }
     #kotoba-video-pop .k-explain { color: #2f6b55; font-size: 12px; }
     #kotoba-video-pop .k-dict { font-size: 11px; font-weight: 700; color: #2f6b55; margin-top: 5px; }
     #kotoba-video-pop.k-big .k-dict { margin-top: 8px; }
@@ -208,7 +210,7 @@
     const byDict = []; for (const it of res.items) if (!byDict.some(x => x.dict === it.dict) && it.kind !== 'kanji') byDict.push(it);
     const items = byDict.slice(0, 4);
     const written = res.written && res.written !== res.key ? res.written : res.key;
-    pop.innerHTML = `<div class="k-head"><b class="k-word">${esc(written)}</b>${written !== res.key ? `<span class="k-key">${esc(res.key)}</span>` : ''}<span class="k-freq"></span><span class="k-saved"></span><button class="k-size" data-k="size" title="Bigger / smaller popup">${big() ? '⤡' : '⤢'}</button></div>
+    pop.innerHTML = `<div class="k-head"><b class="k-word">${esc(written)}</b>${written !== res.key ? `<span class="k-key">${esc(res.key)}</span>` : ''}<span class="k-freq"></span><span class="k-saved"></span><button class="k-size" data-k="size" title="Bigger / smaller popup">${big() ? '⤡' : '⤢'}</button><button class="k-close" data-k="close" title="Close (Esc)">×</button></div>
       ${res.explain ? `<div class="k-explain">${esc(res.explain)}</div>` : ''}
       ${items.map((it, n) => `<div class="${n ? 'k-more' : ''}"><div class="k-dict">${esc(shortName(it.dictionary))}${it.page && it.page !== it.key ? ' · ' + esc(it.page) : ''}</div><div class="k-text" data-n="${n}">…</div></div>`).join('')}
       <div class="k-actions"><button data-k="card">＋ Card</button><button class="k-more" data-k="open">Open in Kotoba</button><button class="k-more" data-k="copy">Copy</button></div>`;
@@ -261,6 +263,7 @@
     pinned = true;
     const b = e.target.closest('[data-k]'); if (!b || !shown) return;
     const res = shown, it = pop.items && pop.items[0];
+    if (b.dataset.k === 'close') { hidePop(); return; }
     if (b.dataset.k === 'size') {
       store.set('kotoba.popBig', big() ? '0' : '1');
       pop.classList.toggle('k-big', big()); b.textContent = big() ? '⤡' : '⤢';

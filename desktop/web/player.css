@@ -31,6 +31,8 @@ body.idle #subs{bottom:34px}
 .p-size{align-self:center;margin-left:auto;border:0;background:#ece7dc;color:#3d433f;border-radius:7px;width:26px;height:26px;font-size:17px;line-height:26px;cursor:pointer;padding:0}
 .p-saved+.p-size,.p-saved:not(:empty)+.p-size{margin-left:6px}
 .p-size::before{content:'⤢'}
+.p-close{align-self:center;margin-left:4px;border:0;background:transparent;color:#72766f;border-radius:7px;width:26px;height:26px;font-size:21px;line-height:24px;cursor:pointer;padding:0}
+.p-close:hover{background:#ece7dc;color:#1d211f}
 .kpop.big .p-size::before{content:'⤡'}
 .p-explain{color:#2f6b55;font-size:12px;margin-top:1px}
 .p-defs{margin-top:5px;display:flex;flex-direction:column;gap:9px}
