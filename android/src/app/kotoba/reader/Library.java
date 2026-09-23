@@ -317,6 +317,7 @@ public class Library {
             JSONObject range=Store.rows(db,"SELECT min(id) a,max(id) b,count(*) n FROM keys WHERE id>=? AND dict=?",Long.toString(seen[1]==Long.MAX_VALUE?0:seen[1]),Long.toString(id)).getJSONObject(0);
             JSONObject recs=Store.rows(db,"SELECT min(id) a,max(id) b,count(*) n FROM records WHERE dict=?",Long.toString(id)).getJSONObject(0);
             ContentValues done=new ContentValues();
+            dictionariesChanged();
             done.put("status","ready");done.put("entries",recs.getLong("n"));done.put("keys",range.getLong("n"));done.put("resources",resources);done.put("keys_v",KEYS_VERSION);
             done.put("key_min",range.optLong("a",0));done.put("key_max",range.optLong("b",0));done.put("rec_min",recs.optLong("a",0));done.put("rec_max",recs.optLong("b",0));
             db.update("dicts",done,"id=?",new String[]{Long.toString(id)});
@@ -676,6 +677,7 @@ public class Library {
                 JSONObject recs=Store.rows(db,"SELECT min(id) a,max(id) b,count(*) n FROM records WHERE dict=?",Long.toString(id)).getJSONObject(0);
                 long metaRows=Store.rows(db,"SELECT count(*) n FROM meta WHERE dict=?",Long.toString(id)).getJSONObject(0).getLong("n");
                 ContentValues fin=new ContentValues();
+                dictionariesChanged();
                 fin.put("status","ready");fin.put("keys_v",KEYS_VERSION);fin.put("entries",kind.equals("freq")?metaRows:recs.getLong("n"));fin.put("keys",kind.equals("freq")?metaRows:range.getLong("n"));
                 fin.put("key_min",range.optLong("a",0));fin.put("key_max",range.optLong("b",0));fin.put("rec_min",recs.optLong("a",0));fin.put("rec_max",recs.optLong("b",0));
                 db.update("dicts",fin,"id=?",new String[]{Long.toString(id)});
@@ -971,6 +973,7 @@ public class Library {
     }
 
     public synchronized void delete(long id){
+        dictionariesChanged();
         closeFiles(id);formats.remove(id);zdicts.remove(id);hasMeta=null;
         db.beginTransaction();
         try{
@@ -997,6 +1000,7 @@ public class Library {
     }
 
     public void updateDictionary(JSONObject data) throws Exception {
+        dictionariesChanged();
         long id=data.getLong("id");
         ContentValues v=new ContentValues();
         if(data.has("name")){String n=data.getString("name").trim();if(n.isEmpty()||n.length()>120)throw new Exception("Names need 1–120 characters.");v.put("name",n);}
@@ -1228,10 +1232,12 @@ public class Library {
         return (from>0?"…":"")+source.substring(from,start)+"\u0001"+source.substring(start,end)+"\u0002"+source.substring(end,to)+(to<source.length()?"…":"");
     }
 
-    public JSONArray exact(String key,String excludeDict) throws Exception {
+    public JSONArray exact(String key,String excludeDict) throws Exception {return exact(key,excludeDict,true);}
+    /** mixed: also pages spelled with more kanji (相まみえる → 相見える); off for the many internal checks of candidate forms. */
+    JSONArray exact(String key,String excludeDict,boolean mixed) throws Exception {
         String norm=HtmlText.normalize(key);
         JSONArray rows=Store.rows(db,"SELECT group_concat(k.key,char(1)) keys,k.rec,k.dict,coalesce(nullif((SELECT y.reading FROM ytext y WHERE y.rec=k.rec),''),r.key) page,d.name dictionary,d.kind,r.len size,(SELECT 1 FROM kanji j WHERE j.rec=k.rec AND j.char=?) head FROM keys k JOIN records r ON r.id=k.rec JOIN dicts d ON d.id=k.dict WHERE k.norm=? AND d.enabled=1 AND d.status='ready' GROUP BY k.dict,k.rec ORDER BY d.position,head IS NULL,r.len DESC LIMIT 60",key.trim(),norm);
-        rows=withMixedSpellings(rows,norm);
+        if(mixed)rows=withMixedSpellings(rows,norm);
         displayKeys(rows,key);
         addSpellings(rows,norm);
         return rows;
@@ -1248,16 +1254,43 @@ public class Library {
     ArrayList<String[]> mixedSpellings(String norm) throws Exception {
         ArrayList<String[]> found=new ArrayList<>();
         int[] q=norm.codePoints().toArray();
-        if(q.length<2||q.length>16||!han(q[0]))return found;
+        if(q.length<2||q.length>10||!han(q[0]))return found;
         boolean anyKana=false;
         for(int c:q){if(kana(c))anyKana=true;else if(!han(c))return found;}
         if(!anyKana)return found;
         StringBuilder read=new StringBuilder();
         for(int c:q)read.append(kana(c)?Pattern.quote(new String(Character.toChars(c))):"[\u3041-\u3096\u30fc]{1,4}");
         Pattern reading=Pattern.compile(read.toString());
-        String first=new String(Character.toChars(q[0]));
-        try(Cursor c=db.rawQuery("SELECT DISTINCT k.norm,k.dict,k.rec FROM keys k JOIN dicts d ON d.id=k.dict WHERE k.norm>=? AND k.norm<? AND length(k.norm)<=? AND k.norm!=? AND d.enabled=1 AND d.status='ready' AND d.kind!='freq' LIMIT 20000",
-                new String[]{first,first+"\uffff",Integer.toString(q.length),norm})){
+        // The spelling starts with the query's leading kanji and has another kanji right after it (相 + 見える for
+        // 相まみえる): a kana there would already be an exact match. That range is small, unlike every key starting 相.
+        int run=0;while(run<q.length&&han(q[run]))run++;
+        String lead=new String(q,0,run);
+        for(Object[] cand:mixedCandidates(lead)){
+            String k=(String)cand[0];
+            if(k.codePointCount(0,k.length())>q.length||k.equals(norm)||!((Pattern)cand[3]).matcher(norm).matches())continue;
+            // The kana the query adds must be how the page reads: 相まみえる fits あいまみえる.
+            boolean fits=false;
+            for(String n:(String[])cand[4])if(reading.matcher(n).matches()){fits=true;break;}
+            if(fits)found.add(new String[]{(String)cand[1],(String)cand[2],k});
+        }
+        return found;
+    }
+
+    /**
+     * Keys that start with these kanji followed by another kanji, each with its pattern (a kanji may be written in
+     * kana), kept for the leads looked up recently: a lookup tries several lengths of the same text, and reading and
+     * compiling them each time cost ~0.5 s on the phone. {norm, dict, rec, pattern, kana readings of the page (its
+     * heading, 大辞林 あいまみ・える, or Yomitan reading)}. Cleared when dictionaries change.
+     */
+    final java.util.Map<String,List<Object[]>> mixedCache=java.util.Collections.synchronizedMap(new java.util.LinkedHashMap<String,List<Object[]>>(64,0.75f,true){
+        protected boolean removeEldestEntry(java.util.Map.Entry<String,List<Object[]>> e){return size()>64;}
+    });
+    List<Object[]> mixedCandidates(String lead){
+        List<Object[]> hit=mixedCache.get(lead);
+        if(hit!=null)return hit;
+        ArrayList<Object[]> list=new ArrayList<>();
+        try(Cursor c=db.rawQuery("SELECT DISTINCT k.norm,k.dict,k.rec,r.norm,(SELECT y.reading FROM ytext y WHERE y.rec=k.rec) FROM keys k JOIN dicts d ON d.id=k.dict JOIN records r ON r.id=k.rec WHERE k.norm>=? AND k.norm<? AND length(k.norm)<=10 AND d.enabled=1 AND d.status='ready' AND d.kind!='freq' LIMIT 5000",
+                new String[]{lead+"\u3400",lead+"\ua000"})){
             while(c.moveToNext()){
                 String k=c.getString(0);
                 StringBuilder b=new StringBuilder();boolean ok=true;
@@ -1267,18 +1300,18 @@ public class Library {
                     else if(kana(cp))b.append(Pattern.quote(ch));
                     else{ok=false;break;}
                 }
-                if(!ok||!norm.matches(b.toString()))continue;
-                // The kana the query adds must be how the page reads: 相まみえる fits あいまみえる.
-                boolean fits=false;
-                String rec=Long.toString(c.getLong(2));
-                // The page's heading (大辞林 あいまみ・える) or Yomitan reading; keys aren't indexed by page.
-                try(Cursor r=db.rawQuery("SELECT norm FROM records WHERE id=? UNION ALL SELECT reading FROM ytext WHERE rec=?",new String[]{rec,rec})){
-                    while(r.moveToNext()&&!fits){String n=KEY_SEPARATORS.matcher(HtmlText.normalize(r.getString(0))).replaceAll("");fits=!n.isEmpty()&&n.codePoints().allMatch(Library::kana)&&reading.matcher(n).matches();}
+                if(!ok)continue;
+                ArrayList<String> readings=new ArrayList<>();
+                for(int col=3;col<=4;col++){
+                    if(c.isNull(col))continue;
+                    String n=KEY_SEPARATORS.matcher(HtmlText.normalize(c.getString(col))).replaceAll("");
+                    if(!n.isEmpty()&&n.codePoints().allMatch(Library::kana))readings.add(n);
                 }
-                if(fits)found.add(new String[]{Long.toString(c.getLong(1)),rec,k});
+                if(!readings.isEmpty())list.add(new Object[]{k,Long.toString(c.getLong(1)),Long.toString(c.getLong(2)),Pattern.compile(b.toString()),readings.toArray(new String[0])});
             }
-        }
-        return found;
+        }catch(Exception e){return list;}
+        mixedCache.put(lead,list);
+        return list;
     }
 
     /** Adds mixedSpellings pages from dictionaries that have no page under the query itself, in dictionary order. */
@@ -1425,7 +1458,7 @@ public class Library {
 
     /** Short plain definition for a word (first matching word-dictionary page), for word-list rows and quick cards. */
     public JSONObject gloss(String word) throws Exception {
-        JSONArray rows=wordEntries(exact(word,null));
+        JSONArray rows=wordEntries(exact(word,null,false));
         if(rows.length()==0){JSONArray f=forms(word);if(f.length()>0)rows=f.getJSONObject(0).getJSONArray("items");}
         if(rows.length()==0)return new JSONObject().put("word",word).put("text","");
         // Homographs: the first-numbered entry (먹다¹ "eat", not 먹다² "go deaf") is the usual meaning.
@@ -1563,7 +1596,7 @@ public class Library {
     static final String[] KO_PARTICLES={"에서부터","에게서","한테서","으로부터","로부터","이라고","이라는","이라도","이었다","이었어요","입니다","이에요","이지만","에서도","에게도","한테도","까지도","부터도","으로도","에서는","에게는","으로는","이든지","이랑","이나","이야","이며","이고","인데","였다","였어요","예요","라고","라는","라도","로도","로는","에도","에는","과는","와는","하고","처럼","보다","만큼","까지","부터","조차","마저","밖에","든지","에서","에게","한테","께서","으로","이다","이든","로","와","과","도","만","들","의","은","는","이","가","을","를","에","께","랑","나","야","며","고","요","든"};
 
     boolean koKey(String word) throws Exception {return isHeadword(word);}
-    JSONArray koEntries(String word) throws Exception {return wordEntries(exact(word,null));}
+    JSONArray koEntries(String word) throws Exception {return wordEntries(exact(word,null,false));}
 
     /**
      * Korean analyses, best first. Each has base (the dictionary word), explain, chain, items (its entries)
@@ -1601,17 +1634,20 @@ public class Library {
                 // A particle that only follows nouns isn't a verb ending: 비운의 is 비운 + 의, not "비운다 + -의" (a noun +
                 // particle is found below). Particles that are also endings (-고, -든지, -라는) still count.
                 if(NOUN_PARTICLES.contains(sp[1]))continue;
-                if(!koKey("-"+sp[1]))continue;
+                // Some endings are listed in their own dictionary form: -잖아(요) and -잖니 under -잖다 (먹었잖아).
+                String endingKey="-"+sp[1];
+                if(!koKey(endingKey)&&sp[1].matches("잖(아|아요|니|냐|어|습니까|아서)"))endingKey="-잖다";
+                if(!koKey(endingKey))continue;
                 String verb=sp[0]+"다";
                 JSONArray rows=koEntries(verb);
-                if(rows.length()>0){add.accept(new JSONObject().put("base",verb).put("explain","ending -"+sp[1]).put("chain",verb+" + -"+sp[1]).put("items",rows).put("extra",koEntries("-"+sp[1])),verb);continue;}
+                if(rows.length()>0){add.accept(new JSONObject().put("base",verb).put("explain","ending -"+sp[1]).put("chain",verb+" + -"+sp[1]).put("items",rows).put("extra",koEntries(endingKey)),verb);continue;}
                 // A conjugated stem before the ending: 갔다며 = 갔(가다, past) + -다며. When two verbs fit (걸었다고: 걷다 "walk"
                 // or 걸다 "bet"), both are kept, since only the context can tell; lookups offer the second as "or 걸다".
                 int found=0;
                 for(Deinflect.Candidate c:Deinflect.korean(verb,w->{try{return koKey(w);}catch(Exception e){return false;}},this::koreanStems)){
                     JSONArray r2=koEntries(c.base);if(r2.length()==0)continue;
                     String ex=c.explain().replaceAll("\\s*·?\\s*plain$","");
-                    add.accept(new JSONObject().put("base",c.base).put("explain",(ex.isEmpty()?"":ex+" + ")+"ending -"+sp[1]).put("chain",c.base+" + "+c.chain().substring(c.base.length()).replaceFirst("\\s*\\+\\s*다$","")+" + -"+sp[1]).put("items",r2).put("extra",koEntries("-"+sp[1])),c.base);
+                    add.accept(new JSONObject().put("base",c.base).put("explain",(ex.isEmpty()?"":ex+" + ")+"ending -"+sp[1]).put("chain",c.base+" + "+c.chain().substring(c.base.length()).replaceFirst("\\s*\\+\\s*다$","")+" + -"+sp[1]).put("items",r2).put("extra",koEntries(endingKey)),c.base);
                     if(++found==2)break;
                 }
             }
@@ -1690,11 +1726,8 @@ public class Library {
         char first=target.charAt(0);
         if(first<0xAC00||first>0xD7A3)return out;
         int initial=(first-0xAC00)/588;
-        String lo=String.valueOf((char)(0xAC00+initial*588)),hi=String.valueOf((char)(0xAC00+(initial+1)*588));
-        try(Cursor c=db.rawQuery("SELECT DISTINCT k.norm FROM keys k JOIN dicts d ON d.id=k.dict WHERE k.norm>=? AND k.norm<? AND substr(k.norm,-1)='다' AND length(k.norm)<=? AND d.enabled=1 LIMIT 20000",new String[]{lo,hi,Integer.toString(target.length()+1)})){
-            while(c.moveToNext()){
-                String h=c.getString(0);
-                if(h.length()<2)continue;
+        for(String h:verbsByInitial(initial)){
+                if(h.length()>target.length()+1)continue;
                 String stem=h.substring(0,h.length()-1);
                 if(stem.length()>target.length())continue;
                 boolean ok=true;
@@ -1704,10 +1737,27 @@ public class Library {
                     else if(a!=b){ok=a>=0xAC00&&a<=0xD7A3&&b>=0xAC00&&b<=0xD7A3&&(a-0xAC00)/588==(b-0xAC00)/588;}
                 }
                 if(ok)out.add(h);
-            }
         }
         return out;
     }
+
+    /**
+     * Every enabled dictionary's -다 headwords starting with this initial consonant (ㄷ: 대다, 듣다, 되다…), loaded once
+     * and kept: a Korean lookup asks for them several times, and reading them from SQLite each time took most of a
+     * lookup (~0.6 s on the phone). Cleared when dictionaries change.
+     */
+    final java.util.Map<Integer,List<String>> verbCache=new java.util.concurrent.ConcurrentHashMap<>();
+    List<String> verbsByInitial(int initial){
+        return verbCache.computeIfAbsent(initial,i->{
+            ArrayList<String> list=new ArrayList<>();
+            String lo=String.valueOf((char)(0xAC00+i*588)),hi=String.valueOf((char)(0xAC00+(i+1)*588));
+            try(Cursor c=db.rawQuery("SELECT DISTINCT k.norm FROM keys k JOIN dicts d ON d.id=k.dict WHERE k.norm>=? AND k.norm<? AND substr(k.norm,-1)='다' AND length(k.norm)<=12 AND d.enabled=1",new String[]{lo,hi})){
+                while(c.moveToNext()){String h=c.getString(0);if(h.length()>=2)list.add(h);}
+            }
+            return list;
+        });
+    }
+    void dictionariesChanged(){verbCache.clear();mixedCache.clear();}
 
     /**
      * Dictionary forms for a conjugated word (食べさせられた, 추웠어요, читала), each with its grammatical explanation.
@@ -1757,11 +1807,11 @@ public class Library {
             // When the typed word is itself a headword, ignore weak one-character guesses (e.g. imperative 書け, adverb 〜く).
             if(exactExists&&c.strength<2)continue;
             String base=c.base;
-            JSONArray rows=wordEntries(exact(base,null));
+            JSONArray rows=wordEntries(exact(base,null,false));
             if(rows.length()==0&&base.endsWith("する")&&base.length()>2){
                 // Noun + する verbs are listed under the noun (勉強しています → 勉強).
                 String noun=base.substring(0,base.length()-2);
-                rows=wordEntries(exact(noun,null));
+                rows=wordEntries(exact(noun,null,false));
                 if(rows.length()>0){c.suffixNote="する verb";base=noun;n=HtmlText.normalize(noun);if(seen.contains(n))continue;}
             }
             if(rows.length()==0)continue;
@@ -1789,6 +1839,21 @@ public class Library {
      */
     public JSONObject lookup(String text) throws Exception {return lookup(text,"");}
 
+    /**
+     * How many characters from the start of the text begin some headword (警戒してたのに… → 4, 警戒して). Longer prefixes
+     * can't be headwords, so a lookup of a whole speech bubble doesn't try all 24 lengths in full (~0.5 s on the phone).
+     */
+    int keyReach(int[] cps) throws Exception {
+        int n=0;
+        for(int len=1;len<=cps.length;len++){
+            String p=HtmlText.normalize(new String(cps,0,len));
+            if(p.isEmpty()){n=len;continue;}
+            if(Store.rows(db,"SELECT 1 FROM keys WHERE norm>=? AND norm<? LIMIT 1",p,p+"\uffff").length()==0)break;
+            n=len;
+        }
+        return n;
+    }
+
     /** lang (zh, th): text scanned from a Chinese or Thai screen looks in that language's dictionaries first. */
     public JSONObject lookup(String text,String lang) throws Exception {
         String clean=text.trim();
@@ -1800,7 +1865,8 @@ public class Library {
             int[] cps=clean.codePoints().limit(24).toArray();
             // Traditional text (Taiwan/Hong Kong games, Cantonese subtitles) is tried as written first, then as simplified: 穿過 → 穿过.
             int[] simp="zh".equals(lang)?simplified(new String(cps,0,cps.length)).codePoints().toArray():cps;
-            for(int len=cps.length;len>0&&!ids.isEmpty();len--)for(int[] form:simp.length==cps.length&&!java.util.Arrays.equals(simp,cps)?new int[][]{cps,simp}:new int[][]{cps}){
+            int reach=Math.max(keyReach(cps),simp==cps?0:keyReach(simp));
+            for(int len=Math.min(cps.length,reach);len>0&&!ids.isEmpty();len--)for(int[] form:simp.length==cps.length&&!java.util.Arrays.equals(simp,cps)?new int[][]{cps,simp}:new int[][]{cps}){
                 String prefix=new String(form,0,len);
                 JSONArray rows=exact(prefix,null),mine=new JSONArray();
                 for(int i=0;i<rows.length();i++)if(ids.contains(rows.getJSONObject(i).getLong("dict")))mine.put(rows.get(i));
@@ -1842,11 +1908,14 @@ public class Library {
             }
         }
         int[] cps=clean.codePoints().limit(24).toArray();
+        int reach=keyReach(cps);
         for(int len=cps.length;len>0;len--){
             String prefix=new String(cps,0,len);
-            JSONArray rows=exact(prefix,null);
+            // Past the longest start of the text that begins any headword, only a conjugated form (a few characters
+            // longer than its stem) or a kana-for-kanji spelling (相まみえる) can still match.
+            JSONArray rows=len<=reach?exact(prefix,null):len<=8?exact(prefix,null):new JSONArray();
             boolean hangulPart=prefix.codePoints().anyMatch(c->c>=0xAC00&&c<=0xD7A3)&&len<cps.length;
-            JSONArray forms=len>=2&&!hangulPart?forms(prefix):new JSONArray();
+            JSONArray forms=len>=2&&len<=reach+10&&!hangulPart?forms(prefix):new JSONArray();
             if(rows.length()>0)return new JSONObject().put("matched",prefix).put("key",rows.getJSONObject(0).getString("key")).put("items",rows).put("forms",forms).put("kanji",kanji(prefix));
             if(forms.length()>0){
                 JSONObject f=forms.getJSONObject(0);

@@ -75,6 +75,25 @@ public class Extras {
         return out;
     }
 
+    /**
+     * The dictionary's own fonts (extras/<name>/files/fonts/*.ttf|otf), as @font-face rules named after each file:
+     * Monokakido's 朝鮮語辞典 draws 315 characters (Korean hanja forms like 鄕 稱, rare hanja) from CHOUSENGO_Symbol
+     * in the private-use area, which no other font has.
+     */
+    public String fontFaces(long dict){
+        try{
+            File dir=folder(dict);if(dir==null)return "";
+            File[] fonts=new File(dir,"files/fonts").listFiles((d,n)->n.matches("(?i).+\\.(ttf|otf|woff2?)"));
+            if(fonts==null)return "";
+            StringBuilder css=new StringBuilder();
+            for(File f:fonts){
+                String n=f.getName(),family=n.substring(0,n.lastIndexOf('.'));
+                css.append("@font-face{font-family:'").append(family).append("';src:url('/d/").append(dict).append("/files/fonts/").append(n).append("')}");
+            }
+            return css.toString();
+        }catch(Exception e){return "";}
+    }
+
     /** A file under the extras folder, for /d/<dict>/files/… URLs. */
     public byte[] file(long dict,String name) throws Exception {
         File dir=folder(dict);
