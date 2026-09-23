@@ -712,7 +712,17 @@ img,svg{max-height:calc(100vh - ${2*m}px)!important}`;
 
   frame.addEventListener('load',()=>{try{frame.contentWindow.addEventListener('resize',debounce(()=>{drawPageBreaks();},300));}catch(e){}});
   // Handle for debugging from DevTools.
-  window.__reader={state,settings,loadChapter,turn,applyStyle,currentAnchor,restoreAnchor,fraction,rtl};
+  // Keyboard text size on the Mac (⌘+ / ⌘− / ⌘0), the same setting as Display › Text size, kept at the same place.
+  async function fontStep(d){
+    const size=d===0?readerDefaults().fontSize:Math.max(12,Math.min(40,settings.fontSize+d));
+    if(size===settings.fontSize)return;
+    const anchor=currentAnchor();
+    settings.fontSize=size;
+    applyStyle();await new Promise(r=>requestAnimationFrame(r));restoreAnchor(anchor);updateStatus();
+    toast(`Text ${size}px`,900);
+    await api('book.settings',{id,settings});
+  }
+  window.__reader={state,settings,loadChapter,turn,applyStyle,currentAnchor,restoreAnchor,fraction,rtl,fontStep};
   // Open where the reader left off (or at the start).
   const first=saved&&saved.chapter<spine.length?saved.chapter:Math.max(0,spine.findIndex(s=>s.linear!==false));
   await loadChapter(first,saved?{anchor:saved.anchor,fraction:saved.fraction}:{fraction:0});

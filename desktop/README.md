@@ -35,11 +35,12 @@ the Mac alike. The interface files come from `android/assets` unchanged.
 
 The phone's book reader (EPUB and TXT, vertical or horizontal, tap-to-look-up, highlights, bookmarks) runs on the
 Mac too: Reader › ＋ Add imports books from Finder. ←/→ turn pages in the book's direction (← is next in a
-right-to-left book); Space, Page Up/Down and ↑/↓ also turn. Hold the configured hover key (Shift by default)
+right-to-left book); Space, Page Up/Down and ↑/↓ also turn. ⌘+ / ⌘− change the text size (saved per book, like
+Display › Text size) and ⌘0 returns to your default. Hold the configured hover key (Shift by default)
 over a word to open its dictionary. A plain click does not look up a word on the Mac unless enabled in
 Settings › Reading; click and drag still selects text.
 
-Comics work as on the phone, including the 文 text layer (the same PaddleOCR models on onnxruntime for macOS,
+Comics work as on the phone (⌘+ / ⌘− zoom in 25% steps up to 4×, ⌘0 fits the page again), including the 文 text layer (the same PaddleOCR models on onnxruntime for macOS,
 about 0.2 s a page). The phone's Mihon webtoons are mirrored to `/Volumes/T7/Mihon` by Syncthing (receive-only; its `.stignore` keeps only `downloads/* (KO)` and `autobackup/`, so manga stays on the phone);
 while the drive is plugged in, Kotoba rescans `downloads/` and imports the newest `autobackup/*.tachibk` (titles,
 categories, read chapters) by itself. Covers come from `mihon-covers/` in the data folder, as on the phone.

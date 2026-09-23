@@ -282,6 +282,8 @@ async function openComic(series,chapterId,startPage=0){
     if(old===1||z===1)requestAnimationFrame(placeLayers);else placeLayers();
   }
   function zoomAt(e){setZoom(zoom>1?1:2.2,e.clientX,e.clientY);}
+  // Keyboard zoom on the Mac (⌘+ / ⌘− / ⌘0): d is 1, -1 or 0 (back to fit).
+  el.kotobaZoom=(d)=>{setZoom(d===0?1:zoom*(d>0?1.25:0.8));toast(zoom>1?`Zoom ${Math.round(zoom*100)}%`:'Fit to screen',900);};
   // Pinch
   let pinch=null;
   const dist=(t)=>Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY);

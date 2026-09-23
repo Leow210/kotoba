@@ -78,6 +78,14 @@
   on('helper-show',r=>{mac({type:'activate'});window.externalLookup&&window.externalLookup(r.word);});
   // Keyboard page turns in the book reader (the phone has none): ←/→ follow the book's direction, like a paper book.
   function readerKey(e){
+    // ⌘+ / ⌘− / ⌘0: zoom in the comic reader, text size in the book reader.
+    if(e.metaKey&&!e.ctrlKey&&!e.altKey&&['=','+','-','_','0'].includes(e.key)){
+      const top=[...document.querySelectorAll('#pages > .page')].pop();
+      const d=e.key==='0'?0:(e.key==='-'||e.key==='_')?-1:1;
+      if(top&&top.kotobaZoom){e.preventDefault();top.kotobaZoom(d);}
+      else if(top&&top.classList.contains('reader-page')&&window.__reader&&window.__reader.fontStep){e.preventDefault();window.__reader.fontStep(d);}
+      return;
+    }
     const r=window.__reader;
     if(!r||!document.querySelector('.reader-page')||e.target.closest&&e.target.closest('input,textarea'))return;
     if(document.querySelector('.sheet'))return;
