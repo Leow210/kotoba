@@ -15,7 +15,8 @@ import java.util.Calendar;
  */
 public class Store {
     final SQLiteDatabase db;
-    static final String[] ITEM_TEXT={"kind","dict_name","page","anchor","headword","reading","back","back_html","note","context","audio"};
+    // image: a small JPEG data URL (a still of a video scene, a comic bubble) shown with sentence cards; it syncs with the card.
+    static final String[] ITEM_TEXT={"kind","dict_name","page","anchor","headword","reading","back","back_html","note","context","audio","image"};
 
     public Store(Context context){
         db=SQLiteDatabase.openOrCreateDatabase(new File(context.getFilesDir(),"personal-v2.sqlite3"),null);
@@ -27,6 +28,7 @@ public class Store {
         db.execSQL("INSERT OR IGNORE INTO folders(id,name,position,created) VALUES(1,'Inbox',0,strftime('%s','now'))");
         db.execSQL("CREATE TABLE IF NOT EXISTS items(id INTEGER PRIMARY KEY,folder_id INTEGER NOT NULL REFERENCES folders(id),kind TEXT NOT NULL DEFAULT 'entry',dict INTEGER NOT NULL DEFAULT 0,dict_name TEXT NOT NULL DEFAULT '',page TEXT NOT NULL DEFAULT '',anchor TEXT NOT NULL DEFAULT '',headword TEXT NOT NULL,reading TEXT NOT NULL DEFAULT '',back TEXT NOT NULL DEFAULT '',back_html TEXT NOT NULL DEFAULT '',note TEXT NOT NULL DEFAULT '',context TEXT NOT NULL DEFAULT '',created INTEGER NOT NULL,updated INTEGER NOT NULL,review INTEGER NOT NULL DEFAULT 0,state INTEGER NOT NULL DEFAULT 0,step INTEGER NOT NULL DEFAULT 0,stability REAL NOT NULL DEFAULT 0,difficulty REAL NOT NULL DEFAULT 0,due INTEGER NOT NULL DEFAULT 0,last_review INTEGER NOT NULL DEFAULT 0,reps INTEGER NOT NULL DEFAULT 0,lapses INTEGER NOT NULL DEFAULT 0,introduced INTEGER NOT NULL DEFAULT 0)");
         try{db.execSQL("ALTER TABLE items ADD COLUMN audio TEXT NOT NULL DEFAULT ''");}catch(Exception ignored){}
+        try{db.execSQL("ALTER TABLE items ADD COLUMN image TEXT NOT NULL DEFAULT ''");}catch(Exception ignored){}
         // Folders are decks: everything saved is studied unless its folder is switched off.
         try{db.execSQL("ALTER TABLE folders ADD COLUMN study INTEGER NOT NULL DEFAULT 1");}catch(Exception ignored){}
         if(setting("unified_decks","").isEmpty()){db.execSQL("UPDATE items SET review=1");setSetting("unified_decks","1");}
@@ -186,8 +188,10 @@ public class Store {
 
     public JSONObject saveItem(JSONObject data)throws Exception{
         String headword=data.optString("headword","").trim();
-        if(headword.isEmpty()||headword.length()>500)throw new Exception("Add the word (up to 500 characters).");
+        if(headword.isEmpty()||headword.length()>1000)throw new Exception("Add the word or sentence (up to 1,000 characters).");
         if(data.optString("back","").length()>200000||data.optString("back_html","").length()>1000000)throw new Exception("This definition is too long to save.");
+        String image=data.optString("image","");
+        if(!image.isEmpty()&&(!image.startsWith("data:image/")||image.length()>400000))throw new Exception("That image is too big to keep with the card.");
         ContentValues v=new ContentValues();
         long folder=data.optLong("folder_id",1);
         if(rows(db,"SELECT id FROM folders WHERE id=?",Long.toString(folder)).length()==0)folder=1;

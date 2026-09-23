@@ -109,6 +109,7 @@ public class DesktopServer {
             case "video.tracks":return videoTracks(new File(d.getString("path")));
             case "video.sub":return new JSONObject().put("text",videoSub(new File(d.getString("path")),d.optInt("stream",-1),d.optString("file","")));
             case "video.ocr":return videoOcr(new File(d.getString("path")),d.getDouble("time"),d.optString("lang","ja"));
+            case "video.still":return new JSONObject().put("image",videoStill(new File(d.getString("path")),d.getDouble("time")));
             case "wordlist.importPath":{
                 File f=new File(d.getString("path"));
                 return routes.wordlists.importText(f.getName(),new String(Files.readAllBytes(f.toPath()),StandardCharsets.UTF_8));
@@ -298,6 +299,19 @@ public class DesktopServer {
     }
 
     /** Read the lower part of a local video frame with the same OCR used for comic pages. */
+    /** A still of the scene at this time (up to 720 px wide, JPEG data URL), for sentence cards. */
+    String videoStill(File video,double time) throws Exception {
+        if(!video.isFile())throw new IllegalArgumentException("Video file not found");
+        if(!Double.isFinite(time)||time<0)throw new IllegalArgumentException("Invalid video position");
+        Process p=new ProcessBuilder(tool("ffmpeg"),"-v","error","-ss",Double.toString(time),"-i",video.getPath(),
+            "-an","-sn","-frames:v","1","-vf","scale='min(720,iw)':-2","-q:v","6","-f","image2pipe","-vcodec","mjpeg","pipe:1")
+            .redirectError(ProcessBuilder.Redirect.DISCARD).start();
+        byte[] image;
+        try(InputStream in=p.getInputStream()){image=readAll(in);}
+        if(p.waitFor()!=0||image.length==0)throw new Exception("Couldn’t read this video frame");
+        return "data:image/jpeg;base64,"+java.util.Base64.getEncoder().encodeToString(image);
+    }
+
     JSONObject videoOcr(File video,double time,String lang) throws Exception {
         if(!video.isFile())throw new IllegalArgumentException("Video file not found");
         if(!java.util.Set.of("ja","zh","ko","th","ru").contains(lang))lang="ja";

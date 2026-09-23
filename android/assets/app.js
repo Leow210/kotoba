@@ -1248,10 +1248,21 @@ function sentenceAround(sel){
     return (before.slice(start)+text+(endMatch<0?after:after.slice(0,endMatch+1))).trim().slice(0,300);
   }catch(e){return '';}
 }
+/** A sentence card: the sentence where you met a word (book, comic bubble, subtitle), with an image when there is one. */
+async function saveSentence({text,image='',note='',back=''}){
+  if(!text||!text.trim()){toast('No sentence here');return;}
+  await openSaveSheet({review:true,kind:'sentence',headword:text.trim().slice(0,1000),image:image||'',note,back});
+}
+/** "Book title · chapter" for cards saved while reading. */
+function readerSourceNote(){
+  const ch=document.querySelector('.reader-page [data-f="chapter"]');
+  return [readerHooks.bookTitle,ch&&ch.textContent.trim()].filter(Boolean).join(' · ');
+}
 function showSelbar(){
   const bar=$('selbar');
+  const reading=selection.opts&&selection.opts.reader;
   bar.innerHTML=[
-    ['lookup','search','Look up'],...(selection.opts&&selection.opts.reader?[['highlight','edit','Highlight']]:[['search','book','Search']]),['copy','copy','Copy'],['card','star','Save'],['translate','share','Translate'],['share','share','Share'],
+    ['lookup','search','Look up'],...(reading?[['highlight','edit','Highlight']]:[['search','book','Search']]),['copy','copy','Copy'],['card','star','Save'],...(reading?[['sentence','text','Sentence']]:[]),['translate','share','Translate'],['share','share','Share'],
   ].map(([a,i,l])=>`<button data-sel="${a}">${icon(i)}${l}</button>`).join('');
   bar.hidden=false;
   bar.querySelectorAll('[data-sel]').forEach(b=>{
@@ -1280,6 +1291,7 @@ window.selectionAction=(action)=>handle(async()=>{
   if(action==='copy'){Kotoba.copy(text);toast('Copied');clearSelections();return;}
   if(action==='share'){Kotoba.share(text);return;}
   if(action==='translate'){Kotoba.translate(text);clearSelections();return;}
+  if(action==='sentence'){clearSelections();await saveSentence({text:sel.context||text,note:readerSourceNote()});return;}
   if(action==='search'){clearSelections();closeAllOverlays();showTab('search');$('q').value=text.slice(0,100);$('q-clear').hidden=false;search.mode='headword';document.querySelectorAll('#modes [data-mode]').forEach(x=>x.classList.toggle('on',x.dataset.mode==='headword'));await runSearch();remember();return;}
   if(action==='lookup'){await lookupSheet(text,sel);return;}
   if(action==='card'){
@@ -1322,6 +1334,13 @@ async function lookupSheet(text,sel,extra={}){
     frame.style.height=Math.min(window.innerHeight*0.55,Math.max(160,wired.doc.body.getBoundingClientRect().bottom+10))+'px';
   };
   s.sheet.querySelector('#lk-open').onclick=()=>{closeSheet(s);const it=items[index];openEntry({...it,key:r.key,alternatives:items});};
+  // The sentence the word was found in (a book line, a comic bubble) can be kept as a sentence card too.
+  const context=sel&&sel.context&&sel.context.trim();
+  if(context&&context!==text.trim()){
+    const b=document.createElement('button');b.className='btn wide';b.innerHTML=`${icon('text')} Sentence`;
+    s.sheet.querySelector('#lk-open').after(b);
+    b.onclick=handle(async()=>{closeSheet(s);await saveSentence({text:context,image:extra.image?await extra.image():'',note:extra.book||readerSourceNote()});});
+  }
   s.sheet.querySelector('#lk-card').onclick=handle(()=>{const it=items[index];closeSheet(s);return saveLookupResult(it,r.key,sel&&sel.context||'',items,true,extra.book||'');});
   await show(0);
 }
@@ -1355,13 +1374,17 @@ async function openSaveSheet(o){
   let edited=!!o.back&&!parts.length;
   let source={dict:o.dict||0,dict_name:o.dict_name||'',page:o.page||'',anchor:o.anchor||'',kind:o.kind||'entry',doc:o.doc,unit:o.unit};
   const composeText=()=>parts.filter((p,i)=>checked[i]&&p.kind!=='Heading').map(p=>p.text).join('\n')||parts.filter((p,i)=>checked[i]).map(p=>p.text).join('\n');
-  const html=`<div class="sheet-body">
+  // A sentence card: the sentence on the front (with the scene or bubble image), a translation or notes on the back.
+  const sentence=(o.kind||(o.item&&o.item.kind))==='sentence';
+  const image=o.image!==undefined?o.image:(o.item&&o.item.image)||'';
+  const html=`<div class="sheet-body${sentence?' sentence-sheet':''}">
     <div id="sv-dup" hidden></div>
-    <label class="f">Word</label><input class="input big" id="sv-word" maxlength="500">
+    ${image?`<div class="sv-image"><img src="${image}" alt=""><button class="chip small" id="sv-noimage">Remove image</button></div>`:''}
+    <label class="f">${sentence?'Sentence':'Word'}</label>${sentence?'<textarea class="textarea" id="sv-word" rows="3" maxlength="1000"></textarea>':'<input class="input big" id="sv-word" maxlength="500">'}
     <label class="f">Reading</label><input class="input" id="sv-reading" maxlength="200" placeholder="Optional">
     <div id="sv-source-wrap"><label class="f">Definition from</label><div class="chips" id="sv-sources" style="margin-top:6px"></div></div>
     <div id="sv-parts-wrap"><label class="f">Keep these parts</label><div class="parts" id="sv-parts"></div></div>
-    <label class="f">Card back</label><textarea class="textarea" id="sv-back" rows="4" placeholder="Definition, translation or notes for the back of the card"></textarea>
+    <label class="f">${sentence?'Translation / notes (optional)':'Card back'}</label><textarea class="textarea" id="sv-back" rows="4" placeholder="${sentence?'What it means, or words to remember from it':'Definition, translation or notes for the back of the card'}"></textarea>
     <p class="hint" id="sv-edit-hint" hidden>You edited the text, so the card shows your wording instead of the dictionary layout. <button id="sv-restore" style="color:var(--accent);font-weight:600">Use dictionary text</button></p>
     <label class="f">Example / context</label><textarea class="textarea" id="sv-context" rows="2" style="min-height:56px" placeholder="Optional sentence"></textarea>
     <label class="f">Note</label><textarea class="textarea" id="sv-note" rows="2" style="min-height:56px" placeholder="Optional"></textarea>
@@ -1372,7 +1395,10 @@ async function openSaveSheet(o){
   <div class="sheet-foot">${o.existing?`<button class="btn danger" id="sv-remove">${icon('trash')}</button>`:''}<button class="btn wide" data-close>Cancel</button><button class="btn primary wide" id="sv-save">${icon('check')} Save</button></div>`;
   const s=openSheet(html,{title:o.existing||o.item?'Saved word':'Save to folder',tall:true,onClose:o.onClose});
   const q=(id)=>s.sheet.querySelector('#'+id);
+  let keepImage=image;
+  if(q('sv-noimage'))q('sv-noimage').onclick=()=>{keepImage='';q('sv-noimage').parentElement.remove();};
   q('sv-word').value=o.headword||'';q('sv-reading').value=o.reading||'';
+  if(sentence)for(const el of [q('sv-reading'),q('sv-reading').previousElementSibling,q('sv-source-wrap'),q('sv-parts-wrap'),q('sv-audio-wrap')])el.hidden=true;
   // Same word already saved from another dictionary (not homophones: the reading must match too).
   const checkDup=debounce(handle(async()=>{
     const w=q('sv-word').value.trim();if(!w){q('sv-dup').hidden=true;return;}
@@ -1381,7 +1407,7 @@ async function openSaveSheet(o){
     const box=q('sv-dup');box.hidden=!list.length;
     box.innerHTML=list.length?`<div class="dup-note">${icon('star','i sm')}<div><b>Already a card</b>${list.slice(0,3).map(x=>`<small>${esc(x.headword)}${x.reading?' · '+esc(x.reading):''} — ${esc(shortName(x.dict_name||'your notes'))} · ${esc(x.folder)}</small>`).join('')}</div></div>`:'';
   }),250);
-  checkDup();q('sv-word').addEventListener('input',checkDup);q('sv-reading').addEventListener('input',checkDup);
+  if(!sentence){checkDup();q('sv-word').addEventListener('input',checkDup);q('sv-reading').addEventListener('input',checkDup);}
   q('sv-context').value=o.context||'';q('sv-note').value=o.note||'';
 
   const renderParts=()=>{
@@ -1423,8 +1449,8 @@ async function openSaveSheet(o){
     q('sv-audio').querySelectorAll('[data-play]').forEach(b=>b.onclick=()=>playClip(clips[+b.dataset.play]));
     q('sv-audio').querySelectorAll('[data-clip]').forEach(b=>b.onclick=()=>{const c=clips[+b.dataset.clip];if(chosenClips.some(x=>clipKey(x)===clipKey(c)))chosenClips=chosenClips.filter(x=>clipKey(x)!==clipKey(c));else chosenClips.push(c);b.parentElement.classList.toggle('on');});
   };
-  renderParts();renderFolders();renderSources();renderAudio(o.headword||'');
-  q('sv-word').addEventListener('change',()=>renderAudio(q('sv-word').value.trim()));
+  renderParts();renderFolders();
+  if(!sentence){renderSources();renderAudio(o.headword||'');q('sv-word').addEventListener('change',()=>renderAudio(q('sv-word').value.trim()));}
   q('sv-back').value=o.back!==undefined&&o.back!==''?o.back:composeText();
   if(o.item&&o.item.back_html)edited=false;
   q('sv-back').oninput=()=>{edited=true;q('sv-edit-hint').hidden=!parts.length;};
@@ -1437,8 +1463,8 @@ async function openSaveSheet(o){
     let back_html=o.item&&!edited?o.item.back_html||'':'';
     if(!edited&&selected.length&&source.doc)back_html=partsHtml(source.doc,source.unit,selected);
     const back=q('sv-back').value.trim();
-    if(!back&&!back_html){toast('Add something for the back of the card');return;}
-    const data={id:o.item?o.item.id:(o.existing?o.existing.id:0),folder_id:folderId,headword,reading:q('sv-reading').value.trim(),back,back_html:edited?'':back_html,note:q('sv-note').value.trim(),context:q('sv-context').value.trim(),dict:source.dict||0,dict_name:source.dict_name||'',page:source.page||'',anchor:source.anchor||'',kind:source.kind||'entry',review:o.item?!!o.item.review:true,audio:JSON.stringify((chosenClips||[]).map(c=>({dict:c.dict,path:c.path,dictionary:c.dictionary,label:c.label,accent:c.accent||''})))};
+    if(!back&&!back_html&&!sentence){toast('Add something for the back of the card');return;}
+    const data={id:o.item?o.item.id:(o.existing?o.existing.id:0),folder_id:folderId,headword,reading:q('sv-reading').value.trim(),back,back_html:edited?'':back_html,note:q('sv-note').value.trim(),context:q('sv-context').value.trim(),dict:source.dict||0,dict_name:source.dict_name||'',page:source.page||'',anchor:source.anchor||'',kind:sentence?'sentence':source.kind||'entry',image:keepImage,review:o.item?!!o.item.review:true,audio:JSON.stringify((chosenClips||[]).map(c=>({dict:c.dict,path:c.path,dictionary:c.dictionary,label:c.label,accent:c.accent||''})))};
     await api('item.save',data);
     try{localStorage.setItem('lastFolder',String(folderId));}catch(e){}
     closeSheet(s);
@@ -1667,7 +1693,10 @@ async function startReview(folder){
     const it=current.item;
     const clips=itemAudio(it);
     const audioBtn=clips.length?clipButtons(clips,'rv-audio'):'';
-    const front=`<div class="front"><div class="word">${esc(it.headword)}</div>${audioBtn&&(settings.audio_front||revealed)?audioBtn:''}${settings.front_reading&&it.reading?`<div class="ctx">${esc(it.reading)}</div>`:''}${it.context&&!revealed?`<div class="ctx">${esc(it.context).replace(new RegExp(esc(it.headword).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g'),'<b>$&</b>')}</div>`:''}</div>`;
+    // Sentence cards: the scene or bubble image and the sentence on the front.
+    const sentence=it.kind==='sentence';
+    const img=it.image?`<img class="card-image" src="${it.image}" alt="">`:'';
+    const front=sentence?`<div class="front sentence">${img}<div class="sentence-text">${esc(it.headword)}</div>${audioBtn&&(settings.audio_front||revealed)?audioBtn:''}</div>`:`<div class="front"><div class="word">${esc(it.headword)}</div>${audioBtn&&(settings.audio_front||revealed)?audioBtn:''}${settings.front_reading&&it.reading?`<div class="ctx">${esc(it.reading)}</div>`:''}${it.context&&!revealed?`<div class="ctx">${esc(it.context).replace(new RegExp(esc(it.headword).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g'),'<b>$&</b>')}</div>`:''}</div>`;
     if(!revealed){
       f('card').innerHTML=front;
       f('actions').innerHTML=`<div class="reveal"><button class="btn primary" id="reveal">Show answer</button></div>`;
@@ -1677,10 +1706,13 @@ async function startReview(folder){
       return;
     }
     f('card').onclick=null;
-    f('card').innerHTML=front+`<div class="answer">${it.reading&&!settings.front_reading?`<div class="reading">${esc(it.reading)}</div>`:''}<iframe class="card-frame" id="rv-frame"></iframe>${it.context?`<div class="note">${esc(it.context)}</div>`:''}${it.note?`<div class="note">${esc(it.note)}</div>`:''}${it.dict_name?`<div style="text-align:center;margin-top:10px"><span class="tag muted">${esc(it.dict_name)}</span></div>`:''}</div>`;
+    const hasBack=!!(it.back||it.back_html);
+    f('card').innerHTML=front+`<div class="answer">${!sentence&&img?img:''}${it.reading&&!settings.front_reading?`<div class="reading">${esc(it.reading)}</div>`:''}${hasBack?'<iframe class="card-frame" id="rv-frame"></iframe>':''}${it.context?`<div class="note">${esc(it.context)}</div>`:''}${it.note?`<div class="note">${esc(it.note)}</div>`:''}${it.dict_name?`<div style="text-align:center;margin-top:10px"><span class="tag muted">${esc(it.dict_name)}</span></div>`:''}</div>`;
     const frame=el.querySelector('#rv-frame');
-    frame.onload=()=>frameSetup(frame,{dict:it.dict,min:40,onLink:()=>{}});
-    frame.src=`/d/${it.dict||0}/item-${it.id}.card`;
+    if(frame){
+      frame.onload=()=>frameSetup(frame,{dict:it.dict,min:40,onLink:()=>{}});
+      frame.src=`/d/${it.dict||0}/item-${it.id}.card`;
+    }
     wireAudio(clips,settings.autoplay_review==='answer');
     const labels=['Again','Hard','Good','Easy'];
     f('actions').innerHTML=`<div class="grades">${labels.map((l,i)=>`<button class="g${i+1}" data-g="${i+1}">${l}<small>${fmtInterval(current.intervals[i])}</small></button>`).join('')}</div>`;

@@ -101,6 +101,10 @@ Tap a preview to play the video. Each one is silent and about 15–25 seconds lo
 - Every field is editable, with room for a note and an example sentence.
 - Cards live in folders that can be filtered, sorted and reviewed separately. Multi-select actions cover moving, copying and deleting.
 - Reviews use FSRS-5, with learning steps, interval previews, undo, daily new-card limits, target recall, a seven-day forecast and a streak.
+- **Sentence cards:** keep the sentence where you met a word, with the sentence on the front and a translation or notes on the back.
+  - Books: **Sentence** in the selection bar, or in a word's pop-up (the whole sentence around it).
+  - Comics: **Save** in a speech bubble's sheet, or **Sentence** in a word's pop-up; the card gets a crop of the bubble.
+  - Mac video player: **＋ Sentence** (or C) saves the subtitle line with a still of the scene; the second subtitle line (e.g. English) goes on the back, and the show, episode and time in the note. No audio is kept, so cards stay small (~15 KB with the still). Images sync with the card.
 - Cards export to Anki (TSV with HTML and folder tags) or CSV, and Chinese cards export to **Pleco** (flashcard text file; each folder becomes a `//Kotoba/<folder>` category).
 - **Already a card:** an entry notes when the same word is already a card saved from another dictionary (e.g. 言葉 from 大辞林 while reading 明鏡), and so does the save sheet. The word and, when both have one, the reading must match, so homophones (橋/箸) and other readings (人気 にんき/ひとけ) aren't confused. JSON backups merge with existing data and skip duplicates when restored.
 

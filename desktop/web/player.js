@@ -8,6 +8,13 @@ const $=(id)=>document.getElementById(id);
 const esc=(v)=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const videoPath=new URLSearchParams(location.search).get('video')||'';
 const videoName=videoPath.split('/').pop().replace(/\.[^.]+$/,'');
+/** "Branding.in.Seongsu.2024.S01E03.1080p.Viki.WEB-DL…" → "Branding in Seongsu · S01E03", for card notes. */
+const showTitle=(()=>{
+  const n=videoName.replace(/[._]+/g,' ').trim();
+  const ep=n.match(/\bS\d{1,2}\s?E\d{1,3}\b/i);
+  let title=n.split(/\s(?:(?:19|20)\d\d|S\d{1,2}\s?E\d{1,3}|\d{3,4}p|WEB|BluRay|BDRip|HDTV|x26[45]|HEVC)\b/i)[0].trim()||n;
+  return ep?title+' · '+ep[0].replace(/\s/g,'').toUpperCase():title;
+})();
 const send=(m)=>{try{window.webkit.messageHandlers.player.postMessage(m);}catch(e){}};
 async function api(route,body){
   const r=await fetch('/api/'+route,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});
@@ -507,7 +514,26 @@ $('bar').addEventListener('click',(e)=>{
   if(a==='speed')menu(b,'Speed',SPEEDS.map(v=>({label:v+'×',on:Math.abs(v-st.speed)<0.001,run:()=>setSpeed(v)})));
   if(a==='transcript')toggleTranscript();
   if(a==='fullscreen')send({cmd:'fullscreen'});
+  if(a==='sentence')saveSentence();
 });
+/**
+ * A sentence card from the line on screen: the line on the front with a still of the scene, the second subtitle line
+ * (e.g. English) on the back, and the episode and time as its note. No audio, to keep cards small.
+ */
+async function saveSentence(){
+  const t=st.t+st.delay;
+  const cue=cueAt(st.cues,t)||st.cues.filter(c=>c.start<=t).pop();
+  if(!cue){osd('No subtitle line here');return;}
+  const second=st.cues2&&st.cues2.length?(cueAt(st.cues2,cue.start+0.05)||cueAt(st.cues2,t)):null;
+  osd('Saving sentence…');
+  let image='';
+  try{image=(await api('video.still',{path:videoPath,time:Math.max(0,(cue.start+cue.end)/2-st.delay)})).image;}catch(e){}
+  try{
+    await api('item.save',{folder_id:store.get('player.folder',1),kind:'sentence',headword:cue.text.replace(/\n/g,' '),back:second?second.text.replace(/\n/g,' '):'',
+      note:`${showTitle} · ${fmt(cue.start)}`,image,review:true});
+    osd('Saved sentence'+(image?' with a still':''));
+  }catch(e){osd(e.message);}
+}
 $('transcript').addEventListener('click',(e)=>{if(e.target.closest('[data-a="transcript"]'))toggleTranscript();});
 function toggleTranscript(){$('transcript').hidden=!$('transcript').hidden;document.body.classList.toggle('with-transcript',!$('transcript').hidden);markTranscript(st.shown);}
 
@@ -529,7 +555,7 @@ document.addEventListener('keydown',(e)=>{
     'ArrowUp':()=>send({cmd:'volume',v:Math.min(130,st.vol+5)}),'ArrowDown':()=>send({cmd:'volume',v:Math.max(0,st.vol-5)}),
     a:()=>lineJump(-1),d:()=>lineJump(1),s:replay,r:replay,p:()=>setAutopause(!st.autopause),f:()=>send({cmd:'fullscreen'}),m:()=>send({cmd:'mute'}),
     '[':()=>stepSpeed(-1),']':()=>stepSpeed(1),z:()=>setDelay(st.delay-0.1),x:()=>setDelay(st.delay+0.1),t:toggleTranscript,
-    '=':()=>setSize(st.size+0.1),'-':()=>setSize(st.size-0.1),'.':()=>send({cmd:'frame'}),
+    '=':()=>setSize(st.size+0.1),'-':()=>setSize(st.size-0.1),'.':()=>send({cmd:'frame'}),c:saveSentence,
     Escape:()=>{if(!pop.el.hidden){hidePop();resumeAfterHover();}else if(!$('menu').hidden)$('menu').hidden=true;}}[k];
   if(run){e.preventDefault();run();wake();}
 });

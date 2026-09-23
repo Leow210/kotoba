@@ -357,7 +357,7 @@ async function openComic(series,chapterId,startPage=0){
     if(im._layer)im._layer.remove();
     const layer=document.createElement('div');layer.className='ocr-layer'+(r.refining?' refining':'');
     layer.innerHTML=r.blocks.map((b,n)=>`<button class="ocr-box" data-n="${n}" style="left:${b.x/r.w*100}%;top:${b.y/r.h*100}%;width:${b.w/r.w*100}%;height:${b.h/r.h*100}%" aria-label="${esc(b.text)}"></button>`).join('');
-    layer.onclick=e=>{const b=e.target.closest('.ocr-box');if(!b)return;e.stopPropagation();bubbleSheet(r.blocks[+b.dataset.n].text,r);};
+    layer.onclick=e=>{const b=e.target.closest('.ocr-box');if(!b)return;e.stopPropagation();const blk=r.blocks[+b.dataset.n];bubbleSheet(blk.text,r,()=>cropBubble(im,r,blk));};
     im.parentElement.appendChild(layer);im._layer=layer;placeLayer(im);
   }
   function placeLayer(im){
@@ -384,7 +384,21 @@ async function openComic(series,chapterId,startPage=0){
   });
 
   // The page's other bubbles go along as context for translation (Hy-MT2 on the Mac uses them: 손이 맵네 is "hits hard").
-  function bubbleSheet(text,page){return ocrTextSheet(text,{lang:series.lang||'ko',source:series.title,title:'Speech bubble',context:page?page.blocks.map(b=>b.text).join('\n'):''});}
+  function bubbleSheet(text,page,image){
+    const ch=el.querySelector('[data-f="chname"]');
+    return ocrTextSheet(text,{lang:series.lang||'ko',source:[series.title,ch&&ch.textContent.trim()].filter(Boolean).join(' · '),title:'Speech bubble',context:page?page.blocks.map(b=>b.text).join('\n'):'',image});
+  }
+  /** The bubble cut out of its page (a little margin, at most 720 px wide), for a sentence card. */
+  async function cropBubble(im,r,b){
+    try{
+      if(!im.complete)await new Promise(res=>{im.onload=res;im.onerror=res;});
+      const sx=im.naturalWidth/r.w,sy=im.naturalHeight/r.h,pad=Math.max(b.w,b.h)*0.08;
+      const x=Math.max(0,(b.x-pad)*sx),y=Math.max(0,(b.y-pad)*sy),w=Math.min(im.naturalWidth-x,(b.w+2*pad)*sx),h=Math.min(im.naturalHeight-y,(b.h+2*pad)*sy);
+      const scale=Math.min(1,720/w),c=document.createElement('canvas');c.width=Math.round(w*scale);c.height=Math.round(h*scale);
+      c.getContext('2d').drawImage(im,x,y,w,h,0,0,c.width,c.height);
+      return c.toDataURL('image/jpeg',0.8);
+    }catch(e){return '';}
+  }
 
   // Controls
   f('slider').oninput=()=>{
@@ -465,12 +479,13 @@ function ocrTextSheet(text,opts={}){
     // Highlight what is being looked up: the tapped syllable to the end of its word (Korean) or the tapped token.
     if(w.dataset.end!=null)s.sheet.querySelectorAll('.ocr-w').forEach(x=>{if(x.dataset.end===w.dataset.end&&+x.dataset.o>=+w.dataset.o)x.classList.add('on');});
     else w.classList.add('on');
-    return lookupSheet(word,{context:text},{book:opts.source||'',lang:opts.lang||''});
+    return lookupSheet(word,{context:text},{book:opts.source||'',lang:opts.lang||'',image:opts.image});
   }));
   wire();
   s.sheet.querySelector('#ob-edit').onclick=handle(async()=>{const t=await prompt2('Fix recognized text',text);if(t==null||!t.trim())return;text=t.trim();s.sheet.querySelector('.ocr-text').innerHTML=render();wire();});
   s.sheet.querySelector('#ob-copy').onclick=()=>{Kotoba.copy(text);toast('Copied');};
   // The Mac's in-app translator takes context; the phone's Translate hands the text to the Google Translate app.
   s.sheet.querySelector('#ob-tr').onclick=()=>window.__translateInApp?window.__translateInApp(text,opts.context||''):Kotoba.translate(text);
-  s.sheet.querySelector('#ob-card').onclick=()=>{closeSheet(s);openSaveSheet({review:true,kind:'selection',headword:text.slice(0,60),back:'',context:text});};
+  // Save keeps the bubble as a sentence card, with the bubble's picture when it came from a comic page.
+  s.sheet.querySelector('#ob-card').onclick=handle(async()=>{closeSheet(s);await saveSentence({text,image:opts.image?await opts.image():'',note:opts.source||''});});
 }
