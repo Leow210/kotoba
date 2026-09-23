@@ -550,6 +550,7 @@ public class Library {
                         insertText.bindLong(1,rec);insertText.bindString(2,e[1]);insertText.bindString(3,e[2]);insertText.bindBlob(4,deflate(e[3],zdict[0],deflater));
                         insertText.executeInsert();
                         LinkedHashSet<String> keys=new LinkedHashSet<>();keys.add(e[0]);if(!e[1].isEmpty())keys.add(e[1]);
+                        String h=honorific(e[0],e[1]);if(h!=null)keys.add(h);
                         LinkedHashSet<String> norms=new LinkedHashSet<>();
                         for(String k:keys){
                             String n=HtmlText.normalize(k);if(n.isEmpty()||!norms.add(n))continue;
@@ -729,7 +730,13 @@ public class Library {
 
     // ---------- extra keys from headings ----------
 
-    static final int KEYS_VERSION=1;
+    // 2: headings like お鉢《×御鉢》 give お鉢 and 御鉢, not one combined spelling.
+    // 3: an honorific 御 is also indexed as the kana it's read as (大辞林 おはち【御鉢】 → お鉢; ごはん【御飯】 → ご飯).
+    // 4: the same for every key and Yomitan entry, not only heading spellings (明鏡 御鉢 おはち, 新明解's 御鉢 key).
+    // 5: ruby annotations aren't part of a spelling (新明解 御︽鉢 is 御鉢).
+    // 6: the heading's kana (見出仮名) also tells how 御 is read, for pages filed under their spelling (新明解 御鉢).
+    static final int KEYS_VERSION=6;
+    static final Pattern HEAD_KANA=Pattern.compile("data-name=\"(?:見出仮名|見出し仮名)\"");
     static final Pattern SPELLING=Pattern.compile("data-name=\"(?:標準表記|表記)\"");
     static final Pattern OPTIONAL_KANA=Pattern.compile("<span data-name=\"送り仮名省略\">");
     static final Pattern KEY_SEPARATORS=Pattern.compile("[・･‧·‐‑‒–—=＝]");
@@ -748,10 +755,13 @@ public class Library {
             int end=closing(html,start+1);if(end<0)continue;
             String inner=html.substring(start+1,end);
             for(String variant:new String[]{withOptional(inner,true),withOptional(inner,false)}){
-                String t=HtmlText.entities(variant.replaceAll("<[^>]*>","")).replaceAll("[()（）\\s]","");
-                t=stripMarks(t).replace("×","");
-                if(t.isEmpty()||t.length()>30||!t.codePoints().anyMatch(c->Character.UnicodeScript.of(c)==Character.UnicodeScript.HAN))continue;
-                if(!out.contains(t))out.add(t);
+                String text=HtmlText.entities(variant.replaceAll("(?s)<(rt|rp)\\b[^>]*>.*?</\\1>","").replaceAll("<[^>]*>","")).replaceAll("[()（）\\s]","");
+                // Alternative forms in 《》〈〉 (NHK お鉢《×御鉢》) and several spellings joined by ・ are separate words.
+                for(String part:text.split("[《》〈〉・,，、]")){
+                    String t=stripMarks(part).replace("×","").replace("▲","").trim();
+                    if(t.isEmpty()||t.length()>30||!t.codePoints().anyMatch(c->Character.UnicodeScript.of(c)==Character.UnicodeScript.HAN))continue;
+                    if(!out.contains(t))out.add(t);
+                }
             }
         }
         return out;
@@ -782,7 +792,31 @@ public class Library {
     static LinkedHashSet<String> extraKeys(String rawHtml,java.util.Collection<String> keys){
         LinkedHashSet<String> out=new LinkedHashSet<>(headingSpellings(rawHtml));
         for(String k:keys){String s2=KEY_SEPARATORS.matcher(k).replaceAll("");if(!s2.equals(k)&&!s2.isEmpty())out.add(s2);}
+        // 御 read お/ご (the honorific prefix): also the way it's usually typed, お鉢 / ご飯.
+        ArrayList<String> words=new ArrayList<>(out);words.addAll(keys);
+        keys=new ArrayList<>(keys);keys.addAll(headingKana(rawHtml));
+        for(String w:words)for(String k:keys){String h=honorific(w,k);if(h!=null)out.add(h);}
         return out;
+    }
+    /** The kana readings printed in a heading (見出仮名), without spaces and separators. */
+    static List<String> headingKana(String rawHtml){
+        ArrayList<String> out=new ArrayList<>();
+        if(rawHtml.indexOf("仮名")<0)return out;
+        String html=MarkupFix.html(rawHtml);
+        Matcher m=HEAD_KANA.matcher(html);
+        while(m.find()&&out.size()<6){
+            int start=html.indexOf('>',m.end());if(start<0)break;
+            int end=closing(html,start+1);if(end<0)continue;
+            String t=HtmlText.entities(html.substring(start+1,end).replaceAll("(?s)<(rt|rp)\\b[^>]*>.*?</\\1>","").replaceAll("<[^>]*>","")).replaceAll("[\\s・･‐\\-=＝]","");
+            if(!t.isEmpty()&&t.length()<30)out.add(t);
+        }
+        return out;
+    }
+    /** 御鉢 read おはち → お鉢; 御飯 read ごはん → ご飯; otherwise null. */
+    static String honorific(String written,String reading){
+        if(written==null||reading==null||!written.startsWith("御")||written.length()<2)return null;
+        String kana=HtmlText.normalize(KEY_SEPARATORS.matcher(reading).replaceAll(""));
+        return kana.startsWith("お")?"お"+written.substring(1):kana.startsWith("ご")?"ご"+written.substring(1):null;
     }
 
     /**
@@ -795,6 +829,15 @@ public class Library {
             db.beginTransaction();
             try{
                 mergeSameEntries(dict);
+                SQLiteStatement add=db.compileStatement("INSERT INTO keys(norm,dict,rec,key) VALUES(?,?,?,?)");
+                try(Cursor c=db.rawQuery("SELECT r.id,r.key,y.reading FROM records r JOIN ytext y ON y.rec=r.id WHERE r.dict=? AND r.key LIKE '御%'",new String[]{Long.toString(dict)})){
+                    while(c.moveToNext()){
+                        String h=honorific(c.getString(1),c.getString(2));if(h==null)continue;
+                        String n=HtmlText.normalize(h);
+                        if(Store.rows(db,"SELECT 1 FROM keys WHERE norm=? AND dict=? AND rec=?",n,Long.toString(dict),Long.toString(c.getLong(0))).length()>0)continue;
+                        add.bindString(1,n);add.bindLong(2,dict);add.bindLong(3,c.getLong(0));add.bindString(4,h);add.executeInsert();
+                    }
+                }
                 JSONObject n=Store.rows(db,"SELECT count(*) n FROM records WHERE dict=?",Long.toString(dict)).getJSONObject(0);
                 db.execSQL("UPDATE dicts SET keys_v=?,entries=? WHERE id=?",new Object[]{KEYS_VERSION,n.getLong("n"),dict});
                 db.setTransactionSuccessful();
@@ -1147,8 +1190,8 @@ public class Library {
             }
             // Keys that carry their spelling (おちあう【落ち合う】, 日韓辞典's おちあう【落ち合う) show as the word itself.
             String shown=stripMarks(best==null?row.optString("page"):best).trim();
-            int bracket=shown.indexOf('【');
-            if(bracket>0)shown=shown.substring(0,bracket).trim();
+            java.util.regex.Matcher bracket=Pattern.compile("[【《〈]").matcher(shown);
+            if(bracket.find()&&bracket.start()>0)shown=shown.substring(0,bracket.start()).trim();
             row.put("key",shown);
             row.put("page",stripMarks(row.optString("page")));
             row.remove("keys");
