@@ -12,3 +12,4 @@ legacy-preview/
 desktop/build/
 desktop/mac/.build/
 desktop/libs/onnxruntime-*.jar
+android/libs/aar/

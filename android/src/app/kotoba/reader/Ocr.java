@@ -57,23 +57,112 @@ public final class Ocr {
     }
     public static volatile LineReader external;
     static boolean externalFor(String lang){LineReader r=external;return r!=null&&r.handles(lang);}
-    /** Cached results remember which recognizer made them. */
-    static int version(String lang){return externalFor(lang)?VERSION*1000+1:VERSION;}
 
-    /** Recognized text on one comic page, cached. */
-    public JSONObject page(Comics comics,long chapter,int index,String lang,boolean refresh) throws Exception {
-        if(!refresh){
-            JSONArray r=Store.rows(db,"SELECT data FROM ocr_cache WHERE chapter=? AND page=? AND lang=?",Long.toString(chapter),Integer.toString(index),lang);
-            if(r.length()>0){JSONObject c=new JSONObject(r.getJSONObject(0).getString("data"));if(c.optInt("v")==version(lang))return c.put("cached",true);}
-        }
-        Object[] res=comics.page(chapter,index);
-        if(res==null)throw new IllegalArgumentException("No such page");
-        long t=System.currentTimeMillis();
-        JSONObject out=recognize((byte[])res[0],lang).put("v",version(lang));
-        out.put("ms",System.currentTimeMillis()-t);
-        db.execSQL("INSERT OR REPLACE INTO ocr_cache(chapter,page,lang,data) VALUES(?,?,?,?)",new Object[]{chapter,index,lang,out.toString()});
-        return out;
+    /**
+     * A reader for whole speech bubbles (on the phone, PaddleOCR-VL): PaddleOCR still finds and groups the text, then
+     * each bubble's crop is read again. It reads vertical manga columns, furigana and small kana far better.
+     * Returns null when it can't read a bubble, which then keeps PaddleOCR's text.
+     */
+    public interface BlockReader {
+        boolean handles(String lang);
+        String read(Bitmap crop,String lang) throws Exception;
     }
+    public static volatile BlockReader blockReader;
+    static boolean blocksFor(String lang){BlockReader r=blockReader;return r!=null&&r.handles(lang);}
+    /** Cached results remember which recognizer made them. */
+    static int version(String lang){return externalFor(lang)?VERSION*1000+1:blocksFor(lang)?VERSION*1000+2:VERSION;}
+
+    /**
+     * Recognized text on one comic page, cached. With a block reader (PaddleOCR-VL, ~2.5 s a bubble on the phone) the
+     * page comes back at once with PaddleOCR's text, marked "refining"; the bubbles are then read again in the
+     * background (this page first, then the next two) and an "ocr-refined" event says when the better text is cached.
+     */
+    public JSONObject page(Comics comics,long chapter,int index,String lang,boolean refresh) throws Exception {
+        return page(comics,chapter,index,lang,refresh,null);
+    }
+    public JSONObject page(Comics comics,long chapter,int index,String lang,boolean refresh,Routes.Host host) throws Exception {
+        boolean refine=blocksFor(lang);
+        if(refine){this.comics=comics;if(host!=null)this.host=host;}
+        JSONObject c=refresh?null:cached(chapter,index,lang);
+        if(c!=null&&c.optInt("v")==version(lang)){if(refine)prefetch(chapter,index,lang);return c.put("cached",true);}
+        if(c==null||c.optInt("v")!=VERSION){
+            Object[] res=comics.page(chapter,index);
+            if(res==null)throw new IllegalArgumentException("No such page");
+            long t=System.currentTimeMillis();
+            c=recognize((byte[])res[0],lang).put("v",VERSION);
+            c.put("ms",System.currentTimeMillis()-t);
+            db.execSQL("INSERT OR REPLACE INTO ocr_cache(chapter,page,lang,data) VALUES(?,?,?,?)",new Object[]{chapter,index,lang,c.toString()});
+        }
+        if(refine){
+            if(c.optJSONArray("blocks")!=null&&c.getJSONArray("blocks").length()>0){c.put("refining",true);queue(chapter,index,lang,true);}
+            prefetch(chapter,index,lang);
+        }
+        return c;
+    }
+
+    JSONObject cached(long chapter,int index,String lang) throws Exception {
+        JSONArray r=Store.rows(db,"SELECT data FROM ocr_cache WHERE chapter=? AND page=? AND lang=?",Long.toString(chapter),Integer.toString(index),lang);
+        return r.length()>0?new JSONObject(r.getJSONObject(0).getString("data")):null;
+    }
+
+    // ---------- background refinement with the block reader ----------
+    Comics comics;Routes.Host host;
+    final java.util.concurrent.LinkedBlockingDeque<Object[]> refineQueue=new java.util.concurrent.LinkedBlockingDeque<>();
+    final java.util.Set<String> queued=java.util.Collections.synchronizedSet(new java.util.HashSet<>());
+    Thread refiner;
+
+    void prefetch(long chapter,int index,String lang){
+        // The next two pages, read ahead while this one is being read (only pages that exist).
+        for(int i=1;i<=2;i++)queue(chapter,index+i,lang,false);
+    }
+    synchronized void queue(long chapter,int index,String lang,boolean first){
+        String k=chapter+":"+index+":"+lang;
+        Object[] job={chapter,index,lang};
+        if(first){refineQueue.removeIf(j->(j[0]+":"+j[1]+":"+j[2]).equals(k));refineQueue.addFirst(job);queued.add(k);}
+        else if(queued.add(k))refineQueue.addLast(job);
+        if(refiner==null){
+            refiner=new Thread(()->{
+                while(true){
+                    Object[] j;
+                    try{j=refineQueue.takeFirst();}catch(InterruptedException e){return;}
+                    try{refine((Long)j[0],(Integer)j[1],(String)j[2]);}catch(Throwable e){android.util.Log.w("Kotoba","OCR refine failed",e);}
+                    finally{queued.remove(j[0]+":"+j[1]+":"+j[2]);}
+                }
+            },"ocr-refine");
+            refiner.setDaemon(true);refiner.start();
+        }
+    }
+
+    void refine(long chapter,int index,String lang) throws Exception {
+        if(!blocksFor(lang)||comics==null)return;
+        JSONObject c=cached(chapter,index,lang);
+        if(c!=null&&c.optInt("v")==version(lang))return;
+        Object[] res;
+        try{res=comics.page(chapter,index);}catch(Exception e){return;}
+        if(res==null)return;
+        byte[] image=(byte[])res[0];
+        if(c==null||c.optInt("v")!=VERSION){
+            synchronized(this){c=recognize(image,lang).put("v",VERSION);}
+            db.execSQL("INSERT OR REPLACE INTO ocr_cache(chapter,page,lang,data) VALUES(?,?,?,?)",new Object[]{chapter,index,lang,c.toString()});
+        }
+        BitmapFactory.Options o=new BitmapFactory.Options();o.inPreferredConfig=Bitmap.Config.ARGB_8888;
+        Bitmap bmp=BitmapFactory.decodeByteArray(image,0,image.length,o);
+        if(bmp==null)return;
+        long t=System.currentTimeMillis();
+        try{
+            JSONArray blocks=c.getJSONArray("blocks");
+            for(int i=0;i<blocks.length();i++){
+                JSONObject b=blocks.getJSONObject(i);
+                String better=readBlock(bmp,b.getInt("x"),b.getInt("y"),b.getInt("w"),b.getInt("h"),b.optString("text",""),lang);
+                if(better!=null)b.put("paddle",b.optString("text","")).put("text",better);
+            }
+        }finally{bmp.recycle();}
+        c.put("v",version(lang)).put("refine_ms",System.currentTimeMillis()-t).remove("refining");
+        db.execSQL("INSERT OR REPLACE INTO ocr_cache(chapter,page,lang,data) VALUES(?,?,?,?)",new Object[]{chapter,index,lang,c.toString()});
+        Routes.Host h=host;
+        if(h!=null)h.event("ocr-refined",new JSONObject().put("chapter",chapter).put("page",index).put("lang",lang));
+    }
+
     public void clear(long chapter){db.execSQL("DELETE FROM ocr_cache WHERE chapter=?",new Object[]{chapter});}
 
     public JSONObject recognize(byte[] image,String lang) throws Exception {
@@ -129,6 +218,30 @@ public final class Ocr {
         return blocks(kept,W,H,0);
     }
 
+    /** One bubble read by the block reader, or null (keep PaddleOCR's lines) when it fails or its answer looks wrong. */
+    static String readBlock(Bitmap bmp,float x1,float y1,float w,float h,String paddle,String lang){
+        float x2=x1+w,y2=y1+h;
+        float pad=Math.max(8,Math.min(x2-x1,y2-y1)*0.12f);
+        int cx1=(int)Math.max(0,x1-pad),cy1=(int)Math.max(0,y1-pad),cx2=(int)Math.min(bmp.getWidth(),x2+pad),cy2=(int)Math.min(bmp.getHeight(),y2+pad);
+        if(cx2-cx1<8||cy2-cy1<8)return null;
+        Bitmap crop=Bitmap.createBitmap(bmp,cx1,cy1,cx2-cx1,cy2-cy1);
+        try{
+            String t=blockReader.read(crop,lang);
+            if(t==null)return null;
+            // Lines of one bubble: Korean joins them with a space, Japanese and Chinese just continue.
+            t=t.trim().replaceAll("\\s*\\n\\s*","ko".equals(lang)?" ":"").replaceAll("[ \\t]+"," ");
+            int n=t.codePointCount(0,t.length()),p=paddle.codePointCount(0,paddle.length());
+            // A runaway answer (the same character over and over, or far longer than the bubble) isn't the bubble's text.
+            if(n==0||n>Math.max(40,p*4)||t.matches(".*([^・.…ー\\-~！!？?])\\1{5,}.*"))return null;
+            // Korean sound effects of a few letters are where it guesses (우물 → 위물); PaddleOCR's reading stays.
+            if("ko".equals(lang)&&p<=3)return null;
+            // It isn't told the language: kana on a Korean page means it misread the bubble (ユ 巻ヮヘ).
+            if("ko".equals(lang)&&t.codePoints().anyMatch(c->c>=0x3040&&c<=0x30FF))return null;
+            return t;
+        }catch(Throwable e){return null;}
+        finally{crop.recycle();}
+    }
+
     /** Whether a recognized line is text worth showing (not artwork, watermarks or stray shapes). */
     static boolean keep(Line l,String lang,float minConf){
         String tt=l.text.trim();
@@ -142,10 +255,14 @@ public final class Ocr {
     }
 
     /** Lines grouped into speech bubbles, as the page's text layer. */
-    static JSONObject blocks(List<Line> kept,int W,int H,float pad) throws Exception {
+    static JSONObject blocks(List<Line> kept,int W,int H,float pad) throws Exception {return blocksOf(group(kept),W,H,pad,null);}
+
+    /** texts: a better reading of each group (from the block reader), or null to join the lines' own text. */
+    static JSONObject blocksOf(List<List<Line>> groups,int W,int H,float pad,List<String> texts) throws Exception {
         JSONObject out=new JSONObject().put("w",W).put("h",H);
         JSONArray blocks=new JSONArray();
-        for(List<Line> g:group(kept)){
+        for(int gi=0;gi<groups.size();gi++){
+            List<Line> g=groups.get(gi);
             // Vision's boxes hug the letters: grouped as they are (padding would join nearby bubbles), then padded
             // like PaddleOCR's so the text layer covers each whole line.
             if(pad>0)for(Line l:g){float p=(l.y2-l.y1)*pad;l.x1=Math.max(0,l.x1-p);l.y1=Math.max(0,l.y1-p);l.x2=Math.min(W,l.x2+p);l.y2=Math.min(H,l.y2+p);}
@@ -157,7 +274,7 @@ public final class Ocr {
                 ls.put(new JSONObject().put("x",Math.round(l.x1)).put("y",Math.round(l.y1)).put("w",Math.round(l.x2-l.x1)).put("h",Math.round(l.y2-l.y1)).put("text",l.text.trim()).put("conf",Math.round(l.conf*100)/100.0));
             }
             blocks.put(new JSONObject().put("x",Math.round(x1)).put("y",Math.round(y1)).put("w",Math.round(x2-x1)).put("h",Math.round(y2-y1))
-                .put("text",text.toString()).put("conf",Math.round(conf/g.size()*100)/100.0).put("lines",ls));
+                .put("text",texts!=null&&texts.get(gi)!=null?texts.get(gi):text.toString()).put("conf",Math.round(conf/g.size()*100)/100.0).put("lines",ls));
         }
         return out.put("blocks",blocks);
     }

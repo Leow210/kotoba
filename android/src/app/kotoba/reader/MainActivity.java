@@ -101,6 +101,8 @@ public class MainActivity extends Activity {
         books=new Books(this,store.db);
         comics=new Comics(this,store.db,this::openChannel);
         ocr=new Ocr(this,store.db);
+        // PaddleOCR-VL for speech bubbles, when the build includes LiteRT-LM (tools/fetch_android_libs.py) and the model is on the phone.
+        try{Class.forName("app.kotoba.reader.VlOcr").getMethod("install",android.content.Context.class,Store.class).invoke(null,this,store);}catch(Throwable ignored){}
         wordlists=new WordLists(store.db);
         extras=new Extras(library,new File(getExternalFilesDir(null),"extras"));
         sync=new Sync(store);

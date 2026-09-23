@@ -331,9 +331,18 @@ async function openComic(series,chapterId,startPage=0){
       }
     }finally{ocrBusy=false;updateUi();}
   }
+  // PaddleOCR-VL reads the bubbles again in the background; its better text replaces the first reading when it's ready.
+  on('ocr-refined',async(e)=>{
+    if(!el.isConnected)return;
+    const k=e.chapter+':'+e.page;if(!ocrData.get(k))return;
+    try{
+      const r=await api('ocr.page',{chapter:e.chapter,page:e.page,lang:series.lang==='ja'?'ja':'ko'});ocrData.set(k,r);
+      const live=view.querySelector(`img.cpage[data-ch="${e.chapter}"][data-i="${e.page}"]`);if(live&&settings.ocr)drawLayer(live,r);
+    }catch(err){}
+  });
   function drawLayer(im,r){
     if(im._layer)im._layer.remove();
-    const layer=document.createElement('div');layer.className='ocr-layer';
+    const layer=document.createElement('div');layer.className='ocr-layer'+(r.refining?' refining':'');
     layer.innerHTML=r.blocks.map((b,n)=>`<button class="ocr-box" data-n="${n}" style="left:${b.x/r.w*100}%;top:${b.y/r.h*100}%;width:${b.w/r.w*100}%;height:${b.h/r.h*100}%" aria-label="${esc(b.text)}"></button>`).join('');
     layer.onclick=e=>{const b=e.target.closest('.ocr-box');if(!b)return;e.stopPropagation();bubbleSheet(r.blocks[+b.dataset.n].text);};
     im.parentElement.appendChild(layer);im._layer=layer;placeLayer(im);

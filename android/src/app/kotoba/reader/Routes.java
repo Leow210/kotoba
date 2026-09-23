@@ -112,7 +112,7 @@ public class Routes {
             case "comic.marks":return comics.marks(d.getLong("series"));
             case "comic.mark":return comics.addMark(d.getLong("chapter"),d.getInt("page"),d.optString("label",""));
             case "comic.unmark":comics.deleteMark(d.getLong("id"));return null;
-            case "ocr.page":return ocr.page(comics,d.getLong("chapter"),d.getInt("page"),d.optString("lang","ko"),d.optBoolean("refresh",false));
+            case "ocr.page":return ocr.page(comics,d.getLong("chapter"),d.getInt("page"),d.optString("lang","ko"),d.optBoolean("refresh",false),host);
             case "ocr.clear":ocr.clear(d.getLong("chapter"));return null;
             // By path (the Mac, and files in the phone's own folder).
             case "comic.scanPath":return comics.scanFiles(new File(d.getString("path")));
