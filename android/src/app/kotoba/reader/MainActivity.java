@@ -109,6 +109,7 @@ public class MainActivity extends Activity {
             @Override public void keepAwake(boolean on){runOnUiThread(()->{if(on)getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);});}
         });
         routes.books=books;routes.comics=comics;routes.ocr=ocr;
+        routes.upgradeIndexesLater();
         web=new KotobaWebView(this);
         setContentView(web);
         web.setBackgroundColor(Color.rgb(247,244,238));
@@ -442,7 +443,8 @@ public class MainActivity extends Activity {
             JSONArray sizes=library.fileSizes(d.getLong("id"));
             boolean changed=false;
             for(int k=0;k<files.length();k++){
-                String u=relinked(files.getString(k),sizes.optLong(k,-1),found);
+                final int index=k;final long dictId=d.getLong("id");
+                String u=relinked(files.getString(k),sizes.optLong(k,-1),found,cand->library.verifyFile(dictId,index,cand));
                 if(u==null)missing++;else if(!u.equals(files.getString(k))){files.put(k,u);changed=true;}
             }
             if(changed){
@@ -453,14 +455,18 @@ public class MainActivity extends Activity {
         return new JSONObject().put("fixed",fixed).put("missing",missing);
     }
 
-    /** The file's current uri when it still opens, else a file with the same name and size (the index points into it), else null. */
-    String relinked(String uri,long size,Map<String,List<String>> found){
+    /**
+     * The file's current uri when it still opens; otherwise a file with the same name and size (the index points into
+     * it), or, when the size was never recorded, a same-named file whose contents match the index. Else null.
+     */
+    String relinked(String uri,long size,Map<String,List<String>> found,java.util.function.Predicate<String> matches){
         try(FileChannel c=openChannel(uri)){return uri;}catch(Exception e){/* moved or deleted */}
-        if(size<0)return null;
         String name=Uri.decode(uri);
         name=name.substring(name.lastIndexOf('/')+1);
-        List<String> same=found.get(name+"\u0000"+size);
-        return same==null?null:same.get(0);
+        if(size>=0){List<String> same=found.get(name+"\u0000"+size);return same==null?null:same.get(0);}
+        for(Map.Entry<String,List<String>> e:found.entrySet())
+            if(e.getKey().startsWith(name+"\u0000"))for(String cand:e.getValue())if(matches.test(cand))return cand;
+        return null;
     }
 
     void collectLocal(File dir,int depth,Map<String,List<String>> found){

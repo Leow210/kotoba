@@ -286,6 +286,33 @@ public class Routes {
         found.put(new JSONObject().put("name",base).put("title",title).put("folder",folder).put("mdx",uri).put("mdd",new JSONArray()).put("size",size).put("imported",already).put("format","yomitan"));
     }
 
+    /**
+     * Once after an update: brings older dictionaries' search keys up to date in the background (e.g. 大辞林's
+     * 落ち合う, filed only as おちあ・う). Runs on the import thread, so it never overlaps an import.
+     */
+    public void upgradeIndexesLater(){
+        importer.execute(()->{
+            try{
+                JSONArray todo=library.keysToUpgrade();
+                if(todo.length()==0)return;
+                importing=true;
+                for(int i=0;i<todo.length();i++){
+                    JSONObject d=todo.getJSONObject(i);final int index=i;
+                    library.upgradeKeys(d.getLong("id"),new Library.Progress(){
+                        long last=0;
+                        @Override public void update(String stage,long a,long b){
+                            long t=System.currentTimeMillis();if(t-last<400)return;last=t;
+                            try{host.event("import",new JSONObject().put("title",d.getString("name")).put("index",index).put("count",todo.length()).put("stage","Improving search").put("done",a).put("total",b));}catch(Exception ignored){}
+                        }
+                        @Override public boolean cancelled(){return cancelImport.get();}
+                    });
+                }
+                host.event("import-done",new JSONObject().put("done",0).put("failed",0).put("cancelled",false).put("quiet",true));
+            }catch(Exception e){android.util.Log.w("Kotoba","index upgrade: "+e.getMessage());}
+            finally{importing=false;}
+        });
+    }
+
     void startImport(JSONArray items,boolean fulltext) throws Exception {
         if(importing)throw new Exception("An import is already running.");
         importing=true;cancelImport.set(false);

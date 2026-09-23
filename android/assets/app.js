@@ -1704,7 +1704,8 @@ on('import-done',async r=>{
   const before=dicts.map(d=>d.id);
   await loadDicts();await autoOrder(false);await placeNew(before);
   if(tab==='library')renderLibrary();
-  toast(r.cancelled?'Import cancelled':`Imported ${r.done} ${r.done===1?'dictionary':'dictionaries'}${r.failed?` · ${r.failed} failed`:''}`,4000);
+  if(r.quiet)toast('Search index updated',2500);
+  else toast(r.cancelled?'Import cancelled':`Imported ${r.done} ${r.done===1?'dictionary':'dictionaries'}${r.failed?` · ${r.failed} failed`:''}`,4000);
   if(!$('q').value)renderSearchEmpty();
 });
 on('restored',r=>{toast(`Restored ${r.added} items${r.skipped?` (${r.skipped} already present)`:''}`,4000);renderFolders();refreshBadge();});
@@ -1743,7 +1744,7 @@ function renderImportProgress(){
   const box=$('import-progress');if(!box)return;
   if(!importState){box.innerHTML='';return;}
   const p=importState;const pct=p.total?Math.min(100,Math.round(p.done/p.total*100)):0;
-  box.innerHTML=`<div class="import-card"><b>Importing ${p.index+1} of ${p.count}: ${esc(p.title)}</b><small>${esc(p.stage)} · ${pct}%</small><div class="progress"><i style="width:${pct}%"></i></div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px"><small>You can keep using dictionaries that are already imported.</small><button class="btn small" id="imp-cancel">Cancel</button></div></div>`;
+  box.innerHTML=`<div class="import-card"><b>${p.stage==='Improving search'?'Updating the search index':'Importing'} ${p.index+1} of ${p.count}: ${esc(p.title)}</b><small>${esc(p.stage)} · ${pct}%</small><div class="progress"><i style="width:${pct}%"></i></div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px"><small>You can keep using dictionaries that are already imported.</small><button class="btn small" id="imp-cancel">Cancel</button></div></div>`;
   $('imp-cancel').onclick=handle(async()=>{await api('library.cancel');toast('Cancelling…');});
 }
 

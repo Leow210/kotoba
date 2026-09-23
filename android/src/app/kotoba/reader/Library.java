@@ -81,6 +81,8 @@ public class Library {
         // The word as the dictionary spells it (norm folds katakana), and rank order for browsing a frequency list.
         try{db.execSQL("ALTER TABLE meta ADD COLUMN term TEXT NOT NULL DEFAULT ''");}catch(Exception ignored){}
         db.execSQL("CREATE INDEX IF NOT EXISTS meta_rank ON meta(dict,mode,value)");
+        // Index version: 1 = heading spellings (【落(ち)合う】) and separator-free headings (おちあ・う → おちあう) are keys too.
+        try{db.execSQL("ALTER TABLE dicts ADD COLUMN keys_v INTEGER NOT NULL DEFAULT 0");}catch(Exception ignored){}
         // Byte sizes of the dictionary's files ([mdx, mdd…]): a moved file is only relinked to an identical one.
         try{db.execSQL("ALTER TABLE dicts ADD COLUMN sizes TEXT NOT NULL DEFAULT ''");}catch(Exception ignored){}
         // Saved cards refer to dictionaries by id; a dictionary re-imported under the same title keeps its id.
@@ -226,6 +228,7 @@ public class Library {
                         long rec=insertRecord.executeInsert();
                         seen[2]++;
                         LinkedHashSet<String> unique=new LinkedHashSet<>(group);
+                        unique.addAll(extraKeys(html,group));
                         for(String key:unique){
                             String norm=HtmlText.normalize(key);if(norm.isEmpty())continue;
                             insertKey.bindString(1,norm);insertKey.bindLong(2,dictId);insertKey.bindLong(3,rec);insertKey.bindString(4,key.trim());
@@ -314,7 +317,7 @@ public class Library {
             JSONObject range=Store.rows(db,"SELECT min(id) a,max(id) b,count(*) n FROM keys WHERE id>=? AND dict=?",Long.toString(seen[1]==Long.MAX_VALUE?0:seen[1]),Long.toString(id)).getJSONObject(0);
             JSONObject recs=Store.rows(db,"SELECT min(id) a,max(id) b,count(*) n FROM records WHERE dict=?",Long.toString(id)).getJSONObject(0);
             ContentValues done=new ContentValues();
-            done.put("status","ready");done.put("entries",recs.getLong("n"));done.put("keys",range.getLong("n"));done.put("resources",resources);
+            done.put("status","ready");done.put("entries",recs.getLong("n"));done.put("keys",range.getLong("n"));done.put("resources",resources);done.put("keys_v",KEYS_VERSION);
             done.put("key_min",range.optLong("a",0));done.put("key_max",range.optLong("b",0));done.put("rec_min",recs.optLong("a",0));done.put("rec_max",recs.optLong("b",0));
             db.update("dicts",done,"id=?",new String[]{Long.toString(id)});
             db.setTransactionSuccessful();
@@ -723,6 +726,108 @@ public class Library {
         return h;
     }
 
+    // ---------- extra keys from headings ----------
+
+    static final int KEYS_VERSION=1;
+    static final Pattern SPELLING=Pattern.compile("data-name=\"(?:標準表記|表記)\"");
+    static final Pattern OPTIONAL_KANA=Pattern.compile("<span data-name=\"送り仮名省略\">");
+    static final Pattern KEY_SEPARATORS=Pattern.compile("[・･‧·‐‑‒–—=＝]");
+
+    /**
+     * Written forms printed in a Monokakido-style heading, for pages keyed only by kana (大辞林 おちあ・う):
+     * 【落(ち)合う】 gives 落ち合う and 落合う.
+     */
+    static List<String> headingSpellings(String rawHtml){
+        ArrayList<String> out=new ArrayList<>();
+        if(rawHtml.indexOf("表記")<0)return out;
+        String html=MarkupFix.html(rawHtml);
+        Matcher m=SPELLING.matcher(html);
+        while(m.find()&&out.size()<20){
+            int start=html.indexOf('>',m.end());if(start<0)break;
+            int end=closing(html,start+1);if(end<0)continue;
+            String inner=html.substring(start+1,end);
+            for(String variant:new String[]{withOptional(inner,true),withOptional(inner,false)}){
+                String t=HtmlText.entities(variant.replaceAll("<[^>]*>","")).replaceAll("[()（）\\s]","");
+                t=stripMarks(t).replace("×","");
+                if(t.isEmpty()||t.length()>30||!t.codePoints().anyMatch(c->Character.UnicodeScript.of(c)==Character.UnicodeScript.HAN))continue;
+                if(!out.contains(t))out.add(t);
+            }
+        }
+        return out;
+    }
+    /** Index of the </span> closing the span whose content starts at `from`, or -1. */
+    static int closing(String html,int from){
+        int depth=0;
+        for(int i=from;i<html.length();){
+            int open=html.indexOf("<span",i),close=html.indexOf("</span>",i);
+            if(close<0)return -1;
+            if(open>=0&&open<close){depth++;i=open+5;}
+            else{if(depth==0)return close;depth--;i=close+7;}
+        }
+        return -1;
+    }
+    /** The okurigana that may be left out (送り仮名省略): kept, or dropped. */
+    static String withOptional(String inner,boolean keep){
+        if(keep)return inner;
+        StringBuilder b=new StringBuilder();int i=0;
+        Matcher m=OPTIONAL_KANA.matcher(inner);
+        while(m.find(i)){
+            int end=closing(inner,m.end());if(end<0)break;
+            b.append(inner,i,m.start());i=end+7;
+        }
+        return b.append(inner.substring(i)).toString();
+    }
+    /** Extra keys for a page: its heading spellings, and its keys without separators. */
+    static LinkedHashSet<String> extraKeys(String rawHtml,java.util.Collection<String> keys){
+        LinkedHashSet<String> out=new LinkedHashSet<>(headingSpellings(rawHtml));
+        for(String k:keys){String s2=KEY_SEPARATORS.matcher(k).replaceAll("");if(!s2.equals(k)&&!s2.isEmpty())out.add(s2);}
+        return out;
+    }
+
+    /**
+     * Adds the version-1 extra keys to an MDX dictionary imported before them (no re-import needed).
+     * Reads every page once, in file order.
+     */
+    public void upgradeKeys(long dict,Progress progress) throws Exception {
+        if(isYomitan(dict))return;
+        JSONObject d=dictRow(dict);
+        MdictFile mdx=file(dict,0);
+        MdictFile.BlockCache c=new MdictFile.BlockCache(3);
+        long total=d.getLong("entries"),done=0,added=0;
+        SQLiteStatement exists=db.compileStatement("SELECT count(*) FROM keys WHERE norm=? AND dict=? AND rec=?");
+        SQLiteStatement insert=db.compileStatement("INSERT INTO keys(norm,dict,rec,key) VALUES(?,?,?,?)");
+        db.beginTransaction();
+        try{
+            try(Cursor cur=db.rawQuery("SELECT id,off,len,key FROM records WHERE dict=? ORDER BY off",new String[]{Long.toString(dict)})){
+                while(cur.moveToNext()){
+                    long rec=cur.getLong(0);
+                    String html;
+                    try{html=mdx.text(mdx.record(cur.getLong(1),cur.getInt(2),c));}catch(Exception e){continue;}
+                    java.util.List<String> keys=new ArrayList<>();
+                    try(Cursor k=db.rawQuery("SELECT key FROM keys WHERE dict=? AND rec=? AND norm=?",new String[]{Long.toString(dict),Long.toString(rec),HtmlText.normalize(cur.getString(3))})){while(k.moveToNext())keys.add(k.getString(0));}
+                    keys.add(cur.getString(3));
+                    for(String extra:extraKeys(html,keys)){
+                        String n=HtmlText.normalize(extra);if(n.isEmpty())continue;
+                        exists.bindString(1,n);exists.bindLong(2,dict);exists.bindLong(3,rec);
+                        if(exists.simpleQueryForLong()>0)continue;
+                        insert.bindString(1,n);insert.bindLong(2,dict);insert.bindLong(3,rec);insert.bindString(4,extra);insert.executeInsert();added++;
+                    }
+                    if(++done%2000==0){
+                        if(progress.cancelled())throw new InterruptedException("cancelled");
+                        progress.update("Improving search for "+d.getString("name"),done,total);
+                    }
+                }
+            }
+            JSONObject range=Store.rows(db,"SELECT max(id) b,count(*) n FROM keys WHERE dict=?",Long.toString(dict)).getJSONObject(0);
+            db.execSQL("UPDATE dicts SET keys_v=?,keys=?,key_max=max(key_max,?) WHERE id=?",new Object[]{KEYS_VERSION,range.getLong("n"),range.optLong("b",0),dict});
+            db.setTransactionSuccessful();
+        }finally{db.endTransaction();}
+    }
+    /** MDX dictionaries whose extra keys are older than this version. */
+    public JSONArray keysToUpgrade() throws Exception {
+        return Store.rows(db,"SELECT id,name FROM dicts WHERE status='ready' AND format!='yomitan' AND keys_v<? ORDER BY entries",Integer.toString(KEYS_VERSION));
+    }
+
     static int parseIntOr(String s,int fallback){try{return Integer.parseInt(s.trim());}catch(Exception e){return fallback;}}
 
     static final Pattern K_CHAR=Pattern.compile("data-name=\"(?:OyajiCharacter|親字-[^\"]*)\"[^>]*>(?:\\s*<[^>]+>)*\\s*([\\x{3400}-\\x{9FFF}\\x{F900}-\\x{FAFF}\\x{20000}-\\x{2FFFF}])");
@@ -829,22 +934,47 @@ public class Library {
     /** Sizes of a dictionary's files, recorded the first time they can be opened. Unknown sizes are -1. */
     public JSONArray fileSizes(long id) throws Exception {
         JSONObject d=dictRow(id);
-        if(!d.optString("sizes").isEmpty())return new JSONArray(d.getString("sizes"));
         JSONArray uris=new JSONArray().put(d.getString("mdx"));
         JSONArray mdd=new JSONArray(d.getString("mdd"));for(int k=0;k<mdd.length();k++)uris.put(mdd.getString(k));
-        JSONArray sizes=new JSONArray();boolean all=true;
+        JSONArray sizes=d.optString("sizes").isEmpty()?new JSONArray():new JSONArray(d.getString("sizes"));
+        // Each file's size is kept on its own: one missing file mustn't lose what's known about the others.
+        boolean changed=false;
         for(int k=0;k<uris.length();k++){
-            try(FileChannel c=opener.open(uris.getString(k))){sizes.put(c.size());}catch(Exception e){sizes.put(-1);all=false;}
+            if(sizes.optLong(k,-1)>=0)continue;
+            long size=-1;
+            try(FileChannel c=opener.open(uris.getString(k))){size=c.size();}catch(Exception ignored){}
+            sizes.put(k,size);changed|=size>=0;
         }
-        if(all)db.execSQL("UPDATE dicts SET sizes=? WHERE id=?",new Object[]{sizes.toString(),id});
+        if(changed)db.execSQL("UPDATE dicts SET sizes=? WHERE id=?",new Object[]{sizes.toString(),id});
         return sizes;
     }
 
-    /** New locations for a dictionary's files (same files, moved); the index is kept. */
+    /** New locations for a dictionary's files (the same files, moved); the index is kept, and so are known sizes. */
     public void setFiles(long id,String mdx,JSONArray mdd){
         closeFiles(id);
-        ContentValues v=new ContentValues();v.put("mdx",mdx);v.put("mdd",mdd.toString());v.put("sizes","");
+        ContentValues v=new ContentValues();v.put("mdx",mdx);v.put("mdd",mdd.toString());
         db.update("dicts",v,"id=?",new String[]{Long.toString(id)});
+    }
+
+    /**
+     * Whether a file is really this dictionary's file number `index` (0 = MDX, 1… = MDD), by reading a few indexed
+     * entries or resources from it. Used to relink a moved file whose size wasn't recorded.
+     */
+    public boolean verifyFile(long dict,int index,String uri){
+        try(MdictFile f=new MdictFile(opener.open(uri),index>0)){
+            MdictFile.BlockCache c=new MdictFile.BlockCache(2);
+            JSONArray rows=index==0
+                ?Store.rows(db,"SELECT off,len,key FROM records WHERE dict=? ORDER BY id LIMIT 3",Long.toString(dict))
+                :Store.rows(db,"SELECT off,len,name key FROM resources WHERE dict=? AND file=? ORDER BY off LIMIT 3",Long.toString(dict),Integer.toString(index));
+            if(rows.length()==0)return false;
+            for(int i=0;i<rows.length();i++){
+                JSONObject r=rows.getJSONObject(i);
+                byte[] b=f.record(r.getLong("off"),r.getInt("len"),c);
+                if(b==null||b.length==0)return false;
+                if(index==0&&!HtmlText.normalize(f.text(b)).contains(HtmlText.normalize(r.getString("key")).replace("@","")))return false;
+            }
+            return true;
+        }catch(Exception e){return false;}
     }
 
     public void reorder(JSONArray ids){
