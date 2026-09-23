@@ -76,6 +76,9 @@ public class Library {
         // Frequency ranks, pitch accents and IPA from Yomitan term_meta banks.
         db.execSQL("CREATE TABLE IF NOT EXISTS meta(dict INTEGER NOT NULL,norm TEXT NOT NULL,reading TEXT NOT NULL DEFAULT '',mode TEXT NOT NULL,value REAL,display TEXT NOT NULL DEFAULT '')");
         db.execSQL("CREATE INDEX IF NOT EXISTS meta_norm ON meta(norm,dict)");
+        // The word as the dictionary spells it (norm folds katakana), and rank order for browsing a frequency list.
+        try{db.execSQL("ALTER TABLE meta ADD COLUMN term TEXT NOT NULL DEFAULT ''");}catch(Exception ignored){}
+        db.execSQL("CREATE INDEX IF NOT EXISTS meta_rank ON meta(dict,mode,value)");
         // Byte sizes of the dictionary's files ([mdx, mdd…]): a moved file is only relinked to an identical one.
         try{db.execSQL("ALTER TABLE dicts ADD COLUMN sizes TEXT NOT NULL DEFAULT ''");}catch(Exception ignored){}
         // Saved cards refer to dictionaries by id; a dictionary re-imported under the same title keeps its id.
@@ -496,7 +499,7 @@ public class Library {
                 SQLiteStatement insertRecord=db.compileStatement("INSERT INTO records(dict,off,len,key,norm) VALUES(?,0,?,?,?)");
                 SQLiteStatement insertKey=db.compileStatement("INSERT INTO keys(norm,dict,rec,key) VALUES(?,?,?,?)");
                 SQLiteStatement insertText=db.compileStatement("INSERT INTO ytext(rec,reading,tags,body) VALUES(?,?,?,?)");
-                SQLiteStatement insertMeta=db.compileStatement("INSERT INTO meta(dict,norm,reading,mode,value,display) VALUES(?,?,?,?,?,?)");
+                SQLiteStatement insertMeta=db.compileStatement("INSERT INTO meta(dict,norm,reading,mode,value,display,term) VALUES(?,?,?,?,?,?,?)");
                 SQLiteStatement insertKanji=db.compileStatement("INSERT INTO kanji(dict,rec,char,strokes,radical,rstrokes,level,flags,variants,sortkey) VALUES(?,?,?,?,'',-1,'','','',?)");
                 final long[] firstKey={Long.MAX_VALUE};
                 final java.util.zip.Deflater deflater=new java.util.zip.Deflater(6);
@@ -596,7 +599,7 @@ public class Library {
                             if(m.term.isEmpty()||m.display.isEmpty())return;
                             insertMeta.bindLong(1,dictId);insertMeta.bindString(2,HtmlText.normalize(m.term));insertMeta.bindString(3,HtmlText.normalize(m.reading));insertMeta.bindString(4,m.mode);
                             if(Double.isNaN(m.value))insertMeta.bindNull(5);else insertMeta.bindDouble(5,m.value);
-                            insertMeta.bindString(6,m.display);insertMeta.executeInsert();
+                            insertMeta.bindString(6,m.display);insertMeta.bindString(7,m.term);insertMeta.executeInsert();
                             if(++done[1]%5000==0){
                                 if(progress.cancelled())throw new RuntimeException(new InterruptedException("Import cancelled"));
                                 progress.update("Indexing frequencies",done[0]+r.count,totalChars);
@@ -698,6 +701,19 @@ public class Library {
         JSONArray rows=Store.rows(db,"SELECT m.dict,d.name dictionary,m.mode,m.reading,min(m.value) value,m.display FROM meta m JOIN dicts d ON d.id=m.dict WHERE m.norm=? AND d.enabled=1 AND d.status='ready' AND (?='' OR m.reading='' OR m.reading=? OR m.reading=m.norm) GROUP BY m.dict,m.mode ORDER BY d.position",n,rn,rn);
         return rows;
     }
+    /**
+     * A frequency dictionary as a ranked word list, most common first. from>0 starts at that rank.
+     * Each word says whether any enabled dictionary has an entry for it.
+     */
+    public JSONObject freqList(long dict,long from,int offset,int limit) throws Exception {
+        String d=Long.toString(dict),n=Integer.toString(Math.max(1,Math.min(300,limit)));
+        JSONArray rows=Store.rows(db,"SELECT CASE WHEN m.term='' THEN m.norm ELSE m.term END word,m.norm,m.reading,m.value,m.display,"
+            +"EXISTS(SELECT 1 FROM keys k JOIN dicts x ON x.id=k.dict WHERE k.norm=m.norm AND x.enabled=1 AND x.kind!='freq') found "
+            +"FROM meta m WHERE m.dict=? AND m.mode='freq' AND m.value>=? ORDER BY m.value,m.rowid LIMIT ? OFFSET ?",d,Long.toString(from),n,Integer.toString(offset));
+        long total=Store.rows(db,"SELECT count(*) n FROM meta WHERE dict=? AND mode='freq'",d).getJSONObject(0).getLong("n");
+        return new JSONObject().put("items",rows).put("total",total);
+    }
+
     volatile Boolean hasMeta;
     boolean hasMeta(){
         Boolean h=hasMeta;

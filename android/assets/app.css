@@ -523,3 +523,12 @@ svg.i.sm{width:16px;height:16px}
 .fq.audio{background:var(--accent-soft);color:var(--accent)}
 .fq.audio svg{width:15px;height:15px}
 .fq.audio b{color:var(--accent)}
+
+/* Frequency list: rank, word, bars. */
+.freq-jump{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--line)}
+.freq-jump .input{flex:1;min-width:180px}
+.freq-only{display:flex;align-items:center;gap:6px;color:var(--ink2);font-size:13.5px}
+.freq-row{display:flex;align-items:center;gap:12px}
+.freq-row .hw{flex:1;min-width:0}
+.freq-rank{flex:none;min-width:4.2em;text-align:right;color:var(--muted);font:600 13px var(--sans);font-variant-numeric:tabular-nums}
+.freq-row.missing .hw{color:var(--muted)}

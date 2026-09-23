@@ -249,12 +249,19 @@ function renderDictChips(){
     if(!c)return;search.dict=String(c.id);renderDictChips();runSearch();
   });
 }
+// Names for tags and tabs, where the generic trimming (publisher, 辞典, 第N版) would leave just 国語 or 古語.
+const SHORT_NAMES=[[/^三省堂国語辞典/,'三省堂国語'],[/日本国語大辞典/,'日本国語大辞典'],[/^現代国語例解/,'現代国語例解'],[/^明鏡国語辞典/,'明鏡'],
+  [/^実用日本語表現/,'実用日本語表現'],[/全訳読解古語/,'全訳読解古語'],[/類語例解/,'類語例解'],[/同訓異義/,'同訓異義'],[/^故事ことわざ/,'故事ことわざ'],
+  [/^新明解四字熟語/,'新明解四字熟語'],[/^日本語文法辞典/,'日本語文法'],[/^数え方辞典/,'数え方'],[/^擬音語・擬態語/,'擬音語・擬態語'],[/^全国方言/,'全国方言'],
+  [/^語源由来/,'語源由来'],[/^全市区町村/,'全市区町村'],[/^絵でわかる慣用句/,'絵でわかる慣用句'],[/^JPDB/i,'JPDB'],[/^CC100/i,'CC100'],[/^hanja$/i,'Hanja 漢字'],
+  [/^KRDICT/i,'KRDICT'],[/^STDICT/i,'STDICT'],[/^JMnedict/i,'JMnedict']];
 function shortName(name){
   // Dates and versions from Yomitan titles: "JMnedict [2026-08-10]", "類語辞典オンライン (2024-02-09)".
   let n=String(name).replace(/　/g,' ').replace(/\s*[\[(（][\d\-. v]+[\])）]\s*$/,'').trim();
+  for(const [re,short] of SHORT_NAMES)if(re.test(n))return short;
   if(/NHK/.test(n))return 'NHK';
   n=n.replace(/^(小学館|三省堂|研究社|大修館|旺文社)\s*/,'').replace(/^全訳\s*/,'').replace(/\s*第.版$/,'').replace(/^プログレッシブ\s*/,'');
-  n=n.replace(/^新明解国語辞典.*/,'新明解').replace(/^明鏡国語辞典.*/,'明鏡').replace(/^精選版\s*日本国語大辞典.*/,'日国').replace(/^三省堂国語辞典.*/,'三国').replace(/^現代国語例解辞典.*/,'現代例解').replace(/^漢検\s*漢字辞典.*/,'漢検').replace(/^大辞林.*/,'大辞林');
+  n=n.replace(/^新明解国語辞典.*/,'新明解').replace(/^漢検\s*漢字辞典.*/,'漢検').replace(/^大辞林.*/,'大辞林');
   if(n.length>4)n=n.replace(/辞典$/,'');
   return n.slice(0,12);
 }
@@ -377,10 +384,12 @@ async function renderSearchEmpty(){
     return;
   }
   const history=await api('history').catch(()=>[]);
-  const browse=`<div class="section-label">Browse a dictionary<button id="random-any" style="display:inline-flex;align-items:center;gap:5px">${icon('shuffle','i sm')} Random word</button></div><div class="history">${dicts.filter(d=>d.enabled).map(d=>`<button class="chip" data-browse="${d.id}">${esc(shortName(d.name))}</button>`).join('')}</div>`;
+  const browse=`<div class="section-label">Browse a dictionary<button id="random-any" style="display:inline-flex;align-items:center;gap:5px">${icon('shuffle','i sm')} Random word</button></div><div class="history">${dicts.filter(d=>d.enabled&&searchable(d)).map(d=>`<button class="chip" data-browse="${d.id}">${esc(shortName(d.name))}</button>`).join('')}</div>`+
+    (dicts.some(d=>d.enabled&&!searchable(d))?`<div class="section-label">Frequency lists</div><div class="history">${dicts.filter(d=>d.enabled&&!searchable(d)).map(d=>`<button class="chip" data-freqlist="${d.id}">${freqBars(1)} ${esc(shortName(d.name))}</button>`).join('')}</div>`:'');
   box.innerHTML=(history.length?`<div class="section-label">Recent<button id="clear-history">Clear</button></div><div class="history">${history.map(h=>`<button class="chip" data-h="${esc(h.query)}">${esc(h.query)}</button>`).join('')}</div>`:
     `<div class="empty" style="padding-bottom:10px"><span class="glyph">言</span><h2>Look something up</h2>Type a word, reading or phrase.<br>Kana, kanji, Hangul, Thai and Cyrillic all work.</div>`)+browse;
   box.querySelectorAll('[data-browse]').forEach(b=>b.onclick=handle(()=>openBrowse(+b.dataset.browse)));
+  box.querySelectorAll('[data-freqlist]').forEach(b=>b.onclick=handle(()=>openFreqList(+b.dataset.freqlist)));
   $('random-any').onclick=handle(async()=>{const r=await api('random',{dict:search.dict&&!search.dict.startsWith('g:')?+search.dict:0});openEntry({rec:r.rec,dict:r.dict,key:r.key});});
   box.querySelectorAll('[data-h]').forEach(b=>b.onclick=()=>{$('q').value=b.dataset.h;$('q-clear').hidden=false;runSearch();});
   const clear=$('clear-history');if(clear)clear.onclick=handle(async()=>{await api('history.clear');renderSearchEmpty();});
@@ -998,6 +1007,42 @@ function indexLetters(sample){
   if(/[\u0400-\u04ff]/.test(t))return 'абвгдежзиклмнопрстуфхцчшэюя'.split('');
   if(/[a-z]/i.test(t))return 'abcdefghijklmnopqrstuvwxyz'.split('');
   return [];
+}
+/** A frequency dictionary as a ranked list (most common first), scrolling without end; tap a word to look it up. */
+async function openFreqList(dictId){
+  const d=dictById(dictId);if(!d){toast('Dictionary not found');return;}
+  const el=document.createElement('div');el.className='browse-page freq-page';
+  el.innerHTML=`<div class="bar"><button class="icon-btn" data-a="back">${icon('back')}</button><div class="title"><b>${esc(d.name)}</b><small data-f="sub">Most common first</small></div></div>
+    <div class="freq-jump"><input class="input" data-f="jump" inputmode="numeric" placeholder="Jump to rank, e.g. 5000"><label class="freq-only"><input type="checkbox" data-f="only"> Only words in my dictionaries</label></div>
+    <div class="browse-body"><div class="scroll" data-f="list"></div></div>`;
+  pushPage(el);
+  el.querySelector('[data-a="back"]').onclick=()=>popPage();
+  const list=el.querySelector('[data-f="list"]');
+  let from=0,offset=0,loading=false,done=false,only=false,shown=0;
+  const row=(r)=>`<button class="row freq-row ${r.found?'':'missing'}" data-w="${esc(r.word)}" data-r="${esc(r.reading||'')}"><span class="freq-rank">${Number(r.value).toLocaleString()}</span><span class="hw">${esc(r.word)}${r.reading&&r.reading!==r.norm?`<span class="pg">${esc(r.reading)}</span>`:''}</span>${freqBars(r.value)}</button>`;
+  async function more(){
+    if(loading||done)return;loading=true;
+    try{
+      const r=await api('freq.list',{dict:d.id,from,offset,limit:150});
+      offset+=r.items.length;done=r.items.length<150;
+      const items=only?r.items.filter(x=>x.found):r.items;
+      shown+=items.length;
+      list.insertAdjacentHTML('beforeend',items.map(row).join(''));
+      el.querySelector('[data-f="sub"]').textContent=`${r.total.toLocaleString()} words · most common first`;
+      if(!done&&list.scrollHeight<=list.clientHeight*1.5)setTimeout(()=>handle(more)(),0);
+    }finally{loading=false;}
+  }
+  const reset=()=>{offset=0;done=false;shown=0;list.innerHTML='';list.scrollTop=0;handle(more)();};
+  list.addEventListener('scroll',()=>{if(list.scrollTop+list.clientHeight>list.scrollHeight-600)handle(more)();},{passive:true});
+  el.querySelector('[data-f="jump"]').addEventListener('keydown',e=>{if(e.key!=='Enter')return;e.preventDefault();from=Math.max(0,parseInt(e.target.value,10)||0);e.target.blur();reset();});
+  el.querySelector('[data-f="only"]').onchange=e=>{only=e.target.checked;reset();};
+  list.addEventListener('click',handle(async e=>{
+    const b=e.target.closest('[data-w]');if(!b)return;
+    const w=b.dataset.w,rows=await api('exact',{key:w});
+    if(!rows.length){const l=await api('lookup',{text:w});if(!l.items.length){toast('Not in your dictionaries');return;}openEntry({...l.items[0],key:l.key,alternatives:l.items});return;}
+    openEntry({...rows[0],key:w,alternatives:rows});
+  }));
+  await more();
 }
 async function openBrowse(dictId,start={}){
   const d=dictById(dictId);if(!d){toast('Dictionary not found');return;}
@@ -1877,7 +1922,7 @@ async function dictMenu(id){
       const g=await chooseGroup(d);if(!g||g===d.grp)return;
       await api('dict.update',{id:d.id,grp:g});await loadDicts();await placeNew(dicts.map(x=>x.id).filter(x=>x!==d.id));toast('Moved to '+groupLabel(g));renderLibrary();}},
     {label:'Rename',icon:'edit',run:async()=>{const name=await prompt2('Rename dictionary',d.name);if(!name)return;await api('dict.update',{id:d.id,name});renderLibrary();}},
-    ...(d.kind==='freq'?[]:[{label:d.kind==='kanji'?'Treat as a word dictionary':'Treat as a kanji dictionary',icon:'text',run:async()=>{await api('dict.update',{id:d.id,kind:d.kind==='kanji'?'term':'kanji'});toast(d.kind==='kanji'?'Now a word dictionary':'Now shown in the kanji strip');renderLibrary();}},
+    ...(d.kind==='freq'?[{label:'Browse by rank',icon:'book',run:()=>openFreqList(d.id)}]:[{label:d.kind==='kanji'?'Treat as a word dictionary':'Treat as a kanji dictionary',icon:'text',run:async()=>{await api('dict.update',{id:d.id,kind:d.kind==='kanji'?'term':'kanji'});toast(d.kind==='kanji'?'Now a word dictionary':'Now shown in the kanji strip');renderLibrary();}},
     {label:'Browse this dictionary',icon:'book',run:()=>openBrowse(d.id)},
     {label:'Appendix / 付録',icon:'book',run:async()=>{const a=await api('appendix',{dict:d.id});if(!a.length){toast(d.format==='yomitan'?'Yomitan dictionaries have no appendix (付録) pages':'This dictionary has no appendix pages');return;}openAppendix(d.id);}}]),
     ...(d.kind==='kanji'?[{label:'Kanji grid',icon:'expand',run:()=>openKanjiGrid(d.id)}]:[]),

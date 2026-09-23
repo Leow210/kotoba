@@ -329,6 +329,7 @@ public class MainActivity extends Activity {
             case "audio":return library.audioFor(d.getString("key"),d.optString("reading",""),d.optLong("dict",0));
             case "exact":return library.exact(d.getString("key"),null);
             case "freq":return library.frequencies(d.getString("key"),d.optString("reading",""));
+            case "freq.list":return library.freqList(d.getLong("dict"),d.optLong("from",0),d.optInt("offset",0),d.optInt("limit",150));
             case "lookup":return library.lookup(d.getString("text"),d.optString("lang",""));
             case "record":{
                 JSONObject r=library.record(d.getLong("rec"));
