@@ -157,6 +157,11 @@ Tap a preview to play the video. Each one is silent and about 15–25 seconds lo
 - **Korean comic text read by Apple Vision** (the macOS text recognizer) instead of the mobile model: in testing it read stylized webtoon lettering that every other recognizer got wrong (그래도 윤치영이가 전에 니가 팬 놈 깽값도 대줬잖아.);
 - **translation inside Kotoba** (Settings › Translation): a local Gemma 4 26B model (best with idioms and slang — 생각보다 손이 맵네 → "You've got a heavier hand than I thought" — and for comic bubbles it reads the rest of the page as context), Google Cloud Translation with your own API key (500,000 characters a month free; the Translation LLM with a project ID), Google's free web service, or Google Translate in the browser. TranslateGemma 12B and Hy-MT2 7B were tried and translated idioms word for word;
 - ⌘+ / ⌘− in the readers: book text size, and comic zoom from 25% (see more of a webtoon at once) to 400%.
+- **Write**, a small editor for writing in the language you're learning. Documents are HTML files in `~/Documents/Kotoba`, so they open in any browser with their furigana.
+  - Bold, italic, underline, headings and lists; **縦** switches to vertical writing; **ルビ** (⌘R) adds furigana. The reading is suggested from your dictionaries, and okurigana stay outside it: 考(かんが)える.
+  - Beside the page, **辞書** shows the selected word in your dictionaries (conjugations folded; save it as a card with its sentence).
+  - **類語** is a brainstormer: type or select a word (a conjugated one works) to see its 類語例解 entry, plus the entries that mention it. Click a word inside an entry to brainstorm from that word (← goes back). Select a word and press **Use** to put it in your text.
+  - **文法** asks the local Gemma 4 model to check grammar, particles, conjugation, spelling and naturalness, all on the Mac. Each suggestion shows the fix and a short explanation, with Apply, Show and Ignore. In testing it caught 面白いでした, 昨日に, 学校を行きました and 考えかた; a check takes about 5 s once the model is loaded.
 
 | Subtitle lookup | Expanded popup |
 |---|---|

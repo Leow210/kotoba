@@ -80,7 +80,7 @@ final class Translator {
         if(!m.isFile())throw new Exception("The translation model isn't at "+m.getPath()+". Plug in the drive, or finish downloading it.");
         File exe=llamaServer();
         if(exe==null)throw new Exception("llama-server isn't installed (brew install llama.cpp).");
-        java.util.List<String> cmd=new java.util.ArrayList<>(java.util.List.of(exe.getPath(),"-m",m.getPath(),"--host","127.0.0.1","--port",Integer.toString(PORT),"-c","4096","-ngl","99"));
+        java.util.List<String> cmd=new java.util.ArrayList<>(java.util.List.of(exe.getPath(),"-m",m.getPath(),"--host","127.0.0.1","--port",Integer.toString(PORT),"-c","8192","-ngl","99"));
         if(chat)cmd.add("--jinja");
         server=new ProcessBuilder(cmd).redirectErrorStream(true).redirectOutput(new File(data,"translator.log")).start();
         serverModel=path;
@@ -182,6 +182,15 @@ final class Translator {
         }
         return out;
     }
+    /** One chat request to the local model (the grammar check); returns the answer's text. */
+    synchronized String chat(JSONObject body) throws Exception {
+        ensureServer(llm(),true);
+        lastUse=System.currentTimeMillis();
+        JSONObject r=new JSONObject(http("POST","/v1/chat/completions",body.toString(),300_000));
+        lastUse=System.currentTimeMillis();
+        return r.getJSONArray("choices").getJSONObject(0).getJSONObject("message").optString("content","").trim();
+    }
+
     static String googleCode(String c){return c.equals("zh-Hans")?"zh-CN":c.equals("zh-Hant")?"zh-TW":c;}
 
     static String http(String method,String path,String body,int timeout) throws Exception {

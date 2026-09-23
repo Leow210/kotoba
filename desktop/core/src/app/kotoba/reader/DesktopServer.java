@@ -41,6 +41,7 @@ public class DesktopServer {
     final List<OutputStream> listeners=new CopyOnWriteArrayList<>();
     final Sync sync;
     final Translator translator;
+    final Writing writing;
     final java.util.Map<String,Long> installLinks=new java.util.concurrent.ConcurrentHashMap<>();
     volatile int port;volatile boolean helperRunning;
 
@@ -56,6 +57,7 @@ public class DesktopServer {
         });
         sync=new Sync(store);
         translator=new Translator(store,data);
+        writing=new Writing(translator);
         routes.books=new Books(context,store.db);
         routes.ocr=new Ocr(context,store.db);
         Ocr.spacing=new Spacing(context.getExternalFilesDir(null));
@@ -99,6 +101,12 @@ public class DesktopServer {
             case "translate.config":return translator.config();
             case "translate.set":translator.set(d);return translator.config();
             case "translate":return translator.translate(d.getString("text"),d.optString("from",""),d.optString("to",""),d.optString("engine",""),d.optString("context",""));
+            case "doc.list":return writing.list();
+            case "doc.get":return writing.get(d.getString("id"));
+            case "doc.save":return writing.save(d);
+            case "doc.delete":writing.delete(d.getString("id"));return null;
+            case "doc.folder":return new JSONObject().put("path",writing.dir.getPath());
+            case "grammar.check":return writing.grammar(d.getString("text"),d.optString("lang",""));
             case "helper.link":{
                 // A one-time link for installing the Firefox helper (see /kotoba-video.user.js).
                 byte[] r=new byte[12];new SecureRandom().nextBytes(r);
@@ -579,7 +587,7 @@ public class DesktopServer {
                 int at=html.indexOf("<script");
                 String inject="<link rel=\"stylesheet\" href=\"/desktop.css\"><script src=\"/hover-modifier.js\"></script><script src=\"/desktop.js\"></script>";
                 html=at<0?html+inject:html.substring(0,at)+inject+html.substring(at);
-                html=html.replace("</body>","<script src=\"/desktop-after.js\"></script></body>");
+                html=html.replace("</body>","<script src=\"/desktop-after.js\"></script><link rel=\"stylesheet\" href=\"/writer.css\"><script src=\"/writer.js\"></script></body>");
                 bytes=html.getBytes(StandardCharsets.UTF_8);
             }
             send(x,200,mime,bytes,null);

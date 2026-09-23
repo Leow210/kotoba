@@ -1233,7 +1233,7 @@ function selectionChanged(doc,opts){
 }
 document.addEventListener('selectionchange',()=>{
   const active=document.activeElement;
-  if(active&&(active.tagName==='INPUT'||active.tagName==='TEXTAREA'))return;
+  if(active&&(active.tagName==='INPUT'||active.tagName==='TEXTAREA'||active.isContentEditable))return;
   const sel=document.getSelection();const text=sel?sel.toString().trim():'';
   if(text){selection={text,doc:document,opts:{},context:sentenceAround(sel)};showSelbar();}
   else if(selection.doc===document)hideSelbar();
