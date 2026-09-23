@@ -1559,6 +1559,7 @@ public class Library {
         try(Cursor c=db.rawQuery("SELECT 1 FROM keys k JOIN dicts d ON d.id=k.dict WHERE k.norm=? AND d.enabled=1 AND d.status='ready' AND d.kind='term' LIMIT 1",new String[]{n})){return c.moveToFirst();}
     }
 
+    static final java.util.Set<String> NOUN_PARTICLES=java.util.Set.of("의","을","를","에","에서","에게","한테","께","께서","와","과","처럼","만큼","조차","마저","밖에","로","으로","로부터","으로부터","에게서","한테서","에서부터");
     static final String[] KO_PARTICLES={"에서부터","에게서","한테서","으로부터","로부터","이라고","이라는","이라도","이었다","이었어요","입니다","이에요","이지만","에서도","에게도","한테도","까지도","부터도","으로도","에서는","에게는","으로는","이든지","이랑","이나","이야","이며","이고","인데","였다","였어요","예요","라고","라는","라도","로도","로는","에도","에는","과는","와는","하고","처럼","보다","만큼","까지","부터","조차","마저","밖에","든지","에서","에게","한테","께서","으로","이다","이든","로","와","과","도","만","들","의","은","는","이","가","을","를","에","께","랑","나","야","며","고","요","든"};
 
     boolean koKey(String word) throws Exception {return isHeadword(word);}
@@ -1597,6 +1598,9 @@ public class Library {
             }
             for(String[] sp:splits){
                 if(sp[0].isEmpty())continue;
+                // A particle that only follows nouns isn't a verb ending: 비운의 is 비운 + 의, not "비운다 + -의" (a noun +
+                // particle is found below). Particles that are also endings (-고, -든지, -라는) still count.
+                if(NOUN_PARTICLES.contains(sp[1]))continue;
                 if(!koKey("-"+sp[1]))continue;
                 String verb=sp[0]+"다";
                 JSONArray rows=koEntries(verb);
@@ -1811,6 +1815,18 @@ public class Library {
         if(kw.find()&&kw.group().length()>=2){
             String word=kw.group();
             JSONArray analyses=koreanAnalyses(word);
+            // 비운 is both a noun (否運) and 비우다's modifier form. Right before another word ("비운 자리") it's almost
+            // always the modifier (the noun would take a particle: 비운의), so that reading goes first.
+            if(analyses.length()>1&&analyses.getJSONObject(0).optString("explain").isEmpty()
+                &&clean.substring(kw.end()).matches("(?s)\\s+[\\uac00-\\ud7a3].*")){
+                for(int i=1;i<analyses.length();i++){
+                    if(!analyses.getJSONObject(i).optString("explain").startsWith("adnominal"))continue;
+                    JSONObject a=analyses.getJSONObject(i);
+                    java.util.List<Object> list=new java.util.ArrayList<>();list.add(a);
+                    for(int j=0;j<analyses.length();j++)if(j!=i)list.add(analyses.get(j));
+                    analyses=new JSONArray(list);break;
+                }
+            }
             if(analyses.length()>0){
                 JSONObject a0=analyses.getJSONObject(0);
                 JSONArray items=new JSONArray();
