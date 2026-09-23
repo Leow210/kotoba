@@ -37,7 +37,7 @@ Mac too: Reader › ＋ Add imports books from Finder. ←/→ turn pages in the
 right-to-left book); Space, Page Up/Down and ↑/↓ also turn.
 
 Comics work as on the phone, including the 文 text layer (the same PaddleOCR models on onnxruntime for macOS,
-about 0.2 s a page). The phone's Mihon folder is mirrored to `/Volumes/T7/Mihon` by Syncthing (receive-only);
+about 0.2 s a page). The phone's Mihon webtoons are mirrored to `/Volumes/T7/Mihon` by Syncthing (receive-only; its `.stignore` keeps only `downloads/* (KO)` and `autobackup/`, so manga stays on the phone);
 while the drive is plugged in, Kotoba rescans `downloads/` and imports the newest `autobackup/*.tachibk` (titles,
 categories, read chapters) by itself. Covers come from `mihon-covers/` in the data folder, as on the phone.
 
