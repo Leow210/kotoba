@@ -55,8 +55,9 @@
     home.querySelectorAll('.translation-settings').forEach(x=>x.remove());
     const label=document.createElement('div');label.className='section-label translation-settings';label.textContent='Translation';
     const box=document.createElement('div');box.className='settings translation-settings';
-    const engines=[['llm','Gemma 4 26B'],['google','Google (in app)'],['google-web','Google (browser)']];
-    const status=cfg.engine==='google'?'Google Translate’s free web service: the text is sent to Google, and the result shows here. Unofficial, so Google may limit it.'
+    const engines=[['llm','Gemma 4 26B'],['cloud','Google Cloud (your key)'],['google','Google (free, in app)'],['google-web','Google (browser)']];
+    const status=cfg.engine==='cloud'?(cfg.cloudKey?`Google Cloud Translation with your key${cfg.cloudProject?` — Translation LLM in project ${esc(cfg.cloudProject)}, falling back to the Basic model`:' — the Basic model (add your project ID for the Translation LLM)'}. 500,000 characters a month are free.`:'Add your API key below.')
+      :cfg.engine==='google'?'Google Translate’s free web service: the text is sent to Google, and the result shows here. Unofficial, so Google may limit it.'
       :cfg.engine==='google-web'?'Translate opens Google Translate in your browser.'
       :!cfg.serverFound?'llama-server isn’t installed (brew install llama.cpp).'
       :cfg.llmFound?`A general model from ${esc(cfg.llm)}: good with idioms and slang, and it reads the rest of a comic page as context. Loads in about a minute the first time; unloads after 10 idle minutes.`
@@ -64,12 +65,24 @@
     box.innerHTML=`<div class="switch-row"><div><b>Translate with</b><small>${status}</small></div>
         <div class="chips">${engines.map(([k,v])=>`<button class="chip small ${cfg.engine===k?'on':''}" data-engine="${k}">${v}</button>`).join('')}</div></div>
       <div class="switch-row"><div><b>Languages</b><small>“Detect” picks the source from the text (Hangul → Korean, kana → Japanese…).</small></div>
-        <div class="chips"><select data-tr="from">${langOptions(cfg,cfg.from,true)}</select> → <select data-tr="to">${langOptions(cfg,cfg.to,false)}</select></div></div>`;
+        <div class="chips"><select data-tr="from">${langOptions(cfg,cfg.from,true)}</select> → <select data-tr="to">${langOptions(cfg,cfg.to,false)}</select></div></div>
+      ${cfg.engine==='cloud'?`<div class="switch-row cloud-row"><div><b>Google Cloud</b><small>Console › APIs &amp; Services: enable the Cloud Translation API, then Credentials › Create API key (restrict it to that API). The project ID is on the console’s home page. The key stays on this Mac.</small></div>
+        <div class="chips"><input type="password" data-cloud="cloud_key" placeholder="${cfg.cloudKey?'API key saved — paste to replace':'API key'}" autocomplete="off"><input type="text" data-cloud="cloud_project" placeholder="Project ID (optional)" value="${esc(cfg.cloudProject||'')}" autocomplete="off"><button class="chip small" data-cloud-save>Save</button><button class="chip small" data-cloud-test>Test</button></div></div>`:''}`;
     home.prepend(label,box);
     box.querySelectorAll('[data-engine]').forEach(b=>b.onclick=handle(async()=>{await api('translate.set',{engine:b.dataset.engine});renderTranslationSettings();}));
     box.querySelectorAll('[data-tr]').forEach(s=>s.onchange=handle(()=>api('translate.set',{[s.dataset.tr]:s.value})));
+    const save=box.querySelector('[data-cloud-save]');
+    if(save)save.onclick=handle(async()=>{
+      const d={};box.querySelectorAll('[data-cloud]').forEach(i=>{if(i.dataset.cloud==='cloud_project'||i.value.trim())d[i.dataset.cloud]=i.value.trim();});
+      await api('translate.set',d);toast('Saved');renderTranslationSettings();
+    });
+    const test=box.querySelector('[data-cloud-test]');
+    if(test)test.onclick=handle(async()=>{
+      try{const r=await api('translate',{text:'생각보다 손이 맵네',from:'ko',to:'en',engine:'cloud'});toast(`${r.model}: “${r.text}”${r.note?' — '+r.note:''}`,8000);}
+      catch(e){toast(e.message,8000);}
+    });
   }
-  const ENGINE_NAMES={llm:'Gemma 4 26B',google:'Google'};
+  const ENGINE_NAMES={llm:'Gemma 4 26B',cloud:'Google Cloud',google:'Google (free)'};
   window.__translateInApp=handle(async(text,context)=>{
     const cfg=await api('translate.config',{}).catch(()=>null);
     if(!cfg||cfg.engine==='google-web'){
@@ -87,7 +100,7 @@
       out.classList.add('busy');delete out.dataset.note;
       out.textContent=engine==='google'||loaded.has(engine)||cfg.running&&engine===cfg.engine?'Translating…':`Loading ${ENGINE_NAMES[engine]}… (the first time takes a few seconds)`;
       try{const r=await api('translate',{text,from,to,engine,context:context||''});result=r.text;loaded.add(engine);out.classList.remove('busy');out.textContent=r.text;
-        out.dataset.note=`${ENGINE_NAMES[engine]} · ${cfg.languages[r.from]||r.from} → ${cfg.languages[r.to]||r.to}${context&&engine==='llm'?' · with the page as context':''}`;}
+        out.dataset.note=`${ENGINE_NAMES[engine]}${r.model?' ('+r.model+')':''} · ${cfg.languages[r.from]||r.from} → ${cfg.languages[r.to]||r.to}${context&&engine==='llm'?' · with the page as context':''}${r.note?' · '+r.note:''}`;}
       catch(e){out.classList.remove('busy');out.textContent=e.message;}
     }
     // Language changes become the default; the engine menu is for comparing, so it stays for this sheet only.

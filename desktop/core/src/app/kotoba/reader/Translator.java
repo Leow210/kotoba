@@ -39,15 +39,16 @@ final class Translator {
     JSONObject config(){
         boolean found=new File(llm()).isFile();
         String engine=store.setting("translate_engine","");
-        if(!engine.equals("google")&&!engine.equals("google-web"))engine=found||engine.equals("llm")?"llm":"google";
+        if(!engine.equals("google")&&!engine.equals("google-web")&&!engine.equals("cloud"))engine=found||engine.equals("llm")?"llm":"google";
         JSONObject langs=new JSONObject();for(String[] l:LANGS)langs.put(l[0],l[1]);
         return new JSONObject().put("engine",engine).put("from",store.setting("translate_from","auto")).put("to",store.setting("translate_to","en"))
             .put("llm",llm()).put("llmFound",found)
+            .put("cloudKey",!store.setting("translate_cloud_key","").isEmpty()).put("cloudProject",store.setting("translate_cloud_project",""))
             .put("serverFound",llamaServer()!=null).put("running",server!=null&&server.isAlive())
             .put("languages",langs);
     }
     void set(JSONObject d){
-        for(String k:new String[]{"engine","from","to","llm"})if(d.has(k))store.setSetting("translate_"+k,d.getString(k));
+        for(String k:new String[]{"engine","from","to","llm","cloud_key","cloud_project"})if(d.has(k))store.setSetting("translate_"+k,d.getString(k).trim());
     }
 
     static String name(String code){for(String[] l:LANGS)if(l[0].equals(code))return l[1];return code;}
@@ -67,6 +68,7 @@ final class Translator {
         if(text.trim().isEmpty())throw new Exception("Nothing to translate.");
         if(engine==null||engine.isEmpty())engine=config().getString("engine");
         if(engine.equals("google"))return google(text,from,to);
+        if(engine.equals("cloud"))return cloud(text,from,to);
         return llm(text,from,to,context);
     }
 
@@ -132,6 +134,53 @@ final class Translator {
         for(int i=0;i<parts.length();i++)if(!parts.isNull(i))out.append(parts.getJSONArray(i).optString(0,""));
         String detected=a.length()>2&&!a.isNull(2)?a.optString(2,sl):sl;
         return new JSONObject().put("text",out.toString().trim()).put("from",detected.equals("zh-CN")?"zh-Hans":detected.equals("zh-TW")?"zh-Hant":detected).put("to",to).put("ms",System.currentTimeMillis()-t).put("engine","google");
+    }
+    /**
+     * Google Cloud Translation with the user's API key. With a project ID it asks for Google's Translation LLM (the
+     * Advanced API, closer to the Google Translate app); otherwise, or if that's refused, the Basic API.
+     */
+    JSONObject cloud(String text,String from,String to) throws Exception {
+        String key=store.setting("translate_cloud_key",""),project=store.setting("translate_cloud_project","");
+        if(key.isEmpty())throw new Exception("Add your Google Cloud API key in Settings › Translation.");
+        if(to==null||to.isEmpty())to=store.setting("translate_to","en");
+        if(from==null||from.isEmpty())from=store.setting("translate_from","auto");
+        long t=System.currentTimeMillis();
+        String note="";
+        if(!project.isEmpty()){
+            try{
+                JSONObject body=new JSONObject().put("contents",new org.json.JSONArray().put(text)).put("mimeType","text/plain").put("targetLanguageCode",googleCode(to))
+                    .put("model","projects/"+project+"/locations/us-central1/models/general/translation-llm");
+                if(!from.equals("auto"))body.put("sourceLanguageCode",googleCode(from));
+                JSONObject r=new JSONObject(post("https://translation.googleapis.com/v3/projects/"+project+"/locations/us-central1:translateText?key="+java.net.URLEncoder.encode(key,StandardCharsets.UTF_8),body));
+                JSONObject tr=r.getJSONArray("translations").getJSONObject(0);
+                String det=tr.optString("detectedLanguageCode",from);
+                return new JSONObject().put("text",tr.optString("translatedText","").trim()).put("from",fromGoogle(det)).put("to",to).put("ms",System.currentTimeMillis()-t).put("engine","cloud").put("model","Translation LLM");
+            }catch(Exception e){note=e.getMessage();}
+        }
+        JSONObject body=new JSONObject().put("q",text).put("target",googleCode(to)).put("format","text");
+        if(!from.equals("auto"))body.put("source",googleCode(from));
+        JSONObject r=new JSONObject(post("https://translation.googleapis.com/language/translate/v2?key="+java.net.URLEncoder.encode(key,StandardCharsets.UTF_8),body));
+        JSONObject tr=r.getJSONObject("data").getJSONArray("translations").getJSONObject(0);
+        String out=tr.optString("translatedText","").replace("&#39;","'").replace("&quot;","\"").replace("&amp;","&");
+        JSONObject res=new JSONObject().put("text",out.trim()).put("from",fromGoogle(tr.optString("detectedSourceLanguage",from))).put("to",to)
+            .put("ms",System.currentTimeMillis()-t).put("engine","cloud").put("model","Basic");
+        if(!note.isEmpty())res.put("note","Translation LLM refused: "+note);
+        return res;
+    }
+    static String fromGoogle(String c){return c.equals("zh-CN")||c.equals("zh")?"zh-Hans":c.equals("zh-TW")?"zh-Hant":c;}
+    /** POST JSON to Google; its error message (bad key, API not enabled, billing) becomes the exception. */
+    static String post(String url,JSONObject body) throws Exception {
+        HttpURLConnection c=(HttpURLConnection)new URL(url).openConnection();
+        c.setRequestMethod("POST");c.setConnectTimeout(8000);c.setReadTimeout(20000);c.setDoOutput(true);
+        c.setRequestProperty("Content-Type","application/json; charset=utf-8");
+        c.getOutputStream().write(body.toString().getBytes(StandardCharsets.UTF_8));
+        int code=c.getResponseCode();
+        String out=new String((code<400?c.getInputStream():c.getErrorStream()).readAllBytes(),StandardCharsets.UTF_8);
+        if(code>=400){
+            String msg=out;try{msg=new JSONObject(out).getJSONObject("error").optString("message",out);}catch(Exception ignored){}
+            throw new Exception("Google Cloud ("+code+"): "+msg);
+        }
+        return out;
     }
     static String googleCode(String c){return c.equals("zh-Hans")?"zh-CN":c.equals("zh-Hant")?"zh-TW":c;}
 
