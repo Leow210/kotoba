@@ -68,6 +68,27 @@ public final class Ocr {
         String read(Bitmap crop,String lang) throws Exception;
     }
     public static volatile BlockReader blockReader;
+    /** Korean word spacing for recognized text (optional model, see Spacing). */
+    public static volatile Spacing spacing;
+
+    /** Bumped when the spacing rules change, so pages are respaced from their recognized text. */
+    static final int SPACING=2;
+    /**
+     * Redoes the Korean spacing of a page's bubbles (once per SPACING version). Each bubble keeps the recognizer's own
+     * text in "raw", so spacing can always be redone from it; returns whether anything changed.
+     */
+    static boolean respace(JSONObject c,String lang) throws Exception {
+        Spacing sp=spacing;
+        if(!"ko".equals(lang)||sp==null||!sp.available()||c.optInt("spaced")==SPACING)return false;
+        JSONArray blocks=c.optJSONArray("blocks");
+        if(blocks!=null)for(int i=0;i<blocks.length();i++){
+            JSONObject b=blocks.getJSONObject(i);
+            String raw=b.optString("raw",b.optString("text",""));
+            b.put("raw",raw).put("text",sp.fix(raw));
+        }
+        c.put("spaced",SPACING);
+        return true;
+    }
     static boolean blocksFor(String lang){BlockReader r=blockReader;return r!=null&&r.handles(lang);}
     /** Cached results remember which recognizer made them. */
     static int version(String lang){return externalFor(lang)?VERSION*1000+1:blocksFor(lang)?VERSION*1000+2:VERSION;}
@@ -84,15 +105,21 @@ public final class Ocr {
         boolean refine=blocksFor(lang);
         if(refine){this.comics=comics;if(host!=null)this.host=host;}
         JSONObject c=refresh?null:cached(chapter,index,lang);
-        if(c!=null&&c.optInt("v")==version(lang)){if(refine)prefetch(chapter,index,lang);return c.put("cached",true);}
+        if(c!=null&&c.optInt("v")==version(lang)){
+            // Pages read before the spacing model was there get their spacing now, once.
+            if(respace(c,lang))db.execSQL("INSERT OR REPLACE INTO ocr_cache(chapter,page,lang,data) VALUES(?,?,?,?)",new Object[]{chapter,index,lang,c.toString()});
+            if(refine)prefetch(chapter,index,lang);
+            return c.put("cached",true);
+        }
         if(c==null||c.optInt("v")!=VERSION){
             Object[] res=comics.page(chapter,index);
             if(res==null)throw new IllegalArgumentException("No such page");
             long t=System.currentTimeMillis();
             c=recognize((byte[])res[0],lang).put("v",VERSION);
+            respace(c,lang);
             c.put("ms",System.currentTimeMillis()-t);
             db.execSQL("INSERT OR REPLACE INTO ocr_cache(chapter,page,lang,data) VALUES(?,?,?,?)",new Object[]{chapter,index,lang,c.toString()});
-        }
+        }else if(respace(c,lang))db.execSQL("INSERT OR REPLACE INTO ocr_cache(chapter,page,lang,data) VALUES(?,?,?,?)",new Object[]{chapter,index,lang,c.toString()});
         if(refine){
             if(c.optJSONArray("blocks")!=null&&c.getJSONArray("blocks").length()>0){c.put("refining",true);queue(chapter,index,lang,true);}
             prefetch(chapter,index,lang);
@@ -162,11 +189,12 @@ public final class Ocr {
                 JSONObject b=blocks.getJSONObject(i);
                 // Each bubble takes the GPU for ~2.5 s: none starts while the page is moving.
                 waitUntilStill();
-                String better=readBlock(bmp,b.getInt("x"),b.getInt("y"),b.getInt("w"),b.getInt("h"),b.optString("text",""),lang);
-                if(better!=null)b.put("paddle",b.optString("text","")).put("text",better);
+                String better=readBlock(bmp,b.getInt("x"),b.getInt("y"),b.getInt("w"),b.getInt("h"),b.optString("raw",b.optString("text","")),lang);
+                if(better!=null)b.put("paddle",b.optString("raw",b.optString("text",""))).put("text",better).put("raw",better);
             }
         }finally{bmp.recycle();}
         c.put("v",version(lang)).put("refine_ms",System.currentTimeMillis()-t).remove("refining");
+        c.put("spaced",0);respace(c,lang);
         db.execSQL("INSERT OR REPLACE INTO ocr_cache(chapter,page,lang,data) VALUES(?,?,?,?)",new Object[]{chapter,index,lang,c.toString()});
         Routes.Host h=host;
         if(h!=null)h.event("ocr-refined",new JSONObject().put("chapter",chapter).put("page",index).put("lang",lang));

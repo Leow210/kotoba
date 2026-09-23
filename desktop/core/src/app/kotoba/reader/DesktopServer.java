@@ -58,6 +58,7 @@ public class DesktopServer {
         translator=new Translator(store,data);
         routes.books=new Books(context,store.db);
         routes.ocr=new Ocr(context,store.db);
+        Ocr.spacing=new Spacing(context.getExternalFilesDir(null));
         // Apple's recognizer (the kotoba-ocr helper beside the app) for Korean; Settings can switch back to PaddleOCR.
         File ocrExe=new File(web.getParentFile().getParentFile(),"MacOS/kotoba-ocr");
         if(!ocrExe.canExecute())ocrExe=new File(web.getParentFile(),"mac/.build/release/KotobaOCR");

@@ -138,6 +138,7 @@ Tap a preview to play the video. Each one is silent and about 15–25 seconds lo
   - Korean uses a Korean model. Japanese uses the multilingual model, which also reads vertical columns right-to-left.
   - Everything runs on the phone (PaddleOCR PP-OCRv5 mobile on ONNX Runtime), at about 0.2–0.6 s per page. Results are cached.
   - **PaddleOCR-VL (optional, much more accurate):** with the 1.4 GB PaddleOCR-VL 1.6 model on the phone, each speech bubble is read again by a vision-language OCR model on the GPU (LiteRT-LM). It reads manga perfectly in testing (vertical columns, furigana, small っ) and Korean dialogue far better than the mobile model. A page shows the first reading at once (boxes slightly faded) and the better text replaces it about 10–25 s later; the next two pages are read ahead. It pauses whenever you scroll, touch the page or have a sheet open, so scrolling and lookups stay smooth. Runaway answers, Korean sound effects of ≤3 letters and kana on a Korean page keep the first reading.
+  - **Korean word spacing (optional):** letterers squeeze words together and the mobile model drops spaces inside a line, so a Korean spacing model (RoBERTa, ~110 MB, ~5 ms a bubble) re-spaces bubble text: 난언제쯤 평범하게 살수있지? → 난 언제쯤 평범하게 살 수 있지?. It only splits runs of 4+ syllables without a space and never removes a space, so sound effects and words already spaced right stay as they are. Works on the phone and the Mac.
 
 ## Kotoba for Mac
 [`desktop/`](desktop/README.md) is a Mac companion app. It runs this app's own Java classes, so it has the same dictionaries, search and cards, plus:
@@ -174,6 +175,8 @@ android/tests/run.sh [some.mdx …]        # desktop tests: MDX reader, text ext
 ```
 
 On first run: **Library → Import from a folder…** → choose your dictionary folder → Import.
+
+Korean spacing: download `onnx/model_quantized.onnx` and `vocab.txt` from [noticemkjung/korean-spacing-ONNX](https://huggingface.co/noticemkjung/korean-spacing-ONNX) into `files/models/korean-spacing/` (phone: `/sdcard/Android/data/app.kotoba.reader/files/models/korean-spacing/`; Mac: `~/Library/Application Support/Kotoba/models/korean-spacing/`).
 
 PaddleOCR-VL: download `PaddleOCR-VL-1.6.litertlm` from [litert-community/PaddleOCR-VL-1.6](https://huggingface.co/litert-community/PaddleOCR-VL-1.6) and `adb push` it to `/sdcard/Android/data/app.kotoba.reader/files/models/` (over USB it takes ~30 s; wireless ~15 min). Without it, or without LiteRT-LM in the build, PaddleOCR's mobile models read everything as before.
 
@@ -266,6 +269,7 @@ This section holds the context needed to keep developing Kotoba in a new session
   - Routes: `ocr.page {chapter, page, lang, refresh}` and `ocr.clear`. They run on their own low-priority thread (`MainActivity.ocrPool`), so a page being read never holds up taps or other requests.
   - **Other recognizers** plug into `Ocr`: a `LineReader` replaces detection and recognition (the Mac's Apple Vision helper, `desktop/mac/Sources/KotobaOCR`, for Korean; its boxes are grouped as they are, then padded), and a `BlockReader` reads each grouped bubble again (the phone's PaddleOCR-VL, `android/src-extra/…/VlOcr.java`, only compiled when `android/libs/aar/` has LiteRT-LM). Cached results carry `v` = which recognizer made them, so switching re-reads pages.
   - **PaddleOCR-VL refinement:** `ocr.page` returns PaddleOCR's text at once with `refining:true`; `Ocr.refine` re-reads each bubble on a background thread (the requested page first, then the next two) and sends `ocr-refined`, and `comics.js` redraws that page's layer. Each bubble is padded onto a white square (the model resizes input to 560×560, which distorted tall or wide bubbles), one image per conversation, greedy, max 160 tokens. `Ocr.touch()` (from `Kotoba.interacting()`, sent on any touch/scroll and while a sheet or entry is open) makes it wait until the app has been still for 2.5 s: each bubble takes the GPU for ~2.5 s and would otherwise stall scrolling. The GPU needs `uses-native-library libOpenCL.so` in the manifest.
+  - **Korean spacing:** `Spacing.java` (ONNX Runtime, shared with the Mac) tags each character without spaces (UNK, PAD, O, B, I, E, S; a space after E and S) and `Ocr.respace` applies it to Korean bubbles when a page is recognized, refined or first loaded after the model was added. Bubbles keep the recognizer's own text in `raw`, and pages record `spaced` = `Ocr.SPACING`, so a rule change re-spaces from `raw`.
   - The comic layer's boxes live inside the scrolling page, so they are only re-placed on zoom, resize or image load, never on scroll (re-measuring every page on each scroll event made scrolling stutter).
   - How a page is read, as tuned on real Mihon chapters:
     - Detection runs at a 1280-pixel long side. Webtoon strips taller than 3× their width go in tiles 2.5× the width tall.

@@ -10,7 +10,7 @@ CP="$HERE/libs/json-20250517.jar:$HERE/libs/sqlite-jdbc-3.50.3.0.jar:$HERE/libs/
 ORT="$HERE/libs/onnxruntime-1.30.0.jar"
 [ -f "$ORT" ] || curl -sSL -o "$ORT" https://repo1.maven.org/maven2/com/microsoft/onnxruntime/onnxruntime/1.30.0/onnxruntime-1.30.0.jar
 rm -rf "$OUT" && mkdir -p "$OUT"
-SHARED="Library Store WordLists Extras Routes Yomitan HtmlText MarkupFix Deinflect Fsrs MdictFile ZipSource Lzo Ripemd128 BookParser Sync Books Comics MihonBackup Ocr"
+SHARED="Library Store WordLists Extras Routes Yomitan HtmlText MarkupFix Deinflect Fsrs MdictFile ZipSource Lzo Ripemd128 BookParser Sync Books Comics MihonBackup Ocr Spacing"
 # Paths contain spaces ("New Chinese typing"), so sources go through a quoted argument file.
 ARGS="$HERE/build/core-sources.txt"
 : > "$ARGS"
