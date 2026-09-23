@@ -1106,6 +1106,7 @@ public class Library {
             items=Store.rows(db,"SELECT group_concat(k.key,char(1)) keys,k.rec,k.dict,coalesce(nullif((SELECT y.reading FROM ytext y WHERE y.rec=k.rec),''),r.key) page,d.name dictionary,d.kind,k.norm=? exact FROM keys k JOIN records r ON r.id=k.rec JOIN dicts d ON d.id=k.dict WHERE "+where+" GROUP BY k.norm,k.dict,k.rec ORDER BY k.norm,d.position,r.len DESC LIMIT ? OFFSET ?",args.toArray(new String[0]));
             if(offset==0&&(dict==null||dict.isEmpty()))items=withMixedExact(items,term);
             displayKeys(items,query);
+            addSpellings(items,term);
         }else if(mode.equals("contains")){
             ArrayList<String> args=new ArrayList<>();
             args.add(term);
@@ -1232,6 +1233,7 @@ public class Library {
         JSONArray rows=Store.rows(db,"SELECT group_concat(k.key,char(1)) keys,k.rec,k.dict,coalesce(nullif((SELECT y.reading FROM ytext y WHERE y.rec=k.rec),''),r.key) page,d.name dictionary,d.kind,r.len size,(SELECT 1 FROM kanji j WHERE j.rec=k.rec AND j.char=?) head FROM keys k JOIN records r ON r.id=k.rec JOIN dicts d ON d.id=k.dict WHERE k.norm=? AND d.enabled=1 AND d.status='ready' GROUP BY k.dict,k.rec ORDER BY d.position,head IS NULL,r.len DESC LIMIT 60",key.trim(),norm);
         rows=withMixedSpellings(rows,norm);
         displayKeys(rows,key);
+        addSpellings(rows,norm);
         return rows;
     }
 
@@ -1298,6 +1300,47 @@ public class Library {
         // A stable sort keeps each dictionary's own order.
         all.sort((a,b)->Integer.compare(pos.getOrDefault(a.optLong("dict"),0),pos.getOrDefault(b.optLong("dict"),0)));
         return new JSONArray(all);
+    }
+
+    static final Pattern BRACKET_SPELLING=Pattern.compile("【([^】]{1,40})】");
+    final java.util.Map<Long,JSONArray> spellingCache=java.util.Collections.synchronizedMap(new java.util.LinkedHashMap<Long,JSONArray>(256,0.75f,true){
+        protected boolean removeEldestEntry(java.util.Map.Entry<Long,JSONArray> e){return size()>4000;}
+    });
+
+    /**
+     * For a query in kana, each row gets "words": the page's written spellings, so homophones
+     * (けんのう: 権能, 献納) can be told apart. A page filed under a spelling has that one; a page filed under
+     * its reading (大辞林, NHK) lists every 【…】 heading on it, since it may hold several words.
+     */
+    void addSpellings(JSONArray rows,String norm) throws Exception {
+        if(norm.isEmpty()||!norm.codePoints().allMatch(Library::kana))return;
+        for(int i=0;i<rows.length();i++){
+            JSONObject o=rows.getJSONObject(i);
+            long rec=o.getLong("rec");
+            JSONArray words=spellingCache.get(rec);
+            if(words==null){words=spellingsOf(rec);spellingCache.put(rec,words);}
+            if(words.length()>0)o.put("words",words);
+        }
+    }
+
+    JSONArray spellingsOf(long rec) throws Exception {
+        LinkedHashSet<String> out=new LinkedHashSet<>();
+        JSONArray r=Store.rows(db,"SELECT dict,key FROM records WHERE id=?",Long.toString(rec));
+        if(r.length()==0)return new JSONArray();
+        String key=stripMarks(r.getJSONObject(0).getString("key")).replace("×","").trim();
+        if(key.codePoints().anyMatch(Library::han))out.add(key);
+        else if(!isYomitan(r.getJSONObject(0).getLong("dict"))){
+            String raw=recordHtml(rec);
+            out.addAll(headingSpellings(raw));
+            Matcher m=BRACKET_SPELLING.matcher(HtmlText.entities(raw.replaceAll("(?s)<(rt|rp)\\b[^>]*>.*?</\\1>","").replaceAll("<[^>]*>","")));
+            while(m.find()&&out.size()<12){
+                for(String part:m.group(1).split("[《》〈〉・,，、]")){
+                    String t=stripMarks(part).replace("×","").replace("▲","").replaceAll("[()（）\\s]","").trim();
+                    if(!t.isEmpty()&&t.codePoints().anyMatch(Library::han))out.add(t);
+                }
+            }
+        }
+        return new JSONArray(out);
     }
 
     /** Search results: mixedSpellings pages count as exact matches, placed after the query's own. */

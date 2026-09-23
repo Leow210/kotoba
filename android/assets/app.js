@@ -289,7 +289,18 @@ function groupResults(items){
     // (新明解 落合う) has no reading to compare, so it joins the word's row.
     const pg=norm(it.page||'').replace(/[・･‧·‐‑‒–—=＝\-]/g,'');
     const reading=pg&&pg!==k&&/^[\u3040-\u30ffー]+$/.test(pg)?pg:'';
-    const same=groups.filter(g=>g.norm===k);
+    // A kana search keeps homophones apart (けんのう: 権能, 献納): a row per written word. A page that holds
+    // several words (大辞林 けんのう has both) appears under each one.
+    if(!text&&it.words&&it.words.length){
+      for(const w of it.words){
+        const wn=norm(w);
+        const g=groups.find(g=>g.norm===k&&g.word===wn);
+        if(!g)groups.push({norm:k,key:w,word:wn,reading:pg||k,readingText:k,items:[it]});
+        else if(!g.items.some(x=>x.dict===it.dict&&x.rec===it.rec))g.items.push(it);
+      }
+      continue;
+    }
+    const same=groups.filter(g=>g.norm===k&&!g.word);
     if(same.some(g=>g.items.some(x=>x.dict===it.dict&&x.rec===it.rec)))continue;
     const free=(g)=>!g.items.some(x=>x.dict===it.dict);
     const target=text?null:same.find(g=>free(g)&&(g.reading===reading||!reading||!g.reading));
@@ -340,7 +351,7 @@ async function runSearch(append=false){
     const rank=(g.items.find(it=>it.rank)||{}).rank;
     const tags=freqBars(rank)+g.items.map(it=>`<span class="tag ${it.kind==='kanji'?'kanji':''}">${esc(shortName(it.dictionary))}</span>`).join('');
     const snip=first.snippet?`<div class="snip">${snippetHtml(first.snippet)}</div>`:'';
-    return `<button class="row" data-g="${i}"><div class="line"><div class="hw">${esc(first.key)}${page}</div><div class="meta">${tags}</div></div>${snip}</button>`;
+    return `<button class="row" data-g="${i}"><div class="line"><div class="hw">${esc(g.key)}${page}</div><div class="meta">${tags}</div></div>${snip}</button>`;
   }).join('');
   if(!groups.length&&!append&&(data.forms||[]).length){$('results').innerHTML='';}
   else if(!groups.length){
@@ -350,7 +361,7 @@ async function runSearch(append=false){
   $('results').querySelectorAll('[data-g]').forEach(b=>b.onclick=handle(()=>{
     const g=groups[+b.dataset.g];remember();
     const hl=(search.mode==='definition'||search.mode==='examples')?q:'';
-    openEntry({...g.items[0],key:g.items[0].key,alternatives:g.items,highlight:hl,highlightIn:search.mode});
+    openEntry({...g.items[0],key:g.word?g.key:g.items[0].key,alternatives:g.items,highlight:hl,highlightIn:search.mode});
   }));
   $('more').hidden=!data.more;
   if(!append)$('search-scroll').scrollTop=0;
@@ -403,7 +414,7 @@ window.externalLookup=(text)=>{
   search.mode='headword';document.querySelectorAll('#modes [data-mode]').forEach(x=>x.classList.toggle('on',x.dataset.mode==='headword'));
   handle(async()=>{await runSearch();remember();
     const groups=groupResults(search.items);
-    if(groups.length&&norm(groups[0].key)===norm(text))openEntry({...groups[0].items[0],alternatives:groups[0].items});
+    if(groups.length&&(norm(groups[0].key)===norm(text)||groups[0].norm===norm(text)))openEntry({...groups[0].items[0],key:groups[0].key,alternatives:groups[0].items});
   })();
 };
 function closeAllOverlays(){while(sheetStack.length)closeSheet();while(pageStack.length)popPage(true);}
