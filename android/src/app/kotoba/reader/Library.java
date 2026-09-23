@@ -735,7 +735,8 @@ public class Library {
     // 4: the same for every key and Yomitan entry, not only heading spellings (明鏡 御鉢 おはち, 新明解's 御鉢 key).
     // 5: ruby annotations aren't part of a spelling (新明解 御︽鉢 is 御鉢).
     // 6: the heading's kana (見出仮名) also tells how 御 is read, for pages filed under their spelling (新明解 御鉢).
-    static final int KEYS_VERSION=6;
+    // 7: a kana-only Yomitan entry (blank reading) merges with the same text filed under its spelling (明鏡 あからさま, 明白).
+    static final int KEYS_VERSION=7;
     static final Pattern HEAD_KANA=Pattern.compile("data-name=\"(?:見出仮名|見出し仮名)\"");
     static final Pattern SPELLING=Pattern.compile("data-name=\"(?:標準表記|表記)\"");
     static final Pattern OPTIONAL_KANA=Pattern.compile("<span data-name=\"送り仮名省略\">");
@@ -844,6 +845,11 @@ public class Library {
             }finally{db.endTransaction();}
             return;
         }
+        if(Store.rows(db,"SELECT 1 FROM dicts WHERE id=? AND keys_v>=6",Long.toString(dict)).length()>0){
+            // Nothing past version 6 changes MDX keys.
+            db.execSQL("UPDATE dicts SET keys_v=? WHERE id=?",new Object[]{KEYS_VERSION,dict});
+            return;
+        }
         JSONObject d=dictRow(dict);
         MdictFile mdx=file(dict,0);
         MdictFile.BlockCache c=new MdictFile.BlockCache(3);
@@ -887,7 +893,7 @@ public class Library {
      * Those become one page: the first keeps its record, the others' keys point to it. Call inside a transaction.
      */
     int mergeSameEntries(long dict) throws Exception {
-        JSONArray dup=Store.rows(db,"SELECT group_concat(r.id) ids FROM records r JOIN ytext y ON y.rec=r.id WHERE r.dict=? AND y.reading!='' GROUP BY y.reading,y.body HAVING count(*)>1",Long.toString(dict));
+        JSONArray dup=Store.rows(db,"SELECT group_concat(r.id) ids FROM records r JOIN ytext y ON y.rec=r.id WHERE r.dict=? GROUP BY coalesce(nullif(y.reading,''),r.key),y.body HAVING count(*)>1",Long.toString(dict));
         int merged=0;
         for(int i=0;i<dup.length();i++){
             String[] ids=dup.getJSONObject(i).getString("ids").split(",");
@@ -1098,6 +1104,7 @@ public class Library {
             where+=" AND "+enabledClause("k.dict",dict,args);
             args.add(Integer.toString(limit+1));args.add(Integer.toString(offset));
             items=Store.rows(db,"SELECT group_concat(k.key,char(1)) keys,k.rec,k.dict,coalesce(nullif((SELECT y.reading FROM ytext y WHERE y.rec=k.rec),''),r.key) page,d.name dictionary,d.kind,k.norm=? exact FROM keys k JOIN records r ON r.id=k.rec JOIN dicts d ON d.id=k.dict WHERE "+where+" GROUP BY k.norm,k.dict,k.rec ORDER BY k.norm,d.position,r.len DESC LIMIT ? OFFSET ?",args.toArray(new String[0]));
+            if(offset==0&&(dict==null||dict.isEmpty()))items=withMixedExact(items,term);
             displayKeys(items,query);
         }else if(mode.equals("contains")){
             ArrayList<String> args=new ArrayList<>();
@@ -1223,8 +1230,86 @@ public class Library {
     public JSONArray exact(String key,String excludeDict) throws Exception {
         String norm=HtmlText.normalize(key);
         JSONArray rows=Store.rows(db,"SELECT group_concat(k.key,char(1)) keys,k.rec,k.dict,coalesce(nullif((SELECT y.reading FROM ytext y WHERE y.rec=k.rec),''),r.key) page,d.name dictionary,d.kind,r.len size,(SELECT 1 FROM kanji j WHERE j.rec=k.rec AND j.char=?) head FROM keys k JOIN records r ON r.id=k.rec JOIN dicts d ON d.id=k.dict WHERE k.norm=? AND d.enabled=1 AND d.status='ready' GROUP BY k.dict,k.rec ORDER BY d.position,head IS NULL,r.len DESC LIMIT 60",key.trim(),norm);
+        rows=withMixedSpellings(rows,norm);
         displayKeys(rows,key);
         return rows;
+    }
+
+    static boolean kana(int c){return c>=0x3041&&c<=0x3096||c==0x30fc;}
+    static boolean han(int c){return c==0x3005||Character.UnicodeScript.of(c)==Character.UnicodeScript.HAN;}
+
+    /**
+     * Pages whose spelling has more kanji than the query, where the query writes some of them in kana:
+     * 相まみえる finds 大辞林's 相▽見える (あいまみえる). Only for a query that starts with a kanji and mixes in kana;
+     * the query must also fit the page's own reading. Returns [dict,rec,key norm] per page.
+     */
+    ArrayList<String[]> mixedSpellings(String norm) throws Exception {
+        ArrayList<String[]> found=new ArrayList<>();
+        int[] q=norm.codePoints().toArray();
+        if(q.length<2||q.length>16||!han(q[0]))return found;
+        boolean anyKana=false;
+        for(int c:q){if(kana(c))anyKana=true;else if(!han(c))return found;}
+        if(!anyKana)return found;
+        StringBuilder read=new StringBuilder();
+        for(int c:q)read.append(kana(c)?Pattern.quote(new String(Character.toChars(c))):"[\u3041-\u3096\u30fc]{1,4}");
+        Pattern reading=Pattern.compile(read.toString());
+        String first=new String(Character.toChars(q[0]));
+        try(Cursor c=db.rawQuery("SELECT DISTINCT k.norm,k.dict,k.rec FROM keys k JOIN dicts d ON d.id=k.dict WHERE k.norm>=? AND k.norm<? AND length(k.norm)<=? AND k.norm!=? AND d.enabled=1 AND d.status='ready' AND d.kind!='freq' LIMIT 20000",
+                new String[]{first,first+"\uffff",Integer.toString(q.length),norm})){
+            while(c.moveToNext()){
+                String k=c.getString(0);
+                StringBuilder b=new StringBuilder();boolean ok=true;
+                for(int cp:k.codePoints().toArray()){
+                    String ch=new String(Character.toChars(cp));
+                    if(han(cp))b.append("(?:").append(Pattern.quote(ch)).append("|[\\u3041-\\u3096\\u30fc]{1,4})");
+                    else if(kana(cp))b.append(Pattern.quote(ch));
+                    else{ok=false;break;}
+                }
+                if(!ok||!norm.matches(b.toString()))continue;
+                // The kana the query adds must be how the page reads: 相まみえる fits あいまみえる.
+                boolean fits=false;
+                String rec=Long.toString(c.getLong(2));
+                // The page's heading (大辞林 あいまみ・える) or Yomitan reading; keys aren't indexed by page.
+                try(Cursor r=db.rawQuery("SELECT norm FROM records WHERE id=? UNION ALL SELECT reading FROM ytext WHERE rec=?",new String[]{rec,rec})){
+                    while(r.moveToNext()&&!fits){String n=KEY_SEPARATORS.matcher(HtmlText.normalize(r.getString(0))).replaceAll("");fits=!n.isEmpty()&&n.codePoints().allMatch(Library::kana)&&reading.matcher(n).matches();}
+                }
+                if(fits)found.add(new String[]{Long.toString(c.getLong(1)),rec,k});
+            }
+        }
+        return found;
+    }
+
+    /** Adds mixedSpellings pages from dictionaries that have no page under the query itself, in dictionary order. */
+    JSONArray withMixedSpellings(JSONArray rows,String norm) throws Exception {
+        ArrayList<String[]> more=mixedSpellings(norm);
+        if(more.isEmpty())return rows;
+        java.util.HashSet<Long> have=new java.util.HashSet<>(),recs=new java.util.HashSet<>();
+        for(int i=0;i<rows.length();i++)have.add(rows.getJSONObject(i).getLong("dict"));
+        ArrayList<JSONObject> all=new ArrayList<>();
+        for(int i=0;i<rows.length();i++)all.add(rows.getJSONObject(i));
+        for(String[] m:more){
+            if(have.contains(Long.parseLong(m[0]))||!recs.add(Long.parseLong(m[1])))continue;
+            JSONArray r=Store.rows(db,"SELECT group_concat(k.key,char(1)) keys,k.rec,k.dict,coalesce(nullif((SELECT y.reading FROM ytext y WHERE y.rec=k.rec),''),r.key) page,d.name dictionary,d.kind,r.len size,NULL head FROM keys k JOIN records r ON r.id=k.rec JOIN dicts d ON d.id=k.dict WHERE k.norm=? AND k.rec=? GROUP BY k.dict,k.rec",m[2],m[1]);
+            for(int i=0;i<r.length();i++)all.add(r.getJSONObject(i));
+        }
+        if(all.size()==rows.length())return rows;
+        java.util.HashMap<Long,Integer> pos=new java.util.HashMap<>();
+        try(Cursor c=db.rawQuery("SELECT id,position FROM dicts",null)){while(c.moveToNext())pos.put(c.getLong(0),c.getInt(1));}
+        // A stable sort keeps each dictionary's own order.
+        all.sort((a,b)->Integer.compare(pos.getOrDefault(a.optLong("dict"),0),pos.getOrDefault(b.optLong("dict"),0)));
+        return new JSONArray(all);
+    }
+
+    /** Search results: mixedSpellings pages count as exact matches, placed after the query's own. */
+    JSONArray withMixedExact(JSONArray items,String norm) throws Exception {
+        JSONArray exact=new JSONArray(),rest=new JSONArray();
+        for(int i=0;i<items.length();i++){JSONObject o=items.getJSONObject(i);(o.optInt("exact")==1?exact:rest).put(o);}
+        int before=exact.length();
+        exact=withMixedSpellings(exact,norm);
+        if(exact.length()==before)return items;
+        for(int i=0;i<exact.length();i++){JSONObject o=exact.getJSONObject(i);o.remove("size");o.remove("head");o.put("exact",1);}
+        for(int i=0;i<rest.length();i++)exact.put(rest.get(i));
+        return exact;
     }
 
     /** Entries in kanji dictionaries for each distinct CJK character in the text. */
