@@ -12,11 +12,13 @@ import java.nio.charset.StandardCharsets;
  */
 final class Translator {
     static final String DEFAULT_MODEL="/Volumes/T7/LLM Models/TranslateGemma-12B/translategemma-12b-it.Q4_K_M.gguf";
+    static final String DEFAULT_HYMT="/Volumes/T7/LLM Models/Hy-MT2-7B/Hy-MT2-7B-Q4_K_M.gguf";
+    static final String DEFAULT_LLM="/Volumes/T7/LLM Models/Gemma4-26B-A4B-QAT-Uncensored-HauhauCS-Balanced-MTP/Gemma4-26B-A4B-QAT-Uncensored-HauhauCS-Balanced-Q4_K_M.gguf";
     static final int PORT=18790;
     static final String[][] LANGS={{"auto","Detect"},{"en","English"},{"ko","Korean"},{"ja","Japanese"},{"zh-Hans","Chinese (Simplified)"},{"zh-Hant","Chinese (Traditional)"},
         {"yue","Cantonese"},{"th","Thai"},{"ru","Russian"},{"fr","French"},{"de","German"},{"es","Spanish"},{"pt","Portuguese"},{"it","Italian"},{"vi","Vietnamese"},{"id","Indonesian"}};
     final Store store;final File data;
-    Process server;long lastUse;
+    Process server;String serverModel;long lastUse;
 
     Translator(Store store,File data){
         this.store=store;this.data=data;
@@ -31,16 +33,19 @@ final class Translator {
     }
 
     String model(){return store.setting("translate_model",DEFAULT_MODEL);}
+    String hymt(){return store.setting("translate_hymt",DEFAULT_HYMT);}
+    String llm(){return store.setting("translate_llm",DEFAULT_LLM);}
     static File llamaServer(){
         for(String p:new String[]{"/opt/homebrew/bin/llama-server","/usr/local/bin/llama-server"}){File f=new File(p);if(f.canExecute())return f;}
         return null;
     }
     JSONObject config(){
         File m=new File(model());
-        String engine=store.setting("translate_engine",m.isFile()?"gemma":"google");
+        String engine=store.setting("translate_engine",new File(llm()).isFile()?"llm":m.isFile()?"gemma":"google");
         JSONObject langs=new JSONObject();for(String[] l:LANGS)langs.put(l[0],l[1]);
         return new JSONObject().put("engine",engine).put("from",store.setting("translate_from","auto")).put("to",store.setting("translate_to","en"))
-            .put("model",m.getPath()).put("modelFound",m.isFile()).put("serverFound",llamaServer()!=null).put("running",server!=null&&server.isAlive())
+            .put("model",m.getPath()).put("modelFound",m.isFile()).put("hymt",hymt()).put("hymtFound",new File(hymt()).isFile()).put("llm",llm()).put("llmFound",new File(llm()).isFile())
+            .put("serverFound",llamaServer()!=null).put("running",server!=null&&server.isAlive())
             .put("languages",langs);
     }
     void set(JSONObject d){
@@ -59,6 +64,18 @@ final class Translator {
         return "en";
     }
 
+    /**
+     * engine: gemma (TranslateGemma), hymt (Hy-MT2, which can take the surrounding text as context), google (Google's
+     * free web endpoint, shown in Kotoba), or google-web (opened in the browser by the page itself).
+     */
+    synchronized JSONObject translate(String text,String from,String to,String engine,String context) throws Exception {
+        if(engine==null||engine.isEmpty())engine=config().getString("engine");
+        if(engine.equals("google"))return google(text,from,to);
+        if(engine.equals("llm"))return llm(text,from,to,context);
+        if(engine.equals("hymt"))return hymt(text,from,to,context);
+        return translate(text,from,to);
+    }
+
     synchronized JSONObject translate(String text,String from,String to) throws Exception {
         if(text.trim().isEmpty())throw new Exception("Nothing to translate.");
         if(from==null||from.isEmpty())from=store.setting("translate_from","auto");
@@ -66,7 +83,7 @@ final class Translator {
         if(from.equals("auto"))from=detect(text);
         if(from.equals(to))to=from.equals("en")?"ko":"en";
         long t=System.currentTimeMillis();
-        ensureServer();
+        ensureServer(model(),false);
         lastUse=System.currentTimeMillis();
         // TranslateGemma's recommended prompt, in Gemma's turn format (the GGUF's chat template expects structured content).
         String src=name(from),tgt=name(to);
@@ -80,17 +97,20 @@ final class Translator {
         return new JSONObject().put("text",r.optString("content","").trim()).put("from",from).put("to",to).put("ms",System.currentTimeMillis()-t);
     }
 
-    void ensureServer() throws Exception {
-        if(server!=null&&server.isAlive())return;
-        File m=new File(model());
-        if(!m.isFile())throw new Exception("TranslateGemma isn't at "+m.getPath()+". Plug in the drive, or choose the model in Settings › Translation.");
+    /** llama-server with this model (one model at a time: switching engines restarts it). */
+    void ensureServer(String path,boolean chat) throws Exception {
+        if(server!=null&&server.isAlive()&&path.equals(serverModel))return;
+        if(server!=null){server.destroy();server.waitFor();server=null;}
+        File m=new File(path);
+        if(!m.isFile())throw new Exception("The translation model isn't at "+m.getPath()+". Plug in the drive, or finish downloading it.");
         File exe=llamaServer();
         if(exe==null)throw new Exception("llama-server isn't installed (brew install llama.cpp).");
-        try{http("GET","/health",null,1000);return;}catch(Exception ignored){}// one already running on the port
-        server=new ProcessBuilder(exe.getPath(),"-m",m.getPath(),"--host","127.0.0.1","--port",Integer.toString(PORT),"-c","4096","-ngl","99",
-                // The GGUF's chat template only takes TranslateGemma's structured messages; Kotoba sends the formatted prompt itself.
-                "--no-jinja","--chat-template","gemma")
-            .redirectErrorStream(true).redirectOutput(new File(data,"translator.log")).start();
+        java.util.List<String> cmd=new java.util.ArrayList<>(java.util.List.of(exe.getPath(),"-m",m.getPath(),"--host","127.0.0.1","--port",Integer.toString(PORT),"-c","4096","-ngl","99"));
+        // TranslateGemma's own template only takes its structured messages, so Kotoba formats that prompt itself;
+        // Hy-MT2 uses its chat template.
+        if(chat)cmd.add("--jinja");else cmd.addAll(java.util.List.of("--no-jinja","--chat-template","gemma"));
+        server=new ProcessBuilder(cmd).redirectErrorStream(true).redirectOutput(new File(data,"translator.log")).start();
+        serverModel=path;
         long until=System.currentTimeMillis()+180_000;
         while(System.currentTimeMillis()<until){
             if(!server.isAlive()){server=null;throw new Exception("TranslateGemma didn't start (see translator.log in Kotoba's data folder).");}
@@ -99,6 +119,71 @@ final class Translator {
         }
         throw new Exception("TranslateGemma is taking too long to load.");
     }
+
+    /** Hy-MT2 with Tencent's recommended prompts: plain, or with the surrounding text as background (a page's other bubbles). */
+    JSONObject hymt(String text,String from,String to,String context) throws Exception {
+        if(to==null||to.isEmpty())to=store.setting("translate_to","en");
+        if(from==null||from.isEmpty())from=store.setting("translate_from","auto");
+        if(from.equals("auto"))from=detect(text);
+        if(from.equals(to))to=from.equals("en")?"ko":"en";
+        long t=System.currentTimeMillis();
+        ensureServer(hymt(),true);
+        lastUse=System.currentTimeMillis();
+        String tgt=name(to);
+        String prompt=context!=null&&!context.trim().isEmpty()&&!context.trim().equals(text.trim())
+            ?"[Background Information]\n"+context.trim()+"\n\nPlease translate the following text into "+tgt+", taking the provided background information into consideration. Only output the translated result without any additional explanation.\n\n[Source Text]\n"+text.trim()
+            :"Translate the following text into "+tgt+". Note that you should only output the translated result without any additional explanation:\n\n"+text.trim();
+        JSONObject body=new JSONObject().put("messages",new org.json.JSONArray().put(new JSONObject().put("role","user").put("content",prompt)))
+            .put("max_tokens",Math.min(2048,text.length()*4+64)).put("temperature",0.7).put("top_p",0.6).put("top_k",20).put("repeat_penalty",1.05);
+        JSONObject r=new JSONObject(http("POST","/v1/chat/completions",body.toString(),300_000));
+        lastUse=System.currentTimeMillis();
+        String out=r.getJSONArray("choices").getJSONObject(0).getJSONObject("message").optString("content","").trim();
+        return new JSONObject().put("text",out).put("from",from).put("to",to).put("ms",System.currentTimeMillis()-t).put("engine","hymt");
+    }
+
+    /**
+     * A general model (Gemma 4 26B-A4B): slower to load and bigger, but it knows idioms and slang (생각보다 손이 맵네 →
+     * "You've got a heavier hand than I thought", where translation models say "spicier"). Thinking is off.
+     */
+    JSONObject llm(String text,String from,String to,String context) throws Exception {
+        if(to==null||to.isEmpty())to=store.setting("translate_to","en");
+        if(from==null||from.isEmpty())from=store.setting("translate_from","auto");
+        if(from.equals("auto"))from=detect(text);
+        if(from.equals(to))to=from.equals("en")?"ko":"en";
+        long t=System.currentTimeMillis();
+        ensureServer(llm(),true);
+        lastUse=System.currentTimeMillis();
+        String prompt="Translate this "+name(from)+" text into natural "+name(to)+". It is usually a line of dialogue from a comic, show, book or game. "
+            +"Translate idioms and slang by their meaning, not word for word. Output only the translation.";
+        if(context!=null&&!context.trim().isEmpty()&&!context.trim().equals(text.trim()))
+            prompt+="\n\nFor context only (don't translate it), the rest of the page:\n"+context.trim();
+        prompt+="\n\nText to translate:\n"+text.trim();
+        JSONObject body=new JSONObject().put("messages",new org.json.JSONArray().put(new JSONObject().put("role","user").put("content",prompt)))
+            .put("max_tokens",Math.min(2048,text.length()*4+128)).put("temperature",0.2)
+            .put("chat_template_kwargs",new JSONObject().put("enable_thinking",false));
+        JSONObject r=new JSONObject(http("POST","/v1/chat/completions",body.toString(),300_000));
+        lastUse=System.currentTimeMillis();
+        String out=r.getJSONArray("choices").getJSONObject(0).getJSONObject("message").optString("content","").trim();
+        if(out.length()>1&&out.startsWith("\"")&&out.endsWith("\""))out=out.substring(1,out.length()-1);
+        return new JSONObject().put("text",out).put("from",from).put("to",to).put("ms",System.currentTimeMillis()-t).put("engine","llm");
+    }
+
+    /** Google Translate's free web endpoint (the one its site widget uses): no key, unofficial, and the text goes to Google. */
+    static JSONObject google(String text,String from,String to) throws Exception {
+        String sl=from==null||from.isEmpty()||from.equals("auto")?"auto":googleCode(from),tl=googleCode(to==null||to.isEmpty()?"en":to);
+        long t=System.currentTimeMillis();
+        String url="https://translate.googleapis.com/translate_a/single?client=gtx&dt=t&sl="+sl+"&tl="+tl+"&q="+java.net.URLEncoder.encode(text,StandardCharsets.UTF_8);
+        HttpURLConnection c=(HttpURLConnection)new URL(url).openConnection();
+        c.setConnectTimeout(8000);c.setReadTimeout(15000);c.setRequestProperty("User-Agent","Mozilla/5.0");
+        if(c.getResponseCode()!=200)throw new Exception("Google Translate didn't answer ("+c.getResponseCode()+").");
+        org.json.JSONArray a=new org.json.JSONArray(new String(c.getInputStream().readAllBytes(),StandardCharsets.UTF_8));
+        StringBuilder out=new StringBuilder();
+        org.json.JSONArray parts=a.getJSONArray(0);
+        for(int i=0;i<parts.length();i++)if(!parts.isNull(i))out.append(parts.getJSONArray(i).optString(0,""));
+        String detected=a.length()>2&&!a.isNull(2)?a.optString(2,sl):sl;
+        return new JSONObject().put("text",out.toString().trim()).put("from",detected.equals("zh-CN")?"zh-Hans":detected.equals("zh-TW")?"zh-Hant":detected).put("to",to).put("ms",System.currentTimeMillis()-t).put("engine","google");
+    }
+    static String googleCode(String c){return c.equals("zh-Hans")?"zh-CN":c.equals("zh-Hant")?"zh-TW":c;}
 
     static String http(String method,String path,String body,int timeout) throws Exception {
         HttpURLConnection c=(HttpURLConnection)new URL("http://127.0.0.1:"+PORT+path).openConnection();

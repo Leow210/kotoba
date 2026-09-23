@@ -344,7 +344,7 @@ async function openComic(series,chapterId,startPage=0){
     if(im._layer)im._layer.remove();
     const layer=document.createElement('div');layer.className='ocr-layer'+(r.refining?' refining':'');
     layer.innerHTML=r.blocks.map((b,n)=>`<button class="ocr-box" data-n="${n}" style="left:${b.x/r.w*100}%;top:${b.y/r.h*100}%;width:${b.w/r.w*100}%;height:${b.h/r.h*100}%" aria-label="${esc(b.text)}"></button>`).join('');
-    layer.onclick=e=>{const b=e.target.closest('.ocr-box');if(!b)return;e.stopPropagation();bubbleSheet(r.blocks[+b.dataset.n].text);};
+    layer.onclick=e=>{const b=e.target.closest('.ocr-box');if(!b)return;e.stopPropagation();bubbleSheet(r.blocks[+b.dataset.n].text,r);};
     im.parentElement.appendChild(layer);im._layer=layer;placeLayer(im);
   }
   function placeLayer(im){
@@ -362,12 +362,13 @@ async function openComic(series,chapterId,startPage=0){
     const s=openSheet(`<div class="sheet-body ocr-list">${r.blocks.map((b,n)=>`<button class="toc-row" data-n="${n}">${esc(b.text)}</button>`).join('')}</div>
       <div class="sheet-foot"><button class="btn wide" id="op-copy">${icon('copy')} Copy all</button><button class="btn wide" id="op-tr">${icon('share')} Translate all</button></div>`,{title:`Page ${state.page+1} text`});
     const all=r.blocks.map(b=>b.text).join('\n');
-    s.sheet.querySelectorAll('[data-n]').forEach(b=>b.onclick=()=>{closeSheet(s);bubbleSheet(r.blocks[+b.dataset.n].text);});
+    s.sheet.querySelectorAll('[data-n]').forEach(b=>b.onclick=()=>{closeSheet(s);bubbleSheet(r.blocks[+b.dataset.n].text,r);});
     s.sheet.querySelector('#op-copy').onclick=()=>{Kotoba.copy(all);toast('Copied');};
     s.sheet.querySelector('#op-tr').onclick=()=>Kotoba.translate(all);
   });
 
-  function bubbleSheet(text){return ocrTextSheet(text,{lang:series.lang||'ko',source:series.title,title:'Speech bubble'});}
+  // The page's other bubbles go along as context for translation (Hy-MT2 on the Mac uses them: 손이 맵네 is "hits hard").
+  function bubbleSheet(text,page){return ocrTextSheet(text,{lang:series.lang||'ko',source:series.title,title:'Speech bubble',context:page?page.blocks.map(b=>b.text).join('\n'):''});}
 
   // Controls
   f('slider').oninput=()=>{
@@ -453,6 +454,7 @@ function ocrTextSheet(text,opts={}){
   wire();
   s.sheet.querySelector('#ob-edit').onclick=handle(async()=>{const t=await prompt2('Fix recognized text',text);if(t==null||!t.trim())return;text=t.trim();s.sheet.querySelector('.ocr-text').innerHTML=render();wire();});
   s.sheet.querySelector('#ob-copy').onclick=()=>{Kotoba.copy(text);toast('Copied');};
-  s.sheet.querySelector('#ob-tr').onclick=()=>Kotoba.translate(text);
+  // The Mac's in-app translator takes context; the phone's Translate hands the text to the Google Translate app.
+  s.sheet.querySelector('#ob-tr').onclick=()=>window.__translateInApp?window.__translateInApp(text,opts.context||''):Kotoba.translate(text);
   s.sheet.querySelector('#ob-card').onclick=()=>{closeSheet(s);openSaveSheet({review:true,kind:'selection',headword:text.slice(0,60),back:'',context:text});};
 }

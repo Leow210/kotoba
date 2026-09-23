@@ -97,7 +97,7 @@ public class DesktopServer {
             case "sync.now":return syncNow();
             case "translate.config":return translator.config();
             case "translate.set":translator.set(d);return translator.config();
-            case "translate":return translator.translate(d.getString("text"),d.optString("from",""),d.optString("to",""));
+            case "translate":return translator.translate(d.getString("text"),d.optString("from",""),d.optString("to",""),d.optString("engine",""),d.optString("context",""));
             case "helper.link":{
                 // A one-time link for installing the Firefox helper (see /kotoba-video.user.js).
                 byte[] r=new byte[12];new SecureRandom().nextBytes(r);

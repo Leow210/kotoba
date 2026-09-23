@@ -14,7 +14,7 @@
     copy(text){if(!mac({type:'copy',text}))navigator.clipboard.writeText(text);},
     share(text){this.copy(text);say('Copied');},
     // TranslateGemma in Kotoba when chosen in Settings › Translation (desktop-after.js), else Google Translate in the browser.
-    translate(text){if(window.__translateInApp)return window.__translateInApp(text);mac({type:'open',url:'https://translate.google.com/?sl=auto&tl=en&op=translate&text='+encodeURIComponent(text)});},
+    translate(text,context){if(window.__translateInApp)return window.__translateInApp(text,context);mac({type:'open',url:'https://translate.google.com/?sl=auto&tl=en&op=translate&text='+encodeURIComponent(text)});},
     pickFolder(){mac({type:'pickFolder'});},
     pickFolderAt(){mac({type:'pickFolder'});},
     exportFile(name,kind,body){

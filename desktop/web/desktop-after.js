@@ -55,37 +55,45 @@
     home.querySelectorAll('.translation-settings').forEach(x=>x.remove());
     const label=document.createElement('div');label.className='section-label translation-settings';label.textContent='Translation';
     const box=document.createElement('div');box.className='settings translation-settings';
-    const status=cfg.engine!=='gemma'?'Translate opens Google Translate in your browser.'
+    const engines=[['llm','Gemma 4 26B'],['gemma','TranslateGemma 12B'],['hymt','Hy-MT2 7B'],['google','Google (in app)'],['google-web','Google (browser)']];
+    const status=cfg.engine==='google'?'Google Translate’s free web service: the text is sent to Google, and the result shows here. Unofficial, so Google may limit it.'
+      :cfg.engine==='google-web'?'Translate opens Google Translate in your browser.'
       :!cfg.serverFound?'llama-server isn’t installed (brew install llama.cpp).'
+      :cfg.engine==='llm'?(cfg.llmFound?`A general model from ${esc(cfg.llm)}: best with idioms and slang, and it reads the rest of a comic page as context. Loads in about a minute the first time; unloads after 10 idle minutes.`:`The model isn’t at ${esc(cfg.llm)} — plug in the drive.`)
+      :cfg.engine==='hymt'?(cfg.hymtFound?`Runs on this Mac from ${esc(cfg.hymt)}. For speech bubbles it also reads the rest of the page as context.`:`The model isn’t at ${esc(cfg.hymt)} — plug in the drive, or finish downloading it.`)
       :cfg.modelFound?`Runs on this Mac from ${esc(cfg.model)}. The first translation takes a few seconds to load the model; it unloads after 10 idle minutes.`
       :`The model isn’t at ${esc(cfg.model)} — plug in the drive, or finish downloading it.`;
     box.innerHTML=`<div class="switch-row"><div><b>Translate with</b><small>${status}</small></div>
-        <div class="chips"><button class="chip small ${cfg.engine==='gemma'?'on':''}" data-engine="gemma">TranslateGemma 12B</button><button class="chip small ${cfg.engine!=='gemma'?'on':''}" data-engine="google">Google (browser)</button></div></div>
+        <div class="chips">${engines.map(([k,v])=>`<button class="chip small ${cfg.engine===k?'on':''}" data-engine="${k}">${v}</button>`).join('')}</div></div>
       <div class="switch-row"><div><b>Languages</b><small>“Detect” picks the source from the text (Hangul → Korean, kana → Japanese…).</small></div>
         <div class="chips"><select data-tr="from">${langOptions(cfg,cfg.from,true)}</select> → <select data-tr="to">${langOptions(cfg,cfg.to,false)}</select></div></div>`;
     home.prepend(label,box);
     box.querySelectorAll('[data-engine]').forEach(b=>b.onclick=handle(async()=>{await api('translate.set',{engine:b.dataset.engine});renderTranslationSettings();}));
     box.querySelectorAll('[data-tr]').forEach(s=>s.onchange=handle(()=>api('translate.set',{[s.dataset.tr]:s.value})));
   }
-  window.__translateInApp=handle(async(text)=>{
+  const ENGINE_NAMES={llm:'Gemma 4 26B',gemma:'TranslateGemma',hymt:'Hy-MT2',google:'Google'};
+  window.__translateInApp=handle(async(text,context)=>{
     const cfg=await api('translate.config',{}).catch(()=>null);
-    if(!cfg||cfg.engine!=='gemma'){
+    if(!cfg||cfg.engine==='google-web'){
       const sl=cfg&&cfg.from!=='auto'?googleCode(cfg.from):'auto',tl=cfg?googleCode(cfg.to):'en';
       mac({type:'open',url:`https://translate.google.com/?sl=${sl}&tl=${tl}&op=translate&text=`+encodeURIComponent(text)});return;
     }
     const s=openSheet(`<div class="sheet-body translate-sheet">
-        <div class="tr-langs"><select data-tr="from">${langOptions(cfg,cfg.from,true)}</select><span>→</span><select data-tr="to">${langOptions(cfg,cfg.to,false)}</select></div>
+        <div class="tr-langs"><select data-tr="from">${langOptions(cfg,cfg.from,true)}</select><span>→</span><select data-tr="to">${langOptions(cfg,cfg.to,false)}</select>
+          <select data-tr="engine">${Object.entries(ENGINE_NAMES).map(([k,v])=>`<option value="${k}" ${k===cfg.engine?'selected':''}>${v}</option>`).join('')}</select></div>
         <div class="tr-src">${esc(text)}</div><div class="tr-out" aria-live="polite"></div></div>
       <div class="sheet-foot"><button class="btn wide" data-a="copy">${icon('copy')} Copy translation</button></div>`,{title:'Translation'});
-    const out=s.sheet.querySelector('.tr-out');let result='';
+    const out=s.sheet.querySelector('.tr-out');let result='';const loaded=new Set();
     async function run(){
-      const from=s.sheet.querySelector('[data-tr="from"]').value,to=s.sheet.querySelector('[data-tr="to"]').value;
-      out.classList.add('busy');out.textContent=cfg.running?'Translating…':'Loading TranslateGemma… (first time takes a few seconds)';
-      try{const r=await api('translate',{text,from,to});result=r.text;cfg.running=true;out.classList.remove('busy');out.textContent=r.text;
-        if(from==='auto')out.dataset.note=`${cfg.languages[r.from]||r.from} → ${cfg.languages[r.to]||r.to}`;}
+      const from=s.sheet.querySelector('[data-tr="from"]').value,to=s.sheet.querySelector('[data-tr="to"]').value,engine=s.sheet.querySelector('[data-tr="engine"]').value;
+      out.classList.add('busy');delete out.dataset.note;
+      out.textContent=engine==='google'||loaded.has(engine)||cfg.running&&engine===cfg.engine?'Translating…':`Loading ${ENGINE_NAMES[engine]}… (the first time takes a few seconds)`;
+      try{const r=await api('translate',{text,from,to,engine,context:context||''});result=r.text;loaded.add(engine);out.classList.remove('busy');out.textContent=r.text;
+        out.dataset.note=`${ENGINE_NAMES[engine]} · ${cfg.languages[r.from]||r.from} → ${cfg.languages[r.to]||r.to}${context&&(engine==='hymt'||engine==='llm')?' · with the page as context':''}`;}
       catch(e){out.classList.remove('busy');out.textContent=e.message;}
     }
-    s.sheet.querySelectorAll('[data-tr]').forEach(x=>x.onchange=()=>{api('translate.set',{[x.dataset.tr]:x.value});run();});
+    // Language changes become the default; the engine menu is for comparing, so it stays for this sheet only.
+    s.sheet.querySelectorAll('[data-tr]').forEach(x=>x.onchange=()=>{if(x.dataset.tr!=='engine')api('translate.set',{[x.dataset.tr]:x.value});run();});
     s.sheet.querySelector('[data-a="copy"]').onclick=()=>{if(result){Kotoba.copy(result);toast('Copied');}};
     run();
   });
