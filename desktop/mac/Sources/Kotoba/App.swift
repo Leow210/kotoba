@@ -187,9 +187,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
             if folder { panel.message = "Choose the folder your sync tool (Syncthing, Google Drive…) keeps in step with the phone" }
             if let ext = m["extensions"] as? [String] { panel.allowedContentTypes = ext.compactMap { .init(filenameExtension: $0) } }
             let purpose = m["purpose"] as? String ?? ""
+            let multiple = m["multiple"] as? Bool ?? false
+            panel.allowsMultipleSelection = multiple
             panel.beginSheetModal(for: window) { [weak self] r in
-                guard r == .OK, let url = panel.url else { return }
-                self?.js("window.desktopPicked(\(Self.quote(purpose)),\(Self.quote(url.path)))")
+                guard r == .OK, !panel.urls.isEmpty else { return }
+                if multiple {
+                    let paths = panel.urls.map { $0.path }
+                    let json = String(data: try! JSONSerialization.data(withJSONObject: paths), encoding: .utf8)!
+                    self?.js("window.desktopPicked(\(Self.quote(purpose)),\(json))")
+                } else if let url = panel.url {
+                    self?.js("window.desktopPicked(\(Self.quote(purpose)),\(Self.quote(url.path)))")
+                }
             }
         case "open":
             if let s = m["url"] as? String, let url = URL(string: s) { NSWorkspace.shared.open(url) }

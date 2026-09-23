@@ -52,6 +52,7 @@ public class DesktopServer {
             @Override public void event(String type,Object payload){DesktopServer.this.event(type,payload);}
         });
         sync=new Sync(store);
+        routes.books=new Books(context,store.db);
         byte[] t=new byte[18];new SecureRandom().nextBytes(t);
         StringBuilder b=new StringBuilder();for(byte x:t)b.append(String.format("%02x",x));
         token=b.toString();
@@ -264,6 +265,13 @@ public class DesktopServer {
                 Object[] f=routes.dictFile(Long.parseLong(rest.substring(0,slash)),rest.substring(slash+1));
                 if(f==null){send(x,404,"text/plain",("Missing: "+rest).getBytes(StandardCharsets.UTF_8),null);return;}
                 send(x,200,(String)f[0],(byte[])f[1],f[2]!=null?ENTRY_CSP:null);
+                return;
+            }
+            if(path.startsWith("/book/")){
+                Object[] f=routes.bookFile(path.substring(6));
+                if(f==null){send(x,404,"text/plain",new byte[0],null);return;}
+                String mime=(String)f[1];
+                send(x,200,mime,(byte[])f[0],mime.contains("html")?ENTRY_CSP:null);
                 return;
             }
             if(path.startsWith("/file/")){

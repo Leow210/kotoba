@@ -10,3 +10,4 @@ mark.kotoba-hl.note{text-decoration:underline dotted rgba(0,0,0,.5)}
 @keyframes kotoba-flash{0%{background:rgba(214,170,60,.45)}100%{background:transparent}}
 body.kotoba-txt p{margin:0 0 .6em;text-indent:0}
 body.kotoba-txt p.blank{margin:0;height:.6em}
+img,svg{max-height:96vh}

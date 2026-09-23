@@ -108,6 +108,7 @@ public class MainActivity extends Activity {
             @Override public void event(String type,Object data){MainActivity.this.event(type,data);}
             @Override public void keepAwake(boolean on){runOnUiThread(()->{if(on)getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);});}
         });
+        routes.books=books;
         web=new KotobaWebView(this);
         setContentView(web);
         web.setBackgroundColor(Color.rgb(247,244,238));
@@ -221,12 +222,9 @@ public class MainActivity extends Activity {
             try{
                 JSONObject data=body==null||body.isEmpty()?new JSONObject():new JSONObject(body);
                 String text;String mime;
-                if(route.equals("highlights")){text=books.exportHighlights(data.getLong("book"));mime="text/markdown";}
-                else{
-                    String[] r=routes.export(route,data);
-                    if(r==null)throw new Exception("Unknown export");
-                    text=r[0];mime=r[1];
-                }
+                String[] r=routes.export(route,data);
+                if(r==null)throw new Exception("Unknown export");
+                text=r[0];mime=r[1];
                 byte[] bytes=text.getBytes(StandardCharsets.UTF_8);
                 runOnUiThread(()->{
                     pendingExport=bytes;
@@ -333,16 +331,6 @@ public class MainActivity extends Activity {
                 for(android.content.UriPermission p:getContentResolver().getPersistedUriPermissions())out.put(p.getUri().toString());
                 return out;
             }
-            case "books":return books.list();
-            case "book.open":return books.open(d.getLong("id"));
-            case "book.position":books.savePosition(d.getLong("id"),d.getString("position"),d.optDouble("progress",0));return null;
-            case "book.settings":books.saveSettings(d.getLong("id"),d.getJSONObject("settings"));return null;
-            case "book.rename":books.rename(d.getLong("id"),d.getString("title"));return null;
-            case "book.delete":books.delete(d.getLong("id"));return null;
-            case "book.importPath":{
-                java.io.File f=new java.io.File(d.getString("path"));
-                return books.importBook(read(new java.io.FileInputStream(f),300_000_000),f.getName());
-            }
             case "comics":return comics.list();
             case "comic.series":return comics.series(d.getLong("id"));
             case "comic.settings":comics.saveSettings(d.getLong("id"),d.getJSONObject("settings"));return null;
@@ -379,12 +367,6 @@ public class MainActivity extends Activity {
                 byte[] b=android.util.Base64.decode(d.getString("data"),android.util.Base64.DEFAULT);
                 return new JSONObject().put("name",scans().importStream(new ByteArrayInputStream(b),d.optString("mime","image/jpeg")));
             }
-            case "highlights":return books.highlights(d.getLong("book"));
-            case "highlight.save":return books.saveHighlight(d);
-            case "highlight.delete":books.deleteHighlight(d.getLong("id"));return null;
-            case "bookmarks":return books.bookmarks(d.getLong("book"));
-            case "bookmark.save":return books.saveBookmark(d);
-            case "bookmark.delete":books.deleteBookmark(d.getLong("id"));return null;
             default:return routes.route(route,d);
         }
     }

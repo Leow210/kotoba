@@ -25,13 +25,21 @@
     restoreBackup(){mac({type:'pickFile',purpose:'restore',extensions:['json']});},
     openResource(dict,name){mac({type:'open',url:location.origin+'/d/'+dict+'/'+encodeURI(name)});},
     setBars(){},exitApp(){},
-    pickBooks:phoneOnly,pickComicFolder:phoneOnly,pickComicFiles:phoneOnly,pickComicCover:phoneOnly,pickMihonBackup:phoneOnly,scanPick:phoneOnly,
+    pickBooks(){mac({type:'pickFile',purpose:'books',extensions:['epub','txt'],multiple:true});},
+    pickComicFolder:phoneOnly,pickComicFiles:phoneOnly,pickComicCover:phoneOnly,pickMihonBackup:phoneOnly,scanPick:phoneOnly,
     pickSyncFolder(){mac({type:'pickFile',purpose:'sync',folder:true});},
     pickWordList(){mac({type:'pickFile',purpose:'wordlist',extensions:['txt','csv','tsv']});},
   };
   // The Mac app answers pickers with these.
   window.desktopPicked=(purpose,path)=>{
     if(purpose==='restore')post('restore',JSON.stringify({path})).then(t=>{const r=JSON.parse(t);if(r.error)say(r.error);else window.__event(JSON.stringify({type:'restored',data:r.data}));});
+    if(purpose==='books'){
+      // One or more books: each is copied into Kotoba's library, as on the phone.
+      const paths=Array.isArray(path)?path:[path];
+      Promise.all(paths.map(p=>post('book.importPath',JSON.stringify({path:p})).then(t=>JSON.parse(t)))).then(rs=>{
+        window.__event(JSON.stringify({type:'books-imported',data:{added:rs.filter(r=>!r.error).map(r=>r.data),errors:rs.filter(r=>r.error).map(r=>r.error)}}));
+      });
+    }
     if(purpose==='sync')post('sync.setFolder',JSON.stringify({path})).then(t=>{const r=JSON.parse(t);if(r.error)say(r.error);else{say('Sync folder set');window.__event(JSON.stringify({type:'sync-status',data:r.data}));}});
     if(purpose==='wordlist')post('wordlist.importPath',JSON.stringify({path})).then(t=>{const r=JSON.parse(t);if(r.error)say(r.error);else window.__event(JSON.stringify({type:'wordlist-imported',data:r.data}));});
   };

@@ -679,7 +679,7 @@ img,svg{max-height:calc(100vh - ${2*m}px)!important}`;
 
   frame.addEventListener('load',()=>{try{frame.contentWindow.addEventListener('resize',debounce(()=>{drawPageBreaks();},300));}catch(e){}});
   // Handle for debugging from DevTools.
-  window.__reader={state,settings,loadChapter,turn,applyStyle,currentAnchor,restoreAnchor,fraction};
+  window.__reader={state,settings,loadChapter,turn,applyStyle,currentAnchor,restoreAnchor,fraction,rtl};
   // Open where the reader left off (or at the start).
   const first=saved&&saved.chapter<spine.length?saved.chapter:Math.max(0,spine.findIndex(s=>s.linear!==false));
   await loadChapter(first,saved?{anchor:saved.anchor,fraction:saved.fraction}:{fraction:0});

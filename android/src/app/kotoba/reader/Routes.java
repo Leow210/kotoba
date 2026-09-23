@@ -26,6 +26,7 @@ public class Routes {
     public final Store store;
     public final WordLists wordlists;
     public final Extras extras;
+    public Books books;// set by the platform (both apps have the book reader)
     final Host host;
     final ExecutorService importer=Executors.newSingleThreadExecutor();
     public final AtomicBoolean cancelImport=new AtomicBoolean(false);
@@ -79,6 +80,23 @@ public class Routes {
             case "library.import":startImport(d.getJSONArray("items"),d.optBoolean("fulltext",true));return null;
             case "library.cancel":cancelImport.set(true);return null;
             case "library.status":return new JSONObject().put("importing",importing);
+            case "books":return books.list();
+            case "book.open":return books.open(d.getLong("id"));
+            case "book.position":books.savePosition(d.getLong("id"),d.getString("position"),d.optDouble("progress",0));return null;
+            case "book.settings":books.saveSettings(d.getLong("id"),d.getJSONObject("settings"));return null;
+            case "book.rename":books.rename(d.getLong("id"),d.getString("title"));return null;
+            case "book.delete":books.delete(d.getLong("id"));return null;
+            case "book.importPath":{
+                File f=new File(d.getString("path"));
+                if(f.length()>300_000_000)throw new Exception("That book is too large.");
+                return books.importBook(java.nio.file.Files.readAllBytes(f.toPath()),f.getName());
+            }
+            case "highlights":return books.highlights(d.getLong("book"));
+            case "highlight.save":return books.saveHighlight(d);
+            case "highlight.delete":books.deleteHighlight(d.getLong("id"));return null;
+            case "bookmarks":return books.bookmarks(d.getLong("book"));
+            case "bookmark.save":return books.saveBookmark(d);
+            case "bookmark.delete":books.deleteBookmark(d.getLong("id"));return null;
             case "wordlists":return wordlists.lists();
             case "wordlist.items":if("abc".equals(d.optString("sort")))wordlists.fillSortKeys(d.getLong("id"),library::readingOf);
                 return wordlists.items(d.getLong("id"),d.optInt("offset",0),d.optInt("limit",200),d.optString("q",""),d.optString("sort",""));
@@ -137,6 +155,7 @@ public class Routes {
             case "tsv":return new String[]{store.exportTsv(data.optLong("folder",0),data.optBoolean("html",true)),"text/tab-separated-values"};
             case "csv":return new String[]{store.exportCsv(data.optLong("folder",0)),"text/csv"};
             case "text":return new String[]{data.optString("text",""),"text/plain"};
+            case "highlights":return new String[]{books.exportHighlights(data.getLong("book")),"text/markdown"};
             case "pleco":{
                 java.util.Set<Long> zh=new java.util.HashSet<>();
                 JSONArray all=library.dictionaries();
@@ -184,6 +203,13 @@ public class Routes {
             return new Object[]{mime,h.getBytes(StandardCharsets.UTF_8),"entry"};
         }
         return new Object[]{mime,bytes,null};
+    }
+
+    /** /book/<id>/<path>: a chapter or image from inside a book, or its cover. {bytes, mime} or null. */
+    public Object[] bookFile(String rest) throws Exception {
+        int slash=rest.indexOf('/');
+        if(slash<0)return null;
+        return books.resource(Long.parseLong(rest.substring(0,slash)),rest.substring(slash+1));
     }
 
     // ---------- importing ----------

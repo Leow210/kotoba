@@ -7,7 +7,7 @@ OUT="$HERE/build/core-classes"
 JAVA_HOME="${JAVA_HOME:-/Library/Java/JavaVirtualMachines/jdk-21.jdk/Contents/Home}"
 CP="$HERE/libs/json-20250517.jar:$HERE/libs/sqlite-jdbc-3.50.3.0.jar:$HERE/libs/slf4j-api-2.0.17.jar"
 rm -rf "$OUT" && mkdir -p "$OUT"
-SHARED="Library Store WordLists Extras Routes Yomitan HtmlText MarkupFix Deinflect Fsrs MdictFile ZipSource Lzo Ripemd128 BookParser Sync"
+SHARED="Library Store WordLists Extras Routes Yomitan HtmlText MarkupFix Deinflect Fsrs MdictFile ZipSource Lzo Ripemd128 BookParser Sync Books"
 # Paths contain spaces ("New Chinese typing"), so sources go through a quoted argument file.
 ARGS="$HERE/build/core-sources.txt"
 : > "$ARGS"
