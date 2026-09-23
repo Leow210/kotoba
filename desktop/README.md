@@ -65,23 +65,28 @@ categories, read chapters) by itself. Covers come from `mihon-covers/` in the da
   **or 걸다** beside the grammar note; click it to switch.
 - Words inside a definition can be looked up too: hold Shift over one and a second popup opens beside it (and so on).
   Releasing Shift while the pointer is over a popup keeps it open. × closes a popup (and any opened from it); Esc or
-  clicking elsewhere closes them all. The Firefox helper's popup has the same ⤢ and ×.
+  clicking elsewhere closes them all. The browser helper's popup works the same way.
 - Keys: Space play/pause · ←/→ 5 s (⇧ 1 s) · A/D previous/next line · S replay line · P pause after each line ·
   T transcript · Z/X subtitle delay · [ ] speed · −/= subtitle size · F full screen · M mute.
 - ＋ Card saves the word with the subtitle line as its example and the episode and time as a note.
 
-### Firefox streaming subtitles
+### Streaming subtitles in Firefox or Chrome
 
-Kotoba › Video › **Firefox subtitle helper** copies a one-time install link (valid ten minutes). Paste it into
-Firefox with Tampermonkey installed and accept the install. On YouTube and GagaOOLala, turn on the site's captions:
+Kotoba › Video › **Browser subtitle helper** copies a one-time install link (valid ten minutes). Paste it into
+Firefox or Chrome with Tampermonkey installed and accept the install. On YouTube and GagaOOLala, turn on the site's captions:
 the helper redraws the current caption as text, and holding **Shift** over a word asks Kotoba for Mac for it. The
-popup shows your dictionaries' definitions (in your order), frequency, whether it's already a card, ＋ Card (the
-caption line becomes the example, the video title and time the note) and Open in Kotoba. The video pauses while a
-word is shown (⏸ on lookup in the helper's toolbar). Kotoba for Mac must be open. The popup is compact with ⤢ to
-expand, as in the player (helper 0.3.0; reinstall from the Video tab to update an older copy).
+popup is the same as the player's: the entry as the dictionary lays it out, a tab per dictionary (⤢), frequency,
+whether it's already a card, **or …** for a second reading, ＋ Card (the caption line becomes the example, the video
+title and time the note), Open in Kotoba, ×, and Shift over a word inside an entry for a second popup. The video
+pauses while a word is shown (⏸ on lookup in the helper's toolbar). Kotoba for Mac must be open. Reinstall from the
+Video tab to update an older copy (current: 0.4.0).
+
+The site can't load Kotoba's pages itself, so the helper asks for each entry with its stylesheets and images packed
+in (`/helper/entry`) and shows it in a frame with scripts off. In Chrome, YouTube only accepts HTML through a Trusted
+Types policy; the helper makes its own (`kotoba-helper`).
 
 The helper talks to Kotoba on 127.0.0.1:47823 through Tampermonkey (`GM_xmlhttpRequest`) with a key built into the
-installed script; that address only answers lookups, definitions, frequency and card saves. Reinstall the helper
+installed script; that address only answers lookups, entries, definitions, frequency and card saves. Reinstall the helper
 from the Video tab if the key changes. It reads only the caption text shown on the page.
 
 ## Sync

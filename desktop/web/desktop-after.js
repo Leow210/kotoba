@@ -64,15 +64,15 @@
   document.getElementById('screen-reader').after(screen);
   const hoverInstruction=()=>KotobaHover.get()==='none'?'Hover a subtitle to look words up':`Hold ${KotobaHover.label()} and hover a subtitle to look words up`;
   function updateVideoHelp(){const e=screen.querySelector('.head .sub');if(e)e.textContent=hoverInstruction();}
-  screen.innerHTML=`<div class="head head-row"><div><h1>Video</h1><p class="sub"></p></div><div><button class="btn small" id="copy-browser-helper">Firefox subtitle helper</button> <button class="btn small primary" id="open-video">＋ Open video…</button></div></div><div class="scroll" id="video-home"></div>`;
+  screen.innerHTML=`<div class="head head-row"><div><h1>Video</h1><p class="sub"></p></div><div><button class="btn small" id="copy-browser-helper">Browser subtitle helper</button> <button class="btn small primary" id="open-video">＋ Open video…</button></div></div><div class="scroll" id="video-home"></div>`;
   updateVideoHelp();
   document.getElementById('open-video').onclick=()=>mac({type:'openVideo'});
-  // The Firefox helper: a one-time install link (it carries the key the helper uses to ask Kotoba for lookups).
+  // The browser helper (Firefox or Chrome): a one-time install link (it carries the key the helper uses to ask Kotoba for lookups).
   document.getElementById('copy-browser-helper').onclick=handle(async()=>{
     const r=await api('helper.link');
     Kotoba.copy(r.url);
     if(!r.helperRunning)toast('Another app is using port '+r.helperPort+'; quit it and reopen Kotoba for the helper to work.',6000);
-    else toast('Install link copied (valid 10 minutes). Paste it into Firefox’s address bar; Tampermonkey offers to install.',6000);
+    else toast('Install link copied (valid 10 minutes). Paste it into Firefox’s or Chrome’s address bar; Tampermonkey offers to install.',6000);
   });
   // "Open in Kotoba" from the helper: the word opens here and the window comes forward.
   on('helper-show',r=>{mac({type:'activate'});window.externalLookup&&window.externalLookup(r.word);});
@@ -101,7 +101,7 @@
     let recent=[];try{recent=JSON.parse(localStorage.getItem('recentVideos')||'[]');}catch(e){}
     const box=document.getElementById('video-home');
     box.innerHTML=recent.length?`<div class="section-label">Recent</div>`+recent.map((v,i)=>`<button class="row video-row" data-v="${i}"><div class="line"><div class="hw">${esc(v.title)}</div><div class="meta"><span class="tag muted">${fmt(v.t)} / ${fmt(v.d)}</span></div></div><div class="progress"><i style="width:${v.d?Math.min(100,v.t/v.d*100):0}%"></i></div><small class="vpath">${esc(v.path)}</small></button>`).join('')
-      :`<div class="empty"><span class="glyph">映</span><h2>Watch with subtitles</h2>Open a video (MKV, MP4…). Subtitle files beside it, or in a <b>subtitles</b> folder next to it, and the tracks inside it are found automatically. For subtitles printed into the picture, choose <b>OCR hardcoded subtitles</b> from the 字幕 menu in the player.<br><br>For YouTube and GagaOOLala in Firefox, install the subtitle helper above (needs Tampermonkey). Turn on the site's captions, then hold <b>Shift</b> over a word: Kotoba shows its definitions and can save a card, as long as this app is open.<br><br>${esc(hoverInstruction())}; <b>A</b> / <b>D</b> go to the previous / next line, <b>S</b> replays it, and <b>P</b> pauses after every line.</div>`;
+      :`<div class="empty"><span class="glyph">映</span><h2>Watch with subtitles</h2>Open a video (MKV, MP4…). Subtitle files beside it, or in a <b>subtitles</b> folder next to it, and the tracks inside it are found automatically. For subtitles printed into the picture, choose <b>OCR hardcoded subtitles</b> from the 字幕 menu in the player.<br><br>For YouTube and GagaOOLala in Firefox or Chrome, install the subtitle helper above (needs Tampermonkey). Turn on the site's captions, then hold <b>Shift</b> over a word: Kotoba shows its definitions and can save a card, as long as this app is open.<br><br>${esc(hoverInstruction())}; <b>A</b> / <b>D</b> go to the previous / next line, <b>S</b> replays it, and <b>P</b> pauses after every line.</div>`;
     box.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>mac({type:'openVideo',path:recent[+b.dataset.v].path}));
   }
   const originalShow=showTab;

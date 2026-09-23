@@ -337,12 +337,94 @@ public class DesktopServer {
             try{
                 Object result;
                 if(route.equals("show")){event("helper-show",new JSONObject().put("word",d.getString("word")));result=null;}
+                else if(route.equals("entry"))result=new JSONObject().put("html",entryInline(d.getLong("rec")));
                 else if(HELPER_ROUTES.contains(route))result=route(route,d);
                 else throw new Exception("Not available to the helper: "+route);
                 reply=new JSONObject().put("data",result==null?JSONObject.NULL:result).toString();
             }catch(Throwable e){reply=new JSONObject().put("error",e.getMessage()==null?e.toString():e.getMessage()).toString();}
             send(x,200,"application/json",reply.getBytes(StandardCharsets.UTF_8),null);
         }catch(Throwable e){try{send(x,500,"text/plain",new byte[0],null);}catch(IOException ignored){}}
+    }
+
+    static final java.util.regex.Pattern LINK_TAG=java.util.regex.Pattern.compile("<link\\b[^>]*>",java.util.regex.Pattern.CASE_INSENSITIVE);
+    static final java.util.regex.Pattern HREF=java.util.regex.Pattern.compile("\\bhref\\s*=\\s*[\"']([^\"']+)[\"']",java.util.regex.Pattern.CASE_INSENSITIVE);
+    static final java.util.regex.Pattern CSS_URL=java.util.regex.Pattern.compile("url\\(\\s*[\"']?([^\"')]+?)[\"']?\\s*\\)");
+    static final java.util.regex.Pattern IMG_SRC=java.util.regex.Pattern.compile("(<img\\b[^>]*?\\bsrc\\s*=\\s*)([\"'])([^\"']+)\\2",java.util.regex.Pattern.CASE_INSENSITIVE);
+
+    /**
+     * An entry page with its stylesheets and images inside it, for the helper's popup: a page on YouTube can't load
+     * Kotoba's resources itself (they need the session cookie), so the helper fetches this with its key instead.
+     * Large files (fonts, big images) are left out; the page is shown in a frame without scripts.
+     */
+    String entryInline(long rec) throws Exception {
+        long dict=routes.library.record(rec).getLong("dict");
+        String page=routes.entryPage(rec);
+        long[] budget={4_000_000};
+        StringBuilder out=new StringBuilder();
+        java.util.regex.Matcher m=LINK_TAG.matcher(page);int last=0;
+        while(m.find()){
+            out.append(page,last,m.start());last=m.end();
+            String tag=m.group();java.util.regex.Matcher h=HREF.matcher(tag);
+            if(!tag.toLowerCase().contains("stylesheet")||!h.find())continue;
+            String href=h.group(1);
+            Object[] css=resource(dict,href);
+            if(css==null)continue;
+            String base=href.contains("/")?href.substring(0,href.lastIndexOf('/')+1):"";
+            String text=new String((byte[])css[1],StandardCharsets.UTF_8);
+            out.append("<style>").append(inlineUrls(dict,base,text,budget).replace("</style","<\\/style")).append("</style>");
+        }
+        out.append(page.substring(last));
+        // Images in the entry itself.
+        String html=out.toString();
+        java.util.regex.Matcher im=IMG_SRC.matcher(html);StringBuilder b=new StringBuilder();last=0;
+        while(im.find()){
+            b.append(html,last,im.start());last=im.end();
+            String data=dataUri(dict,im.group(3),budget);
+            b.append(im.group(1)).append('"').append(data==null?"":data).append('"');
+        }
+        b.append(html.substring(last));
+        return b.toString();
+    }
+    String inlineUrls(long dict,String base,String css,long[] budget){
+        java.util.regex.Matcher m=CSS_URL.matcher(css);StringBuilder b=new StringBuilder();int last=0;
+        while(m.find()){
+            b.append(css,last,m.start());last=m.end();
+            String url=m.group(1).trim();
+            String data=url.startsWith("data:")||url.startsWith("#")?url:dataUri(dict,url.startsWith("/")?url:base+url,budget);
+            b.append("url(\"").append(data==null?"":data.replace("\"","%22")).append("\")");
+        }
+        return b.append(css.substring(last)).toString();
+    }
+    String dataUri(long dict,String href,long[] budget){
+        try{
+            if(href.startsWith("data:"))return href;
+            Object[] f=resource(dict,href);
+            if(f==null)return null;
+            byte[] bytes=(byte[])f[1];
+            if(bytes.length>400_000||bytes.length>budget[0])return null;
+            budget[0]-=bytes.length;
+            return "data:"+f[0]+";base64,"+java.util.Base64.getEncoder().encodeToString(bytes);
+        }catch(Exception e){return null;}
+    }
+    /** {mime, bytes} for a URL as an entry page uses it: /d/<dict>/<name>, /<asset>, or relative to the dictionary. */
+    Object[] resource(long dict,String href) throws Exception {
+        href=href.replaceAll("[?#].*$","");
+        if(href.isEmpty()||href.contains("://"))return null;
+        if(href.startsWith("/d/")){
+            String rest=href.substring(3);int slash=rest.indexOf('/');if(slash<0)return null;
+            Object[] f=routes.dictFile(Long.parseLong(rest.substring(0,slash)),URLDecoder.decode(rest.substring(slash+1),StandardCharsets.UTF_8));
+            return f==null?null:new Object[]{f[0],f[1]};
+        }
+        if(href.startsWith("/")){
+            for(File root:new File[]{assets,web}){
+                File f=new File(root,URLDecoder.decode(href.substring(1),StandardCharsets.UTF_8)).getCanonicalFile();
+                if(f.isFile()&&f.getPath().startsWith(root.getCanonicalPath()+File.separator))
+                    return new Object[]{href.endsWith(".css")?"text/css":"application/octet-stream",Files.readAllBytes(f.toPath())};
+            }
+            return null;
+        }
+        Object[] f=routes.dictFile(dict,URLDecoder.decode(href,StandardCharsets.UTF_8));
+        return f==null?null:new Object[]{f[0],f[1]};
     }
 
     boolean authorized(HttpExchange x){

@@ -139,7 +139,7 @@ Tap a preview to play the video. Each one is silent and about 15–25 seconds lo
 [`desktop/`](desktop/README.md) is a Mac companion app. It runs this app's own Java classes, so it has the same dictionaries, search and cards, plus:
 - a video player (mpv) whose subtitles (SRT/VTT/ASS files or embedded tracks) you hover with Shift to look words up. The popup is compact so it doesn't cover the scene, with ⤢ to show every dictionary; words inside a definition can be looked up the same way (a second popup opens beside it); and ＋ Card saves the word with the line as its example;
 - the book reader and the comic reader, with the Mihon webtoons mirrored from the phone;
-- a Firefox (Tampermonkey) helper that looks up YouTube and other streaming captions in Kotoba instead of Yomitan.
+- a browser helper (Tampermonkey, Firefox or Chrome) that looks up YouTube and other streaming captions in Kotoba instead of Yomitan, with the same popup as the player.
 
 | Subtitle lookup | Expanded popup |
 |---|---|
