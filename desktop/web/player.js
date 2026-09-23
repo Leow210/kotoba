@@ -238,17 +238,13 @@ async function showPop(res,cue,r1,r2,P=pop){
     // The word as the subtitle writes it (門口), with the dictionary's form when that differs (门口, 食べる).
     const shown=res.written&&res.written!==res.key?res.written:res.key;
     P.el.innerHTML=`<div class="p-head"><b class="p-word">${esc(shown)}</b>${shown!==res.key?`<span class="p-key">${esc(res.key)}</span>`:''}<span class="p-freq"></span><span class="p-saved"></span><button class="p-size" data-p="size" title="Bigger / smaller popup"></button><button class="p-close" data-p="close" title="Close (Esc)">×</button></div>
-      ${res.explain?`<div class="p-explain">${esc(res.explain)}</div>`:''}
-      <div class="p-defs">${items.map((it,n)=>`<div class="p-def" data-n="${n}"><div class="p-dict">${esc(shortName(it.dictionary))}${it.page&&it.page!==it.key?` · ${esc(it.page)}`:''}</div><div class="p-text">…</div></div>`).join('')}</div>
-      <div class="p-full" hidden></div>
-      <div class="p-actions"><button data-p="card">＋ Card</button><button data-p="full">Full entry</button><button data-p="main">Open in Kotoba</button><button data-p="copy">Copy</button></div>`;
+      ${res.explain||alts(res).length?`<div class="p-explain">${esc(res.explain||'')}${alts(res).map((f,j)=>`<button class="p-alt" data-p="alt" data-j="${j}" title="${esc(f.explain||'')}">or ${esc(f.base)}</button>`).join('')}</div>`:''}
+      <div class="p-tabs">${items.map((it,n)=>`<button class="p-tab${n?'':' on'}" data-p="tab" data-n="${n}">${esc(shortName(it.dictionary))}</button>`).join('')}</div>
+      <div class="p-entry"></div>
+      <div class="p-actions"><button data-p="card">＋ Card</button><button data-p="main">Open in Kotoba</button><button data-p="copy">Copy</button></div>`;
     P.items=items;
-    api('gloss.rec',{recs:items.map(x=>x.rec),max:360}).then(g=>{
-      if(P.key!==key)return;
-      // Definitions are drawn a character at a time, so a word in them can be looked up too.
-      g.forEach((x,n)=>{const el=P.el.querySelector(`.p-def[data-n="${n}"] .p-text`);if(el)el.innerHTML=x.text?chars(x.text,'dch'):'—';});
-      place(P);
-    }).catch(()=>{});
+    // The entry as the dictionary lays it out (same page as the main window), not flattened text.
+    showEntry(P,0);
     Promise.all([api('freq',{key:res.key,reading:''}),dictGroups()]).then(([f,groups])=>{
       if(P.key!==key)return;
       // Only frequency lists in the subtitle's language (JPDB ranks mean nothing for a Cantonese word).
@@ -266,6 +262,8 @@ async function showPop(res,cue,r1,r2,P=pop){
   P.r1=r1;P.r2=r2;
   place(P);
 }
+/** Other readings of the same form (걸었다고: 걷다 or 걸다), which only the context can decide between. */
+function alts(res){return (res.forms||[]).filter(f=>f.base&&f.base!==res.key&&f.items&&f.items.length).slice(0,2);}
 let groupsCache=null;
 function dictGroups(){return groupsCache||(groupsCache=api('dicts').then(ds=>Object.fromEntries(ds.map(d=>[d.id,d.grp||'Japanese']))));}
 function bars(rank){const l=!rank?0:rank<=2000?4:rank<=8000?3:rank<=25000?2:1;return `<span class="fbars l${l}"><i></i><i></i><i></i><i></i></span>`;}
@@ -294,43 +292,101 @@ function textLang(t){
   if(/[\u4e00-\u9fff]/.test(c))return st.lang==='zh'?'zh':'ja';
   return '';
 }
-let defT=0,defAt=null,lastPopPoint=null;
+let defT=0;
 function wire(P){
   const el=P.el;
   el.addEventListener('mouseenter',()=>clearTimeout(pop.hideT));
   el.addEventListener('mouseleave',(e)=>{if(!pop.pinned&&!(e.relatedTarget&&e.relatedTarget.closest&&e.relatedTarget.closest('.kpop')))leaveSubs();});
-  el.addEventListener('mousemove',(e)=>{
-    lastPopPoint={x:e.clientX,y:e.clientY};
-    if(!KotobaHover.matches(e))return;
-    const span=e.target.closest('.dch');if(!span)return;
-    const box=span.closest('.p-text');const at=P.level+':'+box.parentElement.dataset.n+':'+span.dataset.i;
-    if(at===defAt)return;defAt=at;
-    clearTimeout(defT);defT=setTimeout(()=>lookupInDef(P,box,+span.dataset.i,at),90);
-  });
   el.addEventListener('click',(e)=>onPopClick(P,e));
 }
-async function lookupInDef(P,box,i,at){
-  const spans=[...box.querySelectorAll('.dch')];
-  const text=spans.slice(i,i+24).map(x=>x.textContent).join('');
+const AUDIO_HREF=/^sound:\/\/|\.(mp3|m4a|aac|ogg|oga|opus|wav|spx)(#.*)?$/i;
+function showEntry(P,n){
+  const it=P.items&&P.items[n];if(!it)return;
+  P.tab=n;
+  P.el.querySelectorAll('.p-tab').forEach(t=>t.classList.toggle('on',+t.dataset.n===n));
+  const f=document.createElement('iframe');f.src=`/d/${it.dict}/${it.rec}.entry`;
+  P.el.querySelector('.p-entry').replaceChildren(f);
+  f.addEventListener('load',()=>{
+    const d=f.contentDocument;if(!d||!d.body)return;
+    const css=d.createElement('style');
+    css.textContent='body.kotoba-entry{padding:2px 6px 8px!important;font-size:14.5px}::highlight(kotoba){background-color:rgba(124,194,160,.5)}';
+    d.head.appendChild(css);
+    wireFrame(P,f,it);
+    fitFrame(P);setTimeout(()=>fitFrame(P),250);
+    // A page with several words (大辞林 けんのう: 献納, 権能) opens at the heading of the one looked up.
+    const key=P.res&&P.res.key,shown=P.res&&P.res.written;
+    const heads=[...d.querySelectorAll('[data-name*="見出"],[data-name*="表記"],[data-name="headword"],.yt-word,.headword,h1,h2,h3')];
+    const clean=s=>s.replace(/[\s・‐\-▽▼×]/g,'');
+    const h=heads.find(e=>{const t=clean(e.textContent);return t&&(t.includes(clean(key||''))||shown&&t.includes(clean(shown)));});
+    if(h){const r=h.getBoundingClientRect();if(r.top>40)f.contentWindow.scrollTo(0,r.top-8);}
+  });
+}
+function fitFrame(P){
+  const f=P.el.querySelector('.p-entry iframe');if(!f||!f.contentDocument)return;
+  const cap=P.el.classList.contains('big')?Math.min(440,innerHeight*.5):170;
+  f.style.height=Math.min(cap,f.contentDocument.documentElement.scrollHeight)+'px';
+  place(P);
+}
+// Hovering a word in an entry (with the hover key) opens the next popup for it.
+let lastFrame=null,defTok=null;
+function wireFrame(P,f,it){
+  const d=f.contentDocument;let last=null;
+  const probe=(x,y,key)=>{
+    if(!key)return;
+    const r=d.caretRangeFromPoint(x,y);if(!r||r.startContainer.nodeType!==3)return;
+    if(last&&last.node===r.startContainer&&last.off===r.startOffset)return;
+    last={node:r.startContainer,off:r.startOffset};
+    clearTimeout(defT);defT=setTimeout(()=>lookupInFrame(P,f,last.node,last.off),90);
+  };
+  d.addEventListener('mousemove',e=>{lastFrame={P,f,x:e.clientX,y:e.clientY,probe};probe(e.clientX,e.clientY,KotobaHover.matches(e));});
+  d.addEventListener('keydown',e=>{if(KotobaHover.isKey(e)&&lastFrame&&lastFrame.f===f)probe(lastFrame.x,lastFrame.y,true);});
+  d.addEventListener('click',e=>{
+    pop.pinned=true;
+    const a=e.target.closest('a[href]');if(!a)return;e.preventDefault();
+    const h=a.getAttribute('href');
+    if(AUDIO_HREF.test(h))new Audio(`/d/${it.dict}/`+h.replace(/^sound:\/\//i,'').replace(/^[\/\\]+/,'').replace(/#.*$/,'').split('/').map(encodeURIComponent).join('/')).play().catch(()=>{});
+  });
+}
+async function lookupInFrame(P,f,node,off){
+  const d=f.contentDocument;
+  // Up to 24 characters from the pointer on, across text nodes (ruby readings left out).
+  const walker=d.createTreeWalker(d.body,NodeFilter.SHOW_TEXT,{acceptNode:n=>n.parentElement&&n.parentElement.closest('rt,rp,script,style')?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT});
+  walker.currentNode=node;
+  const parts=[];let text='',n=node,o=off;
+  while(n&&text.length<24){const t=n.nodeValue.slice(o);if(t)parts.push({n,o,len:t.length});text+=t;n=walker.nextNode();o=0;}
+  text=text.slice(0,24);
   if(!text.trim()||/^[\s\p{P}\d]/u.test(text))return;
+  const tok={};defTok=tok;
   const lang=textLang(text);
   let res;try{res=await api('lookup',{text,lang:lang==='zh'||lang==='th'?lang:''});}catch(e){return;}
-  if(defAt!==at||!res.items.length)return;
-  P.el.querySelectorAll('.dch.hl').forEach(x=>x.classList.remove('hl'));
-  const n=Array.from(res.matched||text[0]).length;
-  const hit=spans.slice(i,i+n);hit.forEach(x=>x.classList.add('hl'));
-  res.written=hit.map(x=>x.textContent).join('');
+  if(defTok!==tok||!res.items.length)return;
+  const range=d.createRange();range.setStart(parts[0].n,parts[0].o);
+  let rem=(res.matched||text[0]).length;
+  for(const p of parts){if(rem<=p.len){range.setEnd(p.n,p.o+rem);break;}rem-=p.len;}
+  try{f.contentWindow.CSS.highlights.set('kotoba',new f.contentWindow.Highlight(range));}catch(e){}
+  res.written=range.toString();
+  const fr=f.getBoundingClientRect(),rects=range.getClientRects();
+  const shift=r=>({left:r.left+fr.left,right:r.right+fr.left,top:r.top+fr.top,bottom:r.bottom+fr.top});
+  const a=rects[0]||range.getBoundingClientRect(),b=rects[rects.length-1]||a;
   const C=popupAt(P.level+1);C.lang=lang;C.cue=P.cue;
-  showPop(res,P.cue,hit[0].getBoundingClientRect(),hit[hit.length-1].getBoundingClientRect(),C);
+  showPop(res,P.cue,shift(a),shift(b),C);
 }
+function clearFrameHighlight(P){const f=P&&P.el.querySelector('.p-entry iframe');try{f.contentWindow.CSS.highlights.delete('kotoba');}catch(e){}}
 wire(pop);
 async function onPopClick(P,e){
   pop.pinned=true;
   const b=e.target.closest('[data-p]');if(!b)return;
   const res=P.res,it=P.items&&P.items[0];
+  if(b.dataset.p==='alt'){
+    // Show the other reading instead; the one shown now becomes the alternative.
+    const f=alts(res)[+b.dataset.j];if(!f)return;
+    const now=(res.forms||[]).find(x=>x.base===res.key)||{base:res.key,explain:res.explain,items:res.items};
+    const next={...res,key:f.base,explain:f.explain||'',items:(f.items||[]).concat(f.extra||[]),forms:[f,now,...(res.forms||[]).filter(x=>x!==f&&x!==now)]};
+    P.key=null;showPop(next,P.cue,P.r1,P.r2,P);return;
+  }
   if(b.dataset.p==='close'){
     // × closes this popup and the ones opened from it; the first one also resumes the video.
-    if(P.level){closeFrom(P.level);stack[P.level-1].el.querySelectorAll('.dch.hl').forEach(x=>x.classList.remove('hl'));defAt=null;}
+    if(P.level){closeFrom(P.level);clearFrameHighlight(stack[P.level-1]);}
     else{hidePop();resumeAfterHover();}
     return;
   }
@@ -338,20 +394,12 @@ async function onPopClick(P,e){
     // Compact by default (first dictionary, two lines); ⤢ shows every dictionary and the other actions.
     const big=!P.el.classList.contains('big');
     store.set('player.popBig',big);
-    for(const Q of stack){Q.el.classList.toggle('big',big);if(!big)Q.el.querySelector('.p-full')&&(Q.el.querySelector('.p-full').hidden=true);place(Q);}
+    for(const Q of stack){Q.el.classList.toggle('big',big);fitFrame(Q);}
     return;
   }
   if(b.dataset.p==='copy'){navigator.clipboard.writeText(res.key).catch(()=>{});osd('Copied');}
   if(b.dataset.p==='main')send({cmd:'lookupInMain',word:res.key});
-  if(b.dataset.p==='full'&&it){
-    const full=P.el.querySelector('.p-full');
-    full.hidden=!full.hidden;
-    if(!full.hidden)full.innerHTML=P.items.map((x,n)=>`<button class="p-tab ${n===0?'on':''}" data-rec="${x.rec}" data-dict="${x.dict}">${esc(shortName(x.dictionary))}</button>`).join('')+`<iframe src="/d/${it.dict}/${it.rec}.entry"></iframe>`;
-  }
-  if(b.classList.contains('p-tab')){
-    P.el.querySelectorAll('.p-tab').forEach(x=>x.classList.toggle('on',x===b));
-    P.el.querySelector('.p-full iframe').src=`/d/${b.dataset.dict}/${b.dataset.rec}.entry`;
-  }
+  if(b.dataset.p==='tab'){closeFrom(P.level+1);showEntry(P,+b.dataset.n);return;}
   if(b.dataset.p==='card'&&it){
     try{
       const g=(await api('gloss.rec',{recs:[it.rec],max:2000}))[0];
@@ -370,9 +418,8 @@ for(const id of ['sub-main','t-list']){
 }
 document.addEventListener('keydown',(e)=>{
   if(!KotobaHover.isKey(e))return;
-  // Pressing the key over a popup's definition looks up the word under the pointer there.
-  const inPop=lastPopPoint&&document.elementFromPoint(lastPopPoint.x,lastPopPoint.y);
-  if(inPop&&inPop.closest('.kpop')){inPop.dispatchEvent(new MouseEvent('mousemove',{bubbles:true,clientX:lastPopPoint.x,clientY:lastPopPoint.y,shiftKey:e.shiftKey,altKey:e.altKey,ctrlKey:e.ctrlKey,metaKey:e.metaKey}));return;}
+  // Pressing the key over an entry in a popup looks up the word under the pointer there.
+  if(lastFrame&&lastFrame.f.isConnected&&lastFrame.f.matches(':hover')){lastFrame.probe(lastFrame.x,lastFrame.y,true);return;}
   if(!lastHoverPoint)return;
   const target=document.elementFromPoint(lastHoverPoint.x,lastHoverPoint.y);
   if(target)onHover({target,clientX:lastHoverPoint.x,clientY:lastHoverPoint.y,

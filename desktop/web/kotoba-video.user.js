@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kotoba Video Text
 // @namespace    app.kotoba.desktop
-// @version      0.3.0
+// @version      0.3.1
 // @description  Look up YouTube and GagaOOLala subtitles in Kotoba for Mac: hold Shift over a word.
 // @match        https://www.youtube.com/watch*
 // @match        https://www.gagaoolala.com/*/videos/*
@@ -76,6 +76,7 @@
     #kotoba-video-pop .k-saved:not(:empty) + .k-size { margin-left: 6px; }
     #kotoba-video-pop .k-close { align-self: center; margin-left: 4px; border: 0; background: transparent; color: #72766f; border-radius: 7px; width: 26px; height: 26px; font-size: 21px; line-height: 24px; padding: 0; cursor: pointer; }
     #kotoba-video-pop .k-close:hover { background: #ece7dc; color: #1d211f; }
+    #kotoba-video-pop .k-alt { margin-left: 8px; border: 1px solid #cfe0d6; background: #fff; color: #2f6b55; border-radius: 10px; padding: 0 8px; font: 600 11.5px/1.7 -apple-system,BlinkMacSystemFont,sans-serif; cursor: pointer; }
     #kotoba-video-pop .k-explain { color: #2f6b55; font-size: 12px; }
     #kotoba-video-pop .k-dict { font-size: 11px; font-weight: 700; color: #2f6b55; margin-top: 5px; }
     #kotoba-video-pop.k-big .k-dict { margin-top: 8px; }
@@ -205,13 +206,15 @@
   }
   const shortName = n => String(n).replace(/\s*[\[(（][\d\-. v]+[\])）]\s*$/, '').replace(/^(小学館|三省堂|研究社|大修館|旺文社)\s*/, '').replace(/\s*第.版$/, '').slice(0, 16);
   let groups = null;
+  // Other readings of the same form (걸었다고: 걷다 or 걸다); only the context can decide.
+  const alts = res => (res.forms || []).filter(f => f.base && f.base !== res.key && f.items && f.items.length).slice(0, 2);
   async function showPop(res, anchor) {
     shown = res;
     const byDict = []; for (const it of res.items) if (!byDict.some(x => x.dict === it.dict) && it.kind !== 'kanji') byDict.push(it);
     const items = byDict.slice(0, 4);
     const written = res.written && res.written !== res.key ? res.written : res.key;
     pop.innerHTML = `<div class="k-head"><b class="k-word">${esc(written)}</b>${written !== res.key ? `<span class="k-key">${esc(res.key)}</span>` : ''}<span class="k-freq"></span><span class="k-saved"></span><button class="k-size" data-k="size" title="Bigger / smaller popup">${big() ? '⤡' : '⤢'}</button><button class="k-close" data-k="close" title="Close (Esc)">×</button></div>
-      ${res.explain ? `<div class="k-explain">${esc(res.explain)}</div>` : ''}
+      ${res.explain || alts(res).length ? `<div class="k-explain">${esc(res.explain || '')}${alts(res).map((f, j) => `<button class="k-alt" data-k="alt" data-j="${j}" title="${esc(f.explain || '')}">or ${esc(f.base)}</button>`).join('')}</div>` : ''}
       ${items.map((it, n) => `<div class="${n ? 'k-more' : ''}"><div class="k-dict">${esc(shortName(it.dictionary))}${it.page && it.page !== it.key ? ' · ' + esc(it.page) : ''}</div><div class="k-text" data-n="${n}">…</div></div>`).join('')}
       <div class="k-actions"><button data-k="card">＋ Card</button><button class="k-more" data-k="open">Open in Kotoba</button><button class="k-more" data-k="copy">Copy</button></div>`;
     pop.classList.toggle('k-big', big());
@@ -264,6 +267,12 @@
     const b = e.target.closest('[data-k]'); if (!b || !shown) return;
     const res = shown, it = pop.items && pop.items[0];
     if (b.dataset.k === 'close') { hidePop(); return; }
+    if (b.dataset.k === 'alt') {
+      const f = alts(res)[+b.dataset.j]; if (!f) return;
+      const now = (res.forms || []).find(x => x.base === res.key) || { base: res.key, explain: res.explain, items: res.items };
+      showPop({ ...res, key: f.base, explain: f.explain || '', items: (f.items || []).concat(f.extra || []), forms: [f, now, ...(res.forms || []).filter(x => x !== f && x !== now)] }, pop.anchor);
+      return;
+    }
     if (b.dataset.k === 'size') {
       store.set('kotoba.popBig', big() ? '0' : '1');
       pop.classList.toggle('k-big', big()); b.textContent = big() ? '⤡' : '⤢';

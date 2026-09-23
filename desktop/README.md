@@ -58,8 +58,11 @@ categories, read chapters) by itself. Covers come from `mihon-covers/` in the da
 - Hold Shift and hover over the main line or transcript to open a lookup popup. Settings › Reading can change
   the key to Option, Control, Command, or no key. A second line (e.g. English) can show underneath. The lookup language follows the
   track (ja, zh, ko, th, ru) and can be changed in the 字幕 menu. Chinese is tried as written, then simplified.
-- The popup is compact by default: the word, its grammar breakdown, the first dictionary's definition in two lines and
-  ＋ Card. ⤢ expands it to every dictionary, Full entry, Open in Kotoba and Copy; the size you pick is remembered.
+- The popup shows the entry as the dictionary lays it out (the same page as the main window). It is compact by default:
+  the word, its grammar breakdown, the first dictionary's entry in a short scrolling box and ＋ Card. ⤢ adds a tab per
+  dictionary, a taller box, Open in Kotoba and Copy; the size you pick is remembered.
+- When a form fits two verbs (걸었다고: 걷다 "walk" or 걸다 "bet"; 들었어: 듣다 or 들다), the popup shows the first with
+  **or 걸다** beside the grammar note; click it to switch.
 - Words inside a definition can be looked up too: hold Shift over one and a second popup opens beside it (and so on).
   Releasing Shift while the pointer is over a popup keeps it open. × closes a popup (and any opened from it); Esc or
   clicking elsewhere closes them all. The Firefox helper's popup has the same ⤢ and ×.

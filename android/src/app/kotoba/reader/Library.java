@@ -1601,12 +1601,14 @@ public class Library {
                 String verb=sp[0]+"다";
                 JSONArray rows=koEntries(verb);
                 if(rows.length()>0){add.accept(new JSONObject().put("base",verb).put("explain","ending -"+sp[1]).put("chain",verb+" + -"+sp[1]).put("items",rows).put("extra",koEntries("-"+sp[1])),verb);continue;}
-                // A conjugated stem before the ending: 갔다며 = 갔(가다, past) + -다며.
+                // A conjugated stem before the ending: 갔다며 = 갔(가다, past) + -다며. When two verbs fit (걸었다고: 걷다 "walk"
+                // or 걸다 "bet"), both are kept, since only the context can tell; lookups offer the second as "or 걸다".
+                int found=0;
                 for(Deinflect.Candidate c:Deinflect.korean(verb,w->{try{return koKey(w);}catch(Exception e){return false;}},this::koreanStems)){
                     JSONArray r2=koEntries(c.base);if(r2.length()==0)continue;
                     String ex=c.explain().replaceAll("\\s*·?\\s*plain$","");
                     add.accept(new JSONObject().put("base",c.base).put("explain",(ex.isEmpty()?"":ex+" + ")+"ending -"+sp[1]).put("chain",c.base+" + "+c.chain().substring(c.base.length()).replaceFirst("\\s*\\+\\s*다$","")+" + -"+sp[1]).put("items",r2).put("extra",koEntries("-"+sp[1])),c.base);
-                    break;
+                    if(++found==2)break;
                 }
             }
         }
