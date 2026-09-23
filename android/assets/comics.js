@@ -304,7 +304,9 @@ async function openComic(series,chapterId,startPage=0){
     el.classList.toggle('ocr-on',on);el.querySelector('[data-a="ocrpage"]').hidden=!on;
     if(on){toast('Text layer on · tap a speech bubble to look it up',2000);scheduleOcr();}
   }
-  function scheduleOcr(){if(!settings.ocr)return;clearTimeout(ocrTimer);ocrTimer=setTimeout(ocrRefresh,120);requestAnimationFrame(placeLayers);}
+  // Runs on every scroll event, so it stays cheap: the text boxes live inside the scrolling page and move with it,
+  // so they're only placed again when the layout changes (zoom, resize, an image loading), not here.
+  function scheduleOcr(){if(!settings.ocr)return;clearTimeout(ocrTimer);ocrTimer=setTimeout(ocrRefresh,250);}
   function ocrRefresh(){
     if(!settings.ocr)return;
     const vr=view.getBoundingClientRect();
@@ -317,7 +319,7 @@ async function openComic(series,chapterId,startPage=0){
       if(d===undefined){ocrData.set(k,null);ocrQueue.push(im);}
       else if(d&&!(im._layer&&im._layer.isConnected))drawLayer(im,d);
     }
-    pumpOcr();placeLayers();
+    pumpOcr();
   }
   async function pumpOcr(){
     if(ocrBusy)return;ocrBusy=true;
@@ -331,6 +333,10 @@ async function openComic(series,chapterId,startPage=0){
       }
     }finally{ocrBusy=false;updateUi();}
   }
+  // Background text recognition pauses while the page is scrolled or touched (it would take the GPU from scrolling).
+  let lastPing=0;
+  const interacting=()=>{const now=Date.now();if(now-lastPing<300)return;lastPing=now;if(window.Kotoba&&Kotoba.interacting)try{Kotoba.interacting();}catch(e){}};
+  for(const type of ['touchstart','touchmove','scroll','wheel','pointerdown'])el.addEventListener(type,interacting,{passive:true,capture:true});
   // PaddleOCR-VL reads the bubbles again in the background; its better text replaces the first reading when it's ready.
   on('ocr-refined',async(e)=>{
     if(!el.isConnected)return;
@@ -352,6 +358,9 @@ async function openComic(series,chapterId,startPage=0){
     l.style.left=im.offsetLeft+'px';l.style.top=im.offsetTop+'px';l.style.width=im.offsetWidth+'px';l.style.height=im.offsetHeight+'px';
   }
   function placeLayers(){view.querySelectorAll('img.cpage').forEach(im=>{if(im._layer)placeLayer(im);});}
+  // Rotation or a window resize changes the images' size; the boxes follow.
+  const onResize=()=>{if(!el.isConnected){removeEventListener('resize',onResize);return;}if(settings.ocr)requestAnimationFrame(placeLayers);};
+  addEventListener('resize',onResize);
   view.addEventListener('load',()=>{if(settings.ocr)requestAnimationFrame(placeLayers);},true);
   el.querySelector('[data-a="ocr"]').onclick=e=>{e.stopPropagation();ocrToggle(!settings.ocr);};
   el.querySelector('[data-a="ocrpage"]').onclick=handle(async e=>{

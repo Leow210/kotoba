@@ -49,6 +49,8 @@ public class MainActivity extends Activity {
     Scans scans;
     PermissionRequest pendingCamera;
     final ExecutorService pool=Executors.newFixedThreadPool(3);
+    // Text recognition gets its own low-priority thread: a page being read never holds up taps, sheets or other requests.
+    final ExecutorService ocrPool=Executors.newSingleThreadExecutor(r->{Thread t=new Thread(r,"ocr");t.setPriority(Thread.MIN_PRIORITY);return t;});
     Routes routes;
     Sync sync;
     final android.os.Handler syncTimer=new android.os.Handler(android.os.Looper.getMainLooper());
@@ -189,7 +191,7 @@ public class MainActivity extends Activity {
 
     public class Bridge {
         @JavascriptInterface public void call(int id,String route,String body){
-            pool.execute(()->{
+            (route.startsWith("ocr.")?ocrPool:pool).execute(()->{
                 String reply;
                 try{
                     Object result=route(route,body==null||body.isEmpty()?new JSONObject():new JSONObject(body));
@@ -202,6 +204,8 @@ public class MainActivity extends Activity {
                 web.post(()->web.evaluateJavascript(script,null));
             });
         }
+        /** The comic reader is being scrolled or touched: background OCR waits so it doesn't take the GPU from drawing. */
+        @JavascriptInterface public void interacting(){Ocr.touch();}
         @JavascriptInterface public void copy(String text){runOnUiThread(()->{((ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("Kotoba",text));});}
         @JavascriptInterface public void share(String text){runOnUiThread(()->startActivity(Intent.createChooser(new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT,text),"Share")));}
         /** The folder a sync tool (Syncthing…) shares with the Mac. */

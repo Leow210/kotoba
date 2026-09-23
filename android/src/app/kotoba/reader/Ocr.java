@@ -106,6 +106,12 @@ public final class Ocr {
     }
 
     // ---------- background refinement with the block reader ----------
+    /** Last time the reader was scrolled or touched; background reading waits until it has been still for a moment. */
+    static volatile long lastTouch;
+    public static void touch(){lastTouch=System.currentTimeMillis();}
+    static void waitUntilStill(){
+        while(System.currentTimeMillis()-lastTouch<1500){try{Thread.sleep(150);}catch(InterruptedException e){return;}}
+    }
     Comics comics;Routes.Host host;
     final java.util.concurrent.LinkedBlockingDeque<Object[]> refineQueue=new java.util.concurrent.LinkedBlockingDeque<>();
     final java.util.Set<String> queued=java.util.Collections.synchronizedSet(new java.util.HashSet<>());
@@ -129,7 +135,7 @@ public final class Ocr {
                     finally{queued.remove(j[0]+":"+j[1]+":"+j[2]);}
                 }
             },"ocr-refine");
-            refiner.setDaemon(true);refiner.start();
+            refiner.setDaemon(true);refiner.setPriority(Thread.MIN_PRIORITY);refiner.start();
         }
     }
 
@@ -142,6 +148,7 @@ public final class Ocr {
         if(res==null)return;
         byte[] image=(byte[])res[0];
         if(c==null||c.optInt("v")!=VERSION){
+            waitUntilStill();
             synchronized(this){c=recognize(image,lang).put("v",VERSION);}
             db.execSQL("INSERT OR REPLACE INTO ocr_cache(chapter,page,lang,data) VALUES(?,?,?,?)",new Object[]{chapter,index,lang,c.toString()});
         }
@@ -153,6 +160,8 @@ public final class Ocr {
             JSONArray blocks=c.getJSONArray("blocks");
             for(int i=0;i<blocks.length();i++){
                 JSONObject b=blocks.getJSONObject(i);
+                // Each bubble takes the GPU for ~2.5 s: none starts while the page is moving.
+                waitUntilStill();
                 String better=readBlock(bmp,b.getInt("x"),b.getInt("y"),b.getInt("w"),b.getInt("h"),b.optString("text",""),lang);
                 if(better!=null)b.put("paddle",b.optString("text","")).put("text",better);
             }
