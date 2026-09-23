@@ -40,6 +40,7 @@ public class DesktopServer {
     final String token;
     final List<OutputStream> listeners=new CopyOnWriteArrayList<>();
     final Sync sync;
+    final Translator translator;
     final java.util.Map<String,Long> installLinks=new java.util.concurrent.ConcurrentHashMap<>();
     volatile int port;volatile boolean helperRunning;
 
@@ -54,6 +55,7 @@ public class DesktopServer {
             @Override public void event(String type,Object payload){DesktopServer.this.event(type,payload);}
         });
         sync=new Sync(store);
+        translator=new Translator(store,data);
         routes.books=new Books(context,store.db);
         routes.ocr=new Ocr(context,store.db);
         // Apple's recognizer (the kotoba-ocr helper beside the app) for Korean; Settings can switch back to PaddleOCR.
@@ -93,6 +95,9 @@ public class DesktopServer {
             case "sync.status":return syncStatus();
             case "sync.setFolder":routes.store.setSetting("sync_folder",d.getString("path"));return syncNow();
             case "sync.now":return syncNow();
+            case "translate.config":return translator.config();
+            case "translate.set":translator.set(d);return translator.config();
+            case "translate":return translator.translate(d.getString("text"),d.optString("from",""),d.optString("to",""));
             case "helper.link":{
                 // A one-time link for installing the Firefox helper (see /kotoba-video.user.js).
                 byte[] r=new byte[12];new SecureRandom().nextBytes(r);
@@ -461,9 +466,7 @@ public class DesktopServer {
                 for(int i=0;i<ls.length();i++){
                     JSONObject o=ls.getJSONObject(i);
                     Ocr.Line l=new Ocr.Line();
-                    // Vision's boxes hug the letters; pad them like PaddleOCR's so the text layer covers the whole line.
-                    float x=(float)o.getDouble("x"),y=(float)o.getDouble("y"),w=(float)o.getDouble("w"),h=(float)o.getDouble("h"),pad=h*0.25f;
-                    l.x1=Math.max(0,x-pad);l.y1=Math.max(0,y-pad);l.x2=Math.min(size[0],x+w+pad);l.y2=Math.min(size[1],y+h+pad);
+                    l.x1=(float)o.getDouble("x");l.y1=(float)o.getDouble("y");l.x2=l.x1+(float)o.getDouble("w");l.y2=l.y1+(float)o.getDouble("h");
                     l.text=o.getString("text");l.conf=(float)o.getDouble("conf");
                     lines.add(l);
                 }

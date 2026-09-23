@@ -14,3 +14,14 @@ html.desktop ::-webkit-scrollbar-thumb{background:rgba(0,0,0,.18);border-radius:
 html.desktop .video-row .progress{height:3px;background:var(--line);border-radius:2px;margin-top:8px;overflow:hidden}
 html.desktop .video-row .progress i{display:block;height:100%;background:var(--accent)}
 html.desktop .video-row .vpath{display:block;color:var(--muted);font-size:11.5px;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Translation sheet (TranslateGemma) */
+.translate-sheet .tr-langs{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.translate-sheet .tr-langs select,.translation-settings select{font:inherit;padding:4px 8px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+.translate-sheet .tr-src{color:var(--muted);font-size:15px;line-height:1.6;white-space:pre-wrap;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.translate-sheet .tr-out{font-size:17px;line-height:1.65;white-space:pre-wrap;padding-top:12px;min-height:3em}
+.translate-sheet .tr-out.busy{color:var(--muted);font-style:italic}
+.translate-sheet .tr-out[data-note]::after{content:attr(data-note);display:block;margin-top:10px;font-size:12px;color:var(--muted);font-style:normal}
+/* Settings rows: the text column shrinks and a row of choices wraps instead of scrolling out of sight. */
+#settings-home .switch-row>div:first-child{flex:1;min-width:0}
+#settings-home .switch-row .chips{flex:none;flex-wrap:wrap;overflow:visible;justify-content:flex-end;align-items:center;max-width:60%}

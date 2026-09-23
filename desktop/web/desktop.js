@@ -13,7 +13,8 @@
     call(id,route,body){post(route,body).then(t=>window.__reply(id,t)).catch(e=>window.__reply(id,JSON.stringify({error:String(e.message||e)})));},
     copy(text){if(!mac({type:'copy',text}))navigator.clipboard.writeText(text);},
     share(text){this.copy(text);say('Copied');},
-    translate(text){mac({type:'open',url:'https://translate.google.com/?sl=auto&tl=en&op=translate&text='+encodeURIComponent(text)});},
+    // TranslateGemma in Kotoba when chosen in Settings › Translation (desktop-after.js), else Google Translate in the browser.
+    translate(text){if(window.__translateInApp)return window.__translateInApp(text);mac({type:'open',url:'https://translate.google.com/?sl=auto&tl=en&op=translate&text='+encodeURIComponent(text)});},
     pickFolder(){mac({type:'pickFolder'});},
     pickFolderAt(){mac({type:'pickFolder'});},
     exportFile(name,kind,body){

@@ -43,8 +43,52 @@
         clickRow.querySelector('input').onchange=e=>KotobaHover.setClickLookup(e.target.checked);
       }
       moveSettings();
+      renderTranslationSettings();
     };
   }
+  // ---------- translation (TranslateGemma on this Mac, or Google Translate in the browser) ----------
+  const googleCode=c=>({'zh-Hans':'zh-CN','zh-Hant':'zh-TW'}[c]||c);
+  const langOptions=(cfg,value,withAuto)=>Object.entries(cfg.languages).filter(([k])=>withAuto||k!=='auto').map(([k,v])=>`<option value="${k}" ${k===value?'selected':''}>${esc(v)}</option>`).join('');
+  async function renderTranslationSettings(){
+    const home=document.getElementById('settings-home');if(!home)return;
+    const cfg=await api('translate.config',{}).catch(()=>null);if(!cfg)return;
+    home.querySelectorAll('.translation-settings').forEach(x=>x.remove());
+    const label=document.createElement('div');label.className='section-label translation-settings';label.textContent='Translation';
+    const box=document.createElement('div');box.className='settings translation-settings';
+    const status=cfg.engine!=='gemma'?'Translate opens Google Translate in your browser.'
+      :!cfg.serverFound?'llama-server isn’t installed (brew install llama.cpp).'
+      :cfg.modelFound?`Runs on this Mac from ${esc(cfg.model)}. The first translation takes a few seconds to load the model; it unloads after 10 idle minutes.`
+      :`The model isn’t at ${esc(cfg.model)} — plug in the drive, or finish downloading it.`;
+    box.innerHTML=`<div class="switch-row"><div><b>Translate with</b><small>${status}</small></div>
+        <div class="chips"><button class="chip small ${cfg.engine==='gemma'?'on':''}" data-engine="gemma">TranslateGemma 12B</button><button class="chip small ${cfg.engine!=='gemma'?'on':''}" data-engine="google">Google (browser)</button></div></div>
+      <div class="switch-row"><div><b>Languages</b><small>“Detect” picks the source from the text (Hangul → Korean, kana → Japanese…).</small></div>
+        <div class="chips"><select data-tr="from">${langOptions(cfg,cfg.from,true)}</select> → <select data-tr="to">${langOptions(cfg,cfg.to,false)}</select></div></div>`;
+    home.prepend(label,box);
+    box.querySelectorAll('[data-engine]').forEach(b=>b.onclick=handle(async()=>{await api('translate.set',{engine:b.dataset.engine});renderTranslationSettings();}));
+    box.querySelectorAll('[data-tr]').forEach(s=>s.onchange=handle(()=>api('translate.set',{[s.dataset.tr]:s.value})));
+  }
+  window.__translateInApp=handle(async(text)=>{
+    const cfg=await api('translate.config',{}).catch(()=>null);
+    if(!cfg||cfg.engine!=='gemma'){
+      const sl=cfg&&cfg.from!=='auto'?googleCode(cfg.from):'auto',tl=cfg?googleCode(cfg.to):'en';
+      mac({type:'open',url:`https://translate.google.com/?sl=${sl}&tl=${tl}&op=translate&text=`+encodeURIComponent(text)});return;
+    }
+    const s=openSheet(`<div class="sheet-body translate-sheet">
+        <div class="tr-langs"><select data-tr="from">${langOptions(cfg,cfg.from,true)}</select><span>→</span><select data-tr="to">${langOptions(cfg,cfg.to,false)}</select></div>
+        <div class="tr-src">${esc(text)}</div><div class="tr-out" aria-live="polite"></div></div>
+      <div class="sheet-foot"><button class="btn wide" data-a="copy">${icon('copy')} Copy translation</button></div>`,{title:'Translation'});
+    const out=s.sheet.querySelector('.tr-out');let result='';
+    async function run(){
+      const from=s.sheet.querySelector('[data-tr="from"]').value,to=s.sheet.querySelector('[data-tr="to"]').value;
+      out.classList.add('busy');out.textContent=cfg.running?'Translating…':'Loading TranslateGemma… (first time takes a few seconds)';
+      try{const r=await api('translate',{text,from,to});result=r.text;cfg.running=true;out.classList.remove('busy');out.textContent=r.text;
+        if(from==='auto')out.dataset.note=`${cfg.languages[r.from]||r.from} → ${cfg.languages[r.to]||r.to}`;}
+      catch(e){out.classList.remove('busy');out.textContent=e.message;}
+    }
+    s.sheet.querySelectorAll('[data-tr]').forEach(x=>x.onchange=()=>{api('translate.set',{[x.dataset.tr]:x.value});run();});
+    s.sheet.querySelector('[data-a="copy"]').onclick=()=>{if(result){Kotoba.copy(result);toast('Copied');}};
+    run();
+  });
   if(typeof renderSearchEmpty==='function'){
     const original=renderSearchEmpty;
     window.renderSearchEmpty=renderSearchEmpty=async function(){

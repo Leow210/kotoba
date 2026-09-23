@@ -82,7 +82,7 @@ public final class Ocr {
             List<Line> kept=new ArrayList<>();
             // Vision's confidences run lower than PaddleOCR's for text it reads correctly.
             for(Line l:external.read(image,lang,size))if(keep(l,lang,0.2f))kept.add(l);
-            return blocks(kept,size[0],size[1]);
+            return blocks(kept,size[0],size[1],0.25f);
         }
         BitmapFactory.Options o=new BitmapFactory.Options();o.inPreferredConfig=Bitmap.Config.ARGB_8888;
         Bitmap bmp=BitmapFactory.decodeByteArray(image,0,image.length,o);
@@ -126,7 +126,7 @@ public final class Ocr {
             if(keep(l,lang,MIN_CONF))kept.add(l);
         }
         bmp.recycle();
-        return blocks(kept,W,H);
+        return blocks(kept,W,H,0);
     }
 
     /** Whether a recognized line is text worth showing (not artwork, watermarks or stray shapes). */
@@ -142,10 +142,13 @@ public final class Ocr {
     }
 
     /** Lines grouped into speech bubbles, as the page's text layer. */
-    static JSONObject blocks(List<Line> kept,int W,int H) throws Exception {
+    static JSONObject blocks(List<Line> kept,int W,int H,float pad) throws Exception {
         JSONObject out=new JSONObject().put("w",W).put("h",H);
         JSONArray blocks=new JSONArray();
         for(List<Line> g:group(kept)){
+            // Vision's boxes hug the letters: grouped as they are (padding would join nearby bubbles), then padded
+            // like PaddleOCR's so the text layer covers each whole line.
+            if(pad>0)for(Line l:g){float p=(l.y2-l.y1)*pad;l.x1=Math.max(0,l.x1-p);l.y1=Math.max(0,l.y1-p);l.x2=Math.min(W,l.x2+p);l.y2=Math.min(H,l.y2+p);}
             float x1=Float.MAX_VALUE,y1=Float.MAX_VALUE,x2=0,y2=0,conf=0;StringBuilder text=new StringBuilder();JSONArray ls=new JSONArray();
             for(Line l:g){
                 x1=Math.min(x1,l.x1);y1=Math.min(y1,l.y1);x2=Math.max(x2,l.x2);y2=Math.max(y2,l.y2);conf+=l.conf;
