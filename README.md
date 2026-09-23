@@ -126,6 +126,9 @@ Tap a preview to play the video. Each one is silent and about 15–25 seconds lo
   - Korean uses a Korean model. Japanese uses the multilingual model, which also reads vertical columns right-to-left.
   - Everything runs on the phone (PaddleOCR PP-OCRv5 mobile on ONNX Runtime), at about 0.2–0.6 s per page. Results are cached.
 
+## Kotoba for Mac
+[`desktop/`](desktop/README.md) is a Mac companion app: the same dictionaries, search and cards (it runs this app's own Java classes), a video player (mpv) whose subtitles you hover to look words up, and sync of cards and reviews with the phone through a shared folder (Library › Sync).
+
 ## Build
 
 Needs the Android SDK (build-tools 35, platform 35) and JDK 21. It doesn't use Gradle or network access.

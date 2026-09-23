@@ -921,20 +921,26 @@ public class Library {
         return new JSONObject().put("items",items).put("more",more);
     }
 
-    /** Each result's rank in the first enabled frequency dictionary that has the word, for the frequency bars in lists. */
+    /** Each result's rank in the first enabled frequency list of the result's language (JPDB for Japanese, CC100 for Korean…). */
     void addRanks(JSONArray items) throws Exception {
         if(!hasMeta())return;
         HashMap<String,Double> seen=new HashMap<>();
+        HashMap<Long,String> langs=new HashMap<>();
         for(int i=0;i<items.length();i++){
             JSONObject row=items.getJSONObject(i);
+            long dict=row.optLong("dict");
+            String lang=langs.computeIfAbsent(dict,x->{String g=dictGroup(x);int s2=g.indexOf('/');return s2<0?g:g.substring(0,s2);});
+            if(lang.isEmpty()||lang.equals("Kanji"))lang="Japanese";
             String n=HtmlText.normalize(row.optString("key"));
-            Double v=seen.get(n);
-            if(v==null&&!seen.containsKey(n)){
-                try(Cursor c=db.rawQuery("SELECT min(m.value) FROM meta m JOIN dicts d ON d.id=m.dict WHERE m.norm=? AND m.mode='freq' AND m.value>0 AND d.enabled=1 GROUP BY m.dict ORDER BY d.position LIMIT 1",new String[]{n})){
-                    v=c.moveToFirst()&&!c.isNull(0)?c.getDouble(0):null;
+            String k=lang+"|"+n;
+            if(!seen.containsKey(k)){
+                Double v=null;
+                try(Cursor c=db.rawQuery("SELECT min(m.value) FROM meta m JOIN dicts d ON d.id=m.dict WHERE m.norm=? AND m.mode='freq' AND m.value>0 AND d.enabled=1 AND (d.grp=? OR d.grp LIKE ?) GROUP BY m.dict ORDER BY d.position LIMIT 1",new String[]{n,lang,lang+"/%"})){
+                    if(c.moveToFirst()&&!c.isNull(0))v=c.getDouble(0);
                 }
-                seen.put(n,v);
+                seen.put(k,v);
             }
+            Double v=seen.get(k);
             if(v!=null)row.put("rank",v.longValue());
         }
     }

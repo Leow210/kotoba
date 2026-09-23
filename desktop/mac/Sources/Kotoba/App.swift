@@ -74,8 +74,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     func installDevHooks() {
         let center = DistributedNotificationCenter.default()
         center.addObserver(forName: .init("app.kotoba.desktop.snapshot"), object: nil, queue: .main) { [weak self] n in
-            guard let self, let path = n.object as? String else { return }
-            self.web.takeSnapshot(with: nil) { image, _ in
+            guard let self, var path = n.object as? String else { return }
+            var target: WKWebView = self.web
+            if path.hasPrefix("player:"), let p = self.players.last { path.removeFirst(7); target = p.overlay }
+            target.takeSnapshot(with: nil) { image, _ in
                 guard let image, let tiff = image.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff),
                       let png = rep.representation(using: .png, properties: [:]) else { return }
                 try? png.write(to: URL(fileURLWithPath: path))

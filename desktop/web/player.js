@@ -198,9 +198,11 @@ async function showPop(res,cue,r1,r2){
       g.forEach((x,n)=>{const el=pop.el.querySelector(`.p-def[data-n="${n}"] .p-text`);if(el)el.textContent=x.text||'—';});
       place(r1,r2);
     }).catch(()=>{});
-    api('freq',{key:res.key,reading:''}).then(f=>{
+    Promise.all([api('freq',{key:res.key,reading:''}),dictGroups()]).then(([f,groups])=>{
       if(pop.key!==key)return;
-      const fq=f.find(x=>x.mode==='freq');
+      // Only frequency lists in the subtitle's language (JPDB ranks mean nothing for a Cantonese word).
+      const want={ja:'Japanese',zh:'Chinese',ko:'Korean',th:'Thai',ru:'Russian'}[st.lang];
+      const fq=f.find(x=>x.mode==='freq'&&want&&(groups[x.dict]||'').split('/')[0]===want);
       if(fq)pop.el.querySelector('.p-freq').innerHTML=`${bars(fq.value)}<span>${esc(fq.display)}</span>`;
     }).catch(()=>{});
     api('item.similar',{headword:res.key,reading:''}).then(s=>{
@@ -211,6 +213,8 @@ async function showPop(res,cue,r1,r2){
   pop.el.hidden=false;
   place(r1,r2);
 }
+let groupsCache=null;
+function dictGroups(){return groupsCache||(groupsCache=api('dicts').then(ds=>Object.fromEntries(ds.map(d=>[d.id,d.grp||'Japanese']))));}
 function bars(rank){const l=!rank?0:rank<=2000?4:rank<=8000?3:rank<=25000?2:1;return `<span class="fbars l${l}"><i></i><i></i><i></i><i></i></span>`;}
 function place(r1,r2){
   const el=pop.el,W=innerWidth,H=innerHeight;

@@ -917,7 +917,7 @@ async function openEntry(target,existing){
     // Entries without audio of their own (大辞林, 明鏡…) borrow the pronunciation dictionary's clip (NHK).
     const scope=(!state.whole&&current.focus)||current.doc.body;
     const ownAudio=[...scope.querySelectorAll('a[href]')].some(a=>!a.closest('.kotoba-hidden')&&(/^sound:\/\//i.test(a.getAttribute('href'))||AUDIO_RE.test(a.getAttribute('href'))));
-    const [freq,similar,clips]=await Promise.all([api('freq',{key:word,reading}).catch(()=>[]),api('item.similar',{headword:word,reading}).catch(()=>[]),
+    let [freq,similar,clips]=await Promise.all([api('freq',{key:word,reading}).catch(()=>[]),api('item.similar',{headword:word,reading}).catch(()=>[]),
       ownAudio||!/[\u3040-\u30ff\u4e00-\u9fff]/.test(word)?[]:api('audio',{key:word,reading,dict:state.dict}).catch(()=>[])]);
     if(infoFor!==key)return;
     const here=new Set((state.saved||[]).map(x=>x.id));
@@ -927,6 +927,9 @@ async function openEntry(target,existing){
     const saved=others.length?`<button class="saved-note" data-open="${others[0].id}">${icon('star','i sm')}<span>Already a card${others.length>1?` (${others.length})`:''}: <b>${esc(others[0].headword)}</b>${others[0].reading?' '+esc(others[0].reading):''} from ${esc(shortName(others[0].dict_name||'your notes'))} · ${esc(others[0].folder)}</span></button>`:'';
     const pron=clips.filter(c=>/\/発音$|^Pronunciation$/.test(c.group||'')&&c.dict!==state.dict&&(c.headed||c.pageMatch)).slice(0,1);
     const audio=pron.map((c,i)=>`<button class="fq audio" data-clip="${i}" aria-label="Play pronunciation from ${esc(c.dictionary)}">${SPEAKER_SVG}<b>${esc(shortName(c.dictionary))}</b></button>`).join('');
+    // Frequency lists of this dictionary's language only (no JPDB rank on a Chinese or Korean entry).
+    const lang=parentOf((dictById(state.dict)||{}).grp);
+    freq=freq.filter(r=>parentOf((dictById(r.dict)||{}).grp)===lang);
     box.innerHTML=(freq.length||audio?`<div class="fq-row">${audio}${freqChips(freq)}</div>`:'')+saved;
     box.querySelectorAll('[data-clip]').forEach(b=>b.onclick=()=>playClip(pron[+b.dataset.clip]));
     if(pron.length&&settings.autoplay_entry&&!state.autoplayed){state.autoplayed=true;playClip(pron[0]);}
