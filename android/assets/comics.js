@@ -333,10 +333,17 @@ async function openComic(series,chapterId,startPage=0){
       }
     }finally{ocrBusy=false;updateUi();}
   }
-  // Background text recognition pauses while the page is scrolled or touched (it would take the GPU from scrolling).
+  // Background text recognition (PaddleOCR-VL on the GPU) waits while you use the reader: touches anywhere in the app
+  // (the page, a bubble's sheet, translation, a dictionary pop-up), and all the time a sheet is open.
   let lastPing=0;
   const interacting=()=>{const now=Date.now();if(now-lastPing<300)return;lastPing=now;if(window.Kotoba&&Kotoba.interacting)try{Kotoba.interacting();}catch(e){}};
-  for(const type of ['touchstart','touchmove','scroll','wheel','pointerdown'])el.addEventListener(type,interacting,{passive:true,capture:true});
+  const touchTypes=['touchstart','touchmove','scroll','wheel','pointerdown','keydown'];
+  for(const type of touchTypes)document.addEventListener(type,interacting,{passive:true,capture:true});
+  const sheetPing=setInterval(()=>{
+    if(!el.isConnected){clearInterval(sheetPing);for(const type of touchTypes)document.removeEventListener(type,interacting,{capture:true});return;}
+    // A sheet open, or a dictionary entry opened from a bubble on top of the reader.
+    if(document.querySelector('.sheet')||[...document.querySelectorAll('#pages > .page')].pop()!==el)interacting();
+  },800);
   // PaddleOCR-VL reads the bubbles again in the background; its better text replaces the first reading when it's ready.
   on('ocr-refined',async(e)=>{
     if(!el.isConnected)return;

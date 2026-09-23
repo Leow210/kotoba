@@ -110,7 +110,7 @@ public final class Ocr {
     static volatile long lastTouch;
     public static void touch(){lastTouch=System.currentTimeMillis();}
     static void waitUntilStill(){
-        while(System.currentTimeMillis()-lastTouch<1500){try{Thread.sleep(150);}catch(InterruptedException e){return;}}
+        while(System.currentTimeMillis()-lastTouch<2500){try{Thread.sleep(150);}catch(InterruptedException e){return;}}
     }
     Comics comics;Routes.Host host;
     final java.util.concurrent.LinkedBlockingDeque<Object[]> refineQueue=new java.util.concurrent.LinkedBlockingDeque<>();
