@@ -206,6 +206,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         case "copy":
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(m["text"] as? String ?? "", forType: .string)
+        case "activate":
+            NSApp.activate(ignoringOtherApps: true)
+            window.makeKeyAndOrderFront(nil)
         case "openVideo":
             if let p = m["path"] as? String { openVideo(URL(fileURLWithPath: p)) } else { chooseVideo() }
         default:

@@ -95,7 +95,8 @@ async function openBook(id){
       <button class="icon-btn" data-a="search" aria-label="Search the dictionary">${icon('search')}</button><button class="icon-btn" data-a="toc" aria-label="Contents">${icon('book')}</button><button class="icon-btn" data-a="mark" aria-label="Bookmark">${icon('bookmark')}</button><button class="icon-btn" data-a="aa" aria-label="Display settings">${icon('text')}</button><button class="icon-btn" data-a="hide" aria-label="Hide controls">${icon('down')}</button></div>
     <div class="rd-bottom"><div class="rd-row"><button class="icon-btn" data-a="prevch" aria-label="Previous chapter">${icon('prev')}</button><input type="range" min="0" max="1000" value="0" data-f="slider" aria-label="Position in chapter"><button class="icon-btn" data-a="nextch" aria-label="Next chapter">${icon('next')}</button></div><div class="rd-meta"><span data-f="chname"></span><span data-f="pct"></span></div><button class="rd-hide" data-a="hide2">Hide controls ⌄</button></div>
     <div class="rd-status" data-f="status"></div><button class="rd-chapter-pill" data-f="pill" hidden></button>`;
-  pushPage(el,{onClose:()=>{savePosition(true);renderShelf();appBars();}});
+  let clearHoverWiring=()=>{};
+  pushPage(el,{onClose:()=>{clearHoverWiring();savePosition(true);renderShelf();appBars();}});
   const f=(n)=>el.querySelector(`[data-f="${n}"]`);
   const frame=f('frame');
   const state={chapter:0,doc:null,vertical:false,paged:false,highlights:[],loading:false};
@@ -412,6 +413,37 @@ img,svg{max-height:calc(100vh - ${2*m}px)!important}`;
 
   // ---------- interaction inside the page ----------
   function wireDoc(doc){
+    clearHoverWiring();
+    if(window.KotobaHover){
+      let point=null,target=null,timer=0;
+      const reset=(forgetPoint=false)=>{clearTimeout(timer);target=null;if(forgetPoint)point=null;};
+      const hover=(x,y,active)=>{
+        point={x,y};
+        if(!active||state.doc!==doc||state.loading||document.querySelector('.sheet.show')){reset();return;}
+        const range=rangeFromPoint(doc,x,y);
+        if(!range||range.startContainer.nodeType!==3){reset();return;}
+        const node=range.startContainer,offset=range.startOffset;
+        if(target&&target.node===node&&target.offset===offset)return;
+        target={node,offset};clearTimeout(timer);
+        timer=setTimeout(()=>{
+          if(state.doc===doc&&!state.loading&&!document.querySelector('.sheet.show'))tapLookup(doc,x,y);
+        },180);
+      };
+      const move=e=>hover(e.clientX,e.clientY,KotobaHover.matches(e));
+      const down=e=>{if(KotobaHover.isKey(e)&&point)hover(point.x,point.y,true);};
+      const up=e=>{if(KotobaHover.isKey(e))reset();};
+      const leave=()=>reset(true);
+      doc.addEventListener('mousemove',move);
+      doc.addEventListener('keydown',down);document.addEventListener('keydown',down);
+      doc.addEventListener('keyup',up);document.addEventListener('keyup',up);
+      doc.addEventListener('mouseleave',leave);window.addEventListener('blur',leave);
+      clearHoverWiring=()=>{
+        leave();doc.removeEventListener('mousemove',move);
+        doc.removeEventListener('keydown',down);document.removeEventListener('keydown',down);
+        doc.removeEventListener('keyup',up);document.removeEventListener('keyup',up);
+        doc.removeEventListener('mouseleave',leave);window.removeEventListener('blur',leave);
+      };
+    }
     const s=scroller();
     doc.addEventListener('scroll',()=>{updateStatus();savePosition();if(state.paged&&state.vertical)updateMask();},{passive:true});
     doc.addEventListener('selectionchange',()=>{
@@ -452,7 +484,7 @@ img,svg{max-height:calc(100vh - ${2*m}px)!important}`;
         turn(forward?1:-1);return;
       }
       // A tap on a word opens the dictionary right away.
-      if(settings.tapLookup&&tapLookup(doc,x,y))return;
+      if((window.KotobaHover?KotobaHover.clickLookup():settings.tapLookup)&&tapLookup(doc,x,y))return;
       toggleChrome(true);
     });
   }
@@ -649,7 +681,7 @@ img,svg{max-height:calc(100vh - ${2*m}px)!important}`;
       ${row('Page direction',seg('pageDir',[['auto','Auto'],['ltr','→ LTR'],['rtl','← RTL']]))}
       <div class="switch-row"><div><b>Page turn animation</b><small>Slide and tilt when turning pages</small></div><label class="toggle"><input type="checkbox" id="rd-anim" ${settings.pageAnim?'checked':''}><span></span></label></div>
       <div class="switch-row"><div><b>Page separators</b><small>In scroll mode, mark each screenful like a printed page</small></div><label class="toggle"><input type="checkbox" id="rd-breaks" ${settings.pageBreaks?'checked':''}><span></span></label></div>
-      <div class="switch-row"><div><b>Tap a word to look it up</b><small>Otherwise tap toggles the menu; you can always select text</small></div><label class="toggle"><input type="checkbox" id="rd-tap" ${settings.tapLookup?'checked':''}><span></span></label></div>
+      ${window.KotobaHover?'':`<div class="switch-row"><div><b>Tap a word to look it up</b><small>Otherwise tap toggles the menu; you can always select text</small></div><label class="toggle"><input type="checkbox" id="rd-tap" ${settings.tapLookup?'checked':''}><span></span></label></div>`}
       <button class="btn small" id="rd-default" style="margin-top:10px">Use these settings for all books</button>
     </div>`,{title:'Display'});
     const apply=async(relayout)=>{
@@ -673,7 +705,8 @@ img,svg{max-height:calc(100vh - ${2*m}px)!important}`;
     }));
     s.sheet.querySelector('#rd-anim').onchange=handle(e=>{settings.pageAnim=e.target.checked;return api('book.settings',{id,settings});});
     s.sheet.querySelector('#rd-breaks').onchange=handle(async e=>{settings.pageBreaks=e.target.checked;await api('book.settings',{id,settings});drawPageBreaks();});
-    s.sheet.querySelector('#rd-tap').onchange=handle(e=>{settings.tapLookup=e.target.checked;return api('book.settings',{id,settings});});
+    const tapSetting=s.sheet.querySelector('#rd-tap');
+    if(tapSetting)tapSetting.onchange=handle(e=>{settings.tapLookup=e.target.checked;return api('book.settings',{id,settings});});
     s.sheet.querySelector('#rd-default').onclick=()=>{try{localStorage.setItem('readerDefaults',JSON.stringify(settings));}catch(e){}toast('Saved as default');};
   }
 

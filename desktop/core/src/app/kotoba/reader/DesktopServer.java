@@ -40,6 +40,8 @@ public class DesktopServer {
     final String token;
     final List<OutputStream> listeners=new CopyOnWriteArrayList<>();
     final Sync sync;
+    final java.util.Map<String,Long> installLinks=new java.util.concurrent.ConcurrentHashMap<>();
+    volatile int port;volatile boolean helperRunning;
 
     DesktopServer(File data,File assets,File web){
         this.data=data;this.assets=assets;this.web=web;
@@ -87,8 +89,16 @@ public class DesktopServer {
             case "sync.status":return syncStatus();
             case "sync.setFolder":routes.store.setSetting("sync_folder",d.getString("path"));return syncNow();
             case "sync.now":return syncNow();
+            case "helper.link":{
+                // A one-time link for installing the Firefox helper (see /kotoba-video.user.js).
+                byte[] r=new byte[12];new SecureRandom().nextBytes(r);
+                StringBuilder b=new StringBuilder();for(byte v:r)b.append(String.format("%02x",v));
+                installLinks.put(b.toString(),System.currentTimeMillis());
+                return new JSONObject().put("url","http://127.0.0.1:"+port+"/kotoba-video.user.js?once="+b).put("helperPort",HELPER_PORT).put("helperRunning",helperRunning);
+            }
             case "video.tracks":return videoTracks(new File(d.getString("path")));
             case "video.sub":return new JSONObject().put("text",videoSub(new File(d.getString("path")),d.optInt("stream",-1),d.optString("file","")));
+            case "video.ocr":return videoOcr(new File(d.getString("path")),d.getDouble("time"),d.optString("lang","ja"));
             case "wordlist.importPath":{
                 File f=new File(d.getString("path"));
                 return routes.wordlists.importText(f.getName(),new String(Files.readAllBytes(f.toPath()),StandardCharsets.UTF_8));
@@ -277,6 +287,64 @@ public class DesktopServer {
         return Files.readString(out.toPath());
     }
 
+    /** Read the lower part of a local video frame with the same OCR used for comic pages. */
+    JSONObject videoOcr(File video,double time,String lang) throws Exception {
+        if(!video.isFile())throw new IllegalArgumentException("Video file not found");
+        if(!java.util.Set.of("ja","zh","ko","th","ru").contains(lang))lang="ja";
+        if(!Double.isFinite(time)||time<0)throw new IllegalArgumentException("Invalid video position");
+        Process p=new ProcessBuilder(tool("ffmpeg"),"-v","error","-ss",Double.toString(time),"-i",video.getPath(),
+            "-an","-sn","-frames:v","1","-vf","crop=iw:ih*0.38:0:ih*0.62","-f","image2pipe","-vcodec","mjpeg","pipe:1")
+            .redirectError(ProcessBuilder.Redirect.DISCARD).start();
+        byte[] image;
+        try(InputStream in=p.getInputStream()){image=readAll(in);}
+        if(p.waitFor()!=0||image.length==0)throw new Exception("Couldn’t read this video frame");
+        JSONObject recognized=routes.ocr.recognize(image,lang);
+        JSONArray blocks=recognized.getJSONArray("blocks");
+        StringBuilder text=new StringBuilder();
+        for(int i=0;i<blocks.length();i++){
+            String line=blocks.getJSONObject(i).optString("text","").trim();
+            if(!line.isEmpty()){if(text.length()>0)text.append('\n');text.append(line);}
+        }
+        return new JSONObject().put("text",text.toString()).put("time",time);
+    }
+
+    // ---------- Firefox helper ----------
+
+    /** The helper's fixed address (the main server's port changes every launch). 127.0.0.1 only. */
+    static final int HELPER_PORT=47823;
+    /** Requests the helper may make: looking words up and saving cards, nothing else. */
+    static final java.util.Set<String> HELPER_ROUTES=java.util.Set.of("lookup","gloss.rec","freq","item.similar","item.save","folders","dicts");
+
+    String helperKey(){
+        String k=routes.store.setting("helper_key","");
+        if(k.isEmpty()){byte[] r=new byte[24];new SecureRandom().nextBytes(r);StringBuilder b=new StringBuilder();for(byte v:r)b.append(String.format("%02x",v));k=b.toString();routes.store.setSetting("helper_key",k);}
+        return k;
+    }
+
+    /**
+     * POST /helper/<route> with the header X-Kotoba-Key: the userscript's requests from YouTube and GagaOOLala (through
+     * Tampermonkey, so no browser page can make them). "show" opens a word in Kotoba's window.
+     */
+    void handleHelper(HttpExchange x) throws IOException {
+        try{
+            String path=x.getRequestURI().getPath();
+            if(path.equals("/helper/ping")){send(x,200,"application/json","{\"data\":\"kotoba\"}".getBytes(StandardCharsets.UTF_8),null);return;}
+            if(!x.getRequestMethod().equals("POST")||!helperKey().equals(x.getRequestHeaders().getFirst("X-Kotoba-Key"))){send(x,403,"text/plain",new byte[0],null);return;}
+            String route=path.startsWith("/helper/")?path.substring(8):"";
+            String body=new String(readAll(x.getRequestBody()),StandardCharsets.UTF_8).trim();
+            JSONObject d=new JSONObject(body.isEmpty()?"{}":body);
+            String reply;
+            try{
+                Object result;
+                if(route.equals("show")){event("helper-show",new JSONObject().put("word",d.getString("word")));result=null;}
+                else if(HELPER_ROUTES.contains(route))result=route(route,d);
+                else throw new Exception("Not available to the helper: "+route);
+                reply=new JSONObject().put("data",result==null?JSONObject.NULL:result).toString();
+            }catch(Throwable e){reply=new JSONObject().put("error",e.getMessage()==null?e.toString():e.getMessage()).toString();}
+            send(x,200,"application/json",reply.getBytes(StandardCharsets.UTF_8),null);
+        }catch(Throwable e){try{send(x,500,"text/plain",new byte[0],null);}catch(IOException ignored){}}
+    }
+
     boolean authorized(HttpExchange x){
         String cookie=x.getRequestHeaders().getFirst("Cookie");
         return cookie!=null&&cookie.contains("kotoba="+token);
@@ -285,6 +353,18 @@ public class DesktopServer {
     void handle(HttpExchange x) throws IOException {
         try{
             String path=x.getRequestURI().getPath();
+            // The Firefox helper, installed by Tampermonkey before it has a Kotoba cookie. It carries the helper key,
+            // so it's only served through a one-time link the Video tab makes (helper.link), valid for ten minutes.
+            if(path.equals("/kotoba-video.user.js")){
+                String q=x.getRequestURI().getRawQuery();
+                String once=q!=null&&q.startsWith("once=")?q.substring(5):"";
+                Long made=installLinks.remove(once);
+                File script=new File(web,"kotoba-video.user.js");
+                if(made==null||System.currentTimeMillis()-made>600_000||!script.isFile()){send(x,404,"text/plain","This install link has expired. Make a new one in Kotoba › Video.".getBytes(StandardCharsets.UTF_8),null);return;}
+                String js=Files.readString(script.toPath()).replace("__KOTOBA_KEY__",helperKey()).replace("__KOTOBA_PORT__",Integer.toString(HELPER_PORT));
+                send(x,200,"text/javascript",js.getBytes(StandardCharsets.UTF_8),null);
+                return;
+            }
             // The Mac app opens /?t=<token> once; the cookie then covers every request, including the entry frames.
             if(path.equals("/")&&("t="+token).equals(x.getRequestURI().getRawQuery())){
                 x.getResponseHeaders().add("Set-Cookie","kotoba="+token+"; Path=/; HttpOnly; SameSite=Strict");
@@ -352,7 +432,7 @@ public class DesktopServer {
                 // The desktop bridge (Kotoba.call → fetch) loads before the app's own scripts.
                 String html=new String(bytes,StandardCharsets.UTF_8);
                 int at=html.indexOf("<script");
-                String inject="<link rel=\"stylesheet\" href=\"/desktop.css\"><script src=\"/desktop.js\"></script>";
+                String inject="<link rel=\"stylesheet\" href=\"/desktop.css\"><script src=\"/hover-modifier.js\"></script><script src=\"/desktop.js\"></script>";
                 html=at<0?html+inject:html.substring(0,at)+inject+html.substring(at);
                 html=html.replace("</body>","<script src=\"/desktop-after.js\"></script></body>");
                 bytes=html.getBytes(StandardCharsets.UTF_8);
@@ -381,6 +461,8 @@ public class DesktopServer {
     }
 
     public static void main(String[] args) throws Exception {
+        // The core runs behind a native Swift window; Java only needs image decoding, not an AWT app.
+        System.setProperty("java.awt.headless","true");
         File data=new File(args.length>0?args[0]:System.getProperty("user.home")+"/Library/Application Support/Kotoba");
         File assets=new File(args.length>1?args[1]:"android/assets");
         File web=new File(args.length>2?args[2]:"desktop/web");
@@ -395,6 +477,14 @@ public class DesktopServer {
                 try{s.syncNow();}catch(Exception e){System.err.println("sync: "+e.getMessage());}
                 try{s.mihonRefresh(false);}catch(Exception e){System.err.println("mihon: "+e.getMessage());}
             },5,30,java.util.concurrent.TimeUnit.SECONDS);
+        s.port=http.getAddress().getPort();
+        s.routes.upgradeIndexesLater();
+        try{
+            HttpServer helper=HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(),HELPER_PORT),16);
+            helper.createContext("/helper/",s::handleHelper);
+            helper.setExecutor(Executors.newFixedThreadPool(4));
+            helper.start();s.helperRunning=true;
+        }catch(IOException e){System.err.println("helper port "+HELPER_PORT+" is busy: "+e.getMessage());}
         System.out.println("KOTOBA PORT "+http.getAddress().getPort()+" TOKEN "+s.token);
         System.out.flush();
         // The Mac app holds our stdin open; when it quits or crashes, stdin closes and the core goes with it.

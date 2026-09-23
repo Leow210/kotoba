@@ -1,7 +1,8 @@
 # Kotoba for Mac
 
 A Mac companion to the Kotoba phone app: the same dictionaries, search and cards, plus a video player whose
-subtitles you can hover to look words up. It syncs cards and reviews with the phone through a shared folder.
+subtitles you can look up by holding Shift and hovering. The hover key can be changed in Settings › Reading.
+It syncs cards and reviews with the phone through a shared folder.
 
 ## Build and run
 
@@ -34,7 +35,9 @@ the Mac alike. The interface files come from `android/assets` unchanged.
 
 The phone's book reader (EPUB and TXT, vertical or horizontal, tap-to-look-up, highlights, bookmarks) runs on the
 Mac too: Reader › ＋ Add imports books from Finder. ←/→ turn pages in the book's direction (← is next in a
-right-to-left book); Space, Page Up/Down and ↑/↓ also turn.
+right-to-left book); Space, Page Up/Down and ↑/↓ also turn. Hold the configured hover key (Shift by default)
+over a word to open its dictionary. A plain click does not look up a word on the Mac unless enabled in
+Settings › Reading; click and drag still selects text.
 
 Comics work as on the phone, including the 文 text layer (the same PaddleOCR models on onnxruntime for macOS,
 about 0.2 s a page). The phone's Mihon webtoons are mirrored to `/Volumes/T7/Mihon` by Syncthing (receive-only; its `.stignore` keeps only `downloads/* (KO)` and `autobackup/`, so manga stays on the phone);
@@ -44,12 +47,28 @@ categories, read chapters) by itself. Covers come from `mihon-covers/` in the da
 ## Player
 
 - Opens anything mpv plays. Subtitles are found beside the video (`Name.srt`, `Name.zh-HK.srt`, `subtitles/Name.srt`)
-  and inside it (text tracks, extracted with ffmpeg and cached). Picture subtitles (PGS) can't be looked up.
-- The main line is hoverable; a second line (e.g. English) can show underneath. The lookup language follows the
+  and inside it (text tracks, extracted with ffmpeg and cached). For hardcoded subtitles, choose
+  **OCR hardcoded subtitles** in the 字幕 menu. It reads the bottom of the local video every two seconds and displays
+  recognized text for lookup. OCR accuracy depends on the video and language; picture subtitle tracks are not read as tracks.
+- Hold Shift and hover over the main line or transcript to open a lookup popup. Settings › Reading can change
+  the key to Option, Control, Command, or no key. A second line (e.g. English) can show underneath. The lookup language follows the
   track (ja, zh, ko, th, ru) and can be changed in the 字幕 menu. Chinese is tried as written, then simplified.
 - Keys: Space play/pause · ←/→ 5 s (⇧ 1 s) · A/D previous/next line · S replay line · P pause after each line ·
   T transcript · Z/X subtitle delay · [ ] speed · −/= subtitle size · F full screen · M mute.
 - ＋ Card saves the word with the subtitle line as its example and the episode and time as a note.
+
+### Firefox streaming subtitles
+
+Kotoba › Video › **Firefox subtitle helper** copies a one-time install link (valid ten minutes). Paste it into
+Firefox with Tampermonkey installed and accept the install. On YouTube and GagaOOLala, turn on the site's captions:
+the helper redraws the current caption as text, and holding **Shift** over a word asks Kotoba for Mac for it. The
+popup shows your dictionaries' definitions (in your order), frequency, whether it's already a card, ＋ Card (the
+caption line becomes the example, the video title and time the note) and Open in Kotoba. The video pauses while a
+word is shown (⏸ on lookup in the helper's toolbar). Kotoba for Mac must be open.
+
+The helper talks to Kotoba on 127.0.0.1:47823 through Tampermonkey (`GM_xmlhttpRequest`) with a key built into the
+installed script; that address only answers lookups, definitions, frequency and card saves. Reinstall the helper
+from the Video tab if the key changes. It reads only the caption text shown on the page.
 
 ## Sync
 

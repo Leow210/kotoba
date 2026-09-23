@@ -6,7 +6,7 @@ html.desktop .screen{left:var(--side);bottom:0}
 html.desktop #pages{left:var(--side)}
 html.desktop #selbar{left:calc(var(--side) + 16px);bottom:16px;right:auto;max-width:640px}
 html.desktop #toast{left:calc(50% + var(--side)/2);bottom:24px}
-html.desktop .screen>.scroll>*,html.desktop .search-head,html.desktop #library-home,html.desktop .page>.entry-scroll>*{max-width:880px;margin-left:auto;margin-right:auto}
+html.desktop .screen>.scroll>*,html.desktop .search-head,html.desktop #library-home,html.desktop #settings-home,html.desktop .page>.entry-scroll>*{max-width:880px;margin-left:auto;margin-right:auto}
 html.desktop .search-head{width:100%;box-sizing:border-box}
 html.desktop body{font-size:15px}
 html.desktop ::-webkit-scrollbar{width:10px;height:10px}

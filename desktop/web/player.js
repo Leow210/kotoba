@@ -51,6 +51,7 @@ function parseSubs(text){
 }
 async function loadTrack(track){
   if(!track)return [];
+  if(track.kind==='ocr')return [];
   const r=await api('video.sub',track.kind==='file'?{path:videoPath,file:track.file}:{path:videoPath,stream:track.stream});
   return parseSubs(r.text);
 }
@@ -60,8 +61,37 @@ function cueAt(cues,t){
   for(let i=best;i>=0&&i>best-4;i--)if(cues[i].end>t)return cues[i];
   return null;
 }
-const trackKey=(t)=>t?(t.kind==='file'?'f:'+t.file:'s:'+t.stream):'';
+const trackKey=(t)=>t?(t.kind==='ocr'?'ocr':t.kind==='file'?'f:'+t.file:'s:'+t.stream):'';
+let ocrTimer=0,ocrBusy=false;
+function stopOcr(){clearInterval(ocrTimer);ocrTimer=0;}
+async function scanOcr(){
+  if(ocrBusy||!st.loaded||!st.main||st.main.kind!=='ocr')return;
+  const time=st.t,lang=st.lang==='zh'?'zh':st.lang;
+  ocrBusy=true;
+  try{
+    const result=await api('video.ocr',{path:videoPath,time,lang});
+    if(!st.main||st.main.kind!=='ocr'||st.lang!==lang)return;
+    if(Math.abs(st.t-time)>5)return;
+    const recognized=result.text.trim(),current=cueAt(st.cues,time),until=Math.max(time+2.5,st.t+2);
+    const same=(a,b)=>a.replace(/\s+/g,' ').trim()===b.replace(/\s+/g,' ').trim();
+    if(current&&same(current.text,recognized)){current.end=Math.max(current.end,until);return;}
+    if(current)current.end=Math.min(current.end,time);
+    if(recognized){
+      st.cues.push({start:time,end:until,text:recognized});
+      st.cues.sort((a,b)=>a.start-b.start);st.cues.forEach((c,i)=>c.i=i);
+    }
+    renderTranscript();render(true);
+  }catch(e){stopOcr();osd('OCR stopped: '+e.message);}
+  finally{ocrBusy=false;}
+}
+function startOcr(){
+  stopOcr();
+  if(!st.main||st.main.kind!=='ocr')return;
+  osd('Reading hardcoded subtitles…');
+  scanOcr();ocrTimer=setInterval(scanOcr,2000);
+}
 async function chooseTracks(mainKey,secondKey){
+  stopOcr();
   const find=(k)=>st.subs.find(t=>trackKey(t)===k)||null;
   st.main=mainKey===''?null:find(mainKey);st.second=secondKey===''?null:find(secondKey);
   st.lang=(st.main&&store.get('player.lang:'+trackKey(st.main),st.main.lang))||'';
@@ -71,6 +101,7 @@ async function chooseTracks(mainKey,secondKey){
   catch(e){osd(e.message);st.cues=st.cues||[];st.cues2=st.cues2||[];}
   store.set('player.tracks:'+videoPath,{main:trackKey(st.main),second:trackKey(st.second)});
   renderTranscript();render(true);
+  startOcr();
 }
 
 // ---------- drawing ----------
@@ -119,13 +150,15 @@ window.playerLoaded=async(info)=>{
   st.loaded=true;
   send({cmd:'play'});
   try{st.subs=(await api('video.tracks',{path:videoPath})).subs.filter(s=>s.kind==='file'||s.text);}catch(e){st.subs=[];osd(e.message);}
+  const hasTextSubs=st.subs.length>0;
+  st.subs.push({kind:'ocr',label:'OCR hardcoded subtitles · bottom of video',lang:'ja'});
   const saved=store.get('player.tracks:'+videoPath,null);
   if(saved)return chooseTracks(saved.main,saved.second);
   // First time: a study-language track (your generated file first), with English underneath if there is one.
-  const study=st.subs.find(s=>s.generated)||st.subs.find(s=>['ja','zh','ko','th','ru'].includes(s.lang))||st.subs[0];
+  const study=st.subs.find(s=>s.generated)||st.subs.find(s=>s.kind!=='ocr'&&['ja','zh','ko','th','ru'].includes(s.lang))||st.subs.find(s=>s.kind!=='ocr');
   const en=st.subs.find(s=>s.lang==='en'&&s!==study);
   await chooseTracks(trackKey(study),trackKey(en));
-  if(!st.subs.length)osd('No subtitles found beside this video');
+  if(!hasTextSubs)osd('No text subtitles found · choose OCR in 字幕');
 };
 window.playerEnded=()=>{remember();};
 window.playerClosing=()=>remember();
@@ -139,8 +172,14 @@ function remember(){
 
 // ---------- hover lookup ----------
 const pop={el:$('pop'),pinned:false,key:null,res:null,hideT:0,cue:null};
-let hoverT=0,hoverAt=null;
+let hoverT=0,hoverAt=null,lastHoverPoint=null;
+function cancelHover(){
+  hoverAt=null;clearTimeout(hoverT);clearTimeout(pop.hideT);
+  if(!pop.pinned){hidePop();resumeAfterHover();}
+}
 function onHover(e){
+  lastHoverPoint={x:e.clientX,y:e.clientY};
+  if(!KotobaHover.matches(e)){cancelHover();return;}
   const span=e.target.closest('.ch');if(!span)return;
   const lineEl=span.closest('[data-cue]');if(!lineEl)return;
   const cue=st.cues[+lineEl.dataset.cue];if(!cue)return;
@@ -167,6 +206,7 @@ async function lookupAt(lineEl,cue,i){
   showPop(res,cue,spans[0].getBoundingClientRect(),spans[spans.length-1].getBoundingClientRect());
 }
 function leaveSubs(){
+  lastHoverPoint=null;
   hoverAt=null;clearTimeout(hoverT);
   clearTimeout(pop.hideT);
   pop.hideT=setTimeout(()=>{if(!pop.pinned&&!pop.el.matches(':hover')){hidePop();resumeAfterHover();}},260);
@@ -257,6 +297,14 @@ for(const id of ['sub-main','t-list']){
   $(id).addEventListener('mousemove',onHover);
   $(id).addEventListener('mouseleave',leaveSubs);
 }
+document.addEventListener('keydown',(e)=>{
+  if(!KotobaHover.isKey(e)||!lastHoverPoint)return;
+  const target=document.elementFromPoint(lastHoverPoint.x,lastHoverPoint.y);
+  if(target)onHover({target,clientX:lastHoverPoint.x,clientY:lastHoverPoint.y,
+    shiftKey:e.shiftKey,altKey:e.altKey,ctrlKey:e.ctrlKey,metaKey:e.metaKey});
+});
+document.addEventListener('keyup',(e)=>{if(KotobaHover.isKey(e))cancelHover();});
+window.addEventListener('blur',cancelHover);
 document.addEventListener('mousedown',(e)=>{if(!pop.el.hidden&&!e.target.closest('#pop')&&!e.target.closest('.ch')){hidePop();resumeAfterHover();}});
 
 // ---------- transcript ----------
@@ -304,14 +352,14 @@ const LANGS=[['ja','日本語'],['zh','中文 / 粵語'],['ko','한국어'],['th
 function subsMenu(anchor){
   const key1=trackKey(st.main),key2=trackKey(st.second);
   menu(anchor,'Subtitles',[
-    {heading:'Main (hover to look up)'},
+    {heading:`Main (${KotobaHover.get()==='none'?'hover':KotobaHover.label()+' + hover'} to look up)`},
     ...st.subs.map(t=>({label:t.label,on:trackKey(t)===key1,run:()=>chooseTracks(trackKey(t),key2===trackKey(t)?'':key2)})),
     {label:'None',on:!st.main,run:()=>chooseTracks('',key2)},
     {heading:'Second line'},
-    ...st.subs.map(t=>({label:t.label,on:trackKey(t)===key2,run:()=>chooseTracks(key1,trackKey(t))})),
+    ...st.subs.filter(t=>t.kind!=='ocr').map(t=>({label:t.label,on:trackKey(t)===key2,run:()=>chooseTracks(key1,trackKey(t))})),
     {label:'None',on:!st.second,run:()=>chooseTracks(key1,'')},
     {heading:'Language of the main line'},
-    ...LANGS.map(([v,l])=>({label:l,on:st.lang===v,run:()=>{st.lang=v;if(st.main)store.set('player.lang:'+trackKey(st.main),v);$('sub-main').lang=v==='zh'?'zh-Hant':v;}})),
+    ...LANGS.map(([v,l])=>({label:l,on:st.lang===v,run:()=>{st.lang=v;if(st.main)store.set('player.lang:'+trackKey(st.main),v);$('sub-main').lang=v==='zh'?'zh-Hant':v;if(st.main&&st.main.kind==='ocr'){st.cues=[];st.shown=null;renderTranscript();render(true);scanOcr();}}})),
     '-',
     {label:`Bigger (now ${Math.round(st.size*100)}%)`,run:()=>setSize(st.size+0.1)},{label:'Smaller',run:()=>setSize(st.size-0.1)},
     {label:`Later by 0.1 s (delay ${st.delay.toFixed(1)} s) — X`,run:()=>setDelay(st.delay+0.1)},{label:'Earlier by 0.1 s — Z',run:()=>setDelay(st.delay-0.1)},
