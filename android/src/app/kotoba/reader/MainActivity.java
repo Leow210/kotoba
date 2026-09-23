@@ -205,6 +205,8 @@ public class MainActivity extends Activity {
         @JavascriptInterface public void pickSyncFolder(){runOnUiThread(()->{
             Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
             i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_GRANT_WRITE_URI_PERMISSION|Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+            // Opens where Syncthing keeps Kotoba's folder, so it's one tap.
+            try{i.putExtra(DocumentsContract.EXTRA_INITIAL_URI,DocumentsContract.buildDocumentUri("com.android.externalstorage.documents","primary:Download/KotobaSync"));}catch(Exception ignored){}
             startActivityForResult(i,SYNC_FOLDER);
         });}
         @JavascriptInterface public void pickFolder(){pickFolderAt("Download/Monokakido_Ciyue");}
