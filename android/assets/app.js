@@ -284,14 +284,17 @@ function groupResults(items){
   const groups=[];
   const text=search.mode==='definition'||search.mode==='examples';
   for(const it of items){
-    const k=norm(it.key),pg=norm(it.page||'');
-    const reading=pg&&pg!==k?pg:'';
+    const k=norm(it.key);
+    // Readings compare without separator dots (大辞林 おちあ・う = おちあう); a page filed under a spelling
+    // (新明解 落合う) has no reading to compare, so it joins the word's row.
+    const pg=norm(it.page||'').replace(/[・･‧·‐‑‒–—=＝\-]/g,'');
+    const reading=pg&&pg!==k&&/^[\u3040-\u30ffー]+$/.test(pg)?pg:'';
     const same=groups.filter(g=>g.norm===k);
     if(same.some(g=>g.items.some(x=>x.dict===it.dict&&x.rec===it.rec)))continue;
     const free=(g)=>!g.items.some(x=>x.dict===it.dict);
     const target=text?null:same.find(g=>free(g)&&(g.reading===reading||!reading||!g.reading));
-    if(target){target.items.push(it);if(!target.reading&&reading){target.reading=reading;target.readingText=it.page;}}
-    else groups.push({norm:k,key:it.key,reading,readingText:reading?it.page:'',items:[it]});
+    if(target){target.items.push(it);if(!target.reading&&reading){target.reading=reading;target.readingText=reading;}}
+    else groups.push({norm:k,key:it.key,reading,readingText:reading,items:[it]});
   }
   return groups;
 }
