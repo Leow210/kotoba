@@ -648,6 +648,7 @@ public class Library {
                     }
                 }
                 d2.end();
+                mergeSameEntries(id);
                 if(fulltext&&!kind.equals("freq")){
                     String fts="body_"+id;
                     db.execSQL("CREATE VIRTUAL TABLE "+fts+" USING fts4(content=\"\",defs,exs,tokenize=simple)");
@@ -674,7 +675,7 @@ public class Library {
                 JSONObject recs=Store.rows(db,"SELECT min(id) a,max(id) b,count(*) n FROM records WHERE dict=?",Long.toString(id)).getJSONObject(0);
                 long metaRows=Store.rows(db,"SELECT count(*) n FROM meta WHERE dict=?",Long.toString(id)).getJSONObject(0).getLong("n");
                 ContentValues fin=new ContentValues();
-                fin.put("status","ready");fin.put("entries",kind.equals("freq")?metaRows:recs.getLong("n"));fin.put("keys",kind.equals("freq")?metaRows:range.getLong("n"));
+                fin.put("status","ready");fin.put("keys_v",KEYS_VERSION);fin.put("entries",kind.equals("freq")?metaRows:recs.getLong("n"));fin.put("keys",kind.equals("freq")?metaRows:range.getLong("n"));
                 fin.put("key_min",range.optLong("a",0));fin.put("key_max",range.optLong("b",0));fin.put("rec_min",recs.optLong("a",0));fin.put("rec_max",recs.optLong("b",0));
                 db.update("dicts",fin,"id=?",new String[]{Long.toString(id)});
                 db.setTransactionSuccessful();
@@ -789,7 +790,17 @@ public class Library {
      * Reads every page once, in file order.
      */
     public void upgradeKeys(long dict,Progress progress) throws Exception {
-        if(isYomitan(dict))return;
+        if(isYomitan(dict)){
+            progress.update("Improving search",0,1);
+            db.beginTransaction();
+            try{
+                mergeSameEntries(dict);
+                JSONObject n=Store.rows(db,"SELECT count(*) n FROM records WHERE dict=?",Long.toString(dict)).getJSONObject(0);
+                db.execSQL("UPDATE dicts SET keys_v=?,entries=? WHERE id=?",new Object[]{KEYS_VERSION,n.getLong("n"),dict});
+                db.setTransactionSuccessful();
+            }finally{db.endTransaction();}
+            return;
+        }
         JSONObject d=dictRow(dict);
         MdictFile mdx=file(dict,0);
         MdictFile.BlockCache c=new MdictFile.BlockCache(3);
@@ -823,9 +834,39 @@ public class Library {
             db.setTransactionSuccessful();
         }finally{db.endTransaction();}
     }
-    /** MDX dictionaries whose extra keys are older than this version. */
+    /** Dictionaries whose search keys are older than this version. */
     public JSONArray keysToUpgrade() throws Exception {
-        return Store.rows(db,"SELECT id,name FROM dicts WHERE status='ready' AND format!='yomitan' AND keys_v<? ORDER BY entries",Integer.toString(KEYS_VERSION));
+        return Store.rows(db,"SELECT id,name FROM dicts WHERE status='ready' AND kind!='freq' AND keys_v<? ORDER BY entries",Integer.toString(KEYS_VERSION));
+    }
+
+    /**
+     * Yomitan dictionaries often list one entry once per spelling (明鏡: 落ち合う, 落合う…) with identical text.
+     * Those become one page: the first keeps its record, the others' keys point to it. Call inside a transaction.
+     */
+    int mergeSameEntries(long dict) throws Exception {
+        JSONArray dup=Store.rows(db,"SELECT group_concat(r.id) ids FROM records r JOIN ytext y ON y.rec=r.id WHERE r.dict=? AND y.reading!='' GROUP BY y.reading,y.body HAVING count(*)>1",Long.toString(dict));
+        int merged=0;
+        for(int i=0;i<dup.length();i++){
+            String[] ids=dup.getJSONObject(i).getString("ids").split(",");
+            java.util.Arrays.sort(ids,(a,b)->Long.compare(Long.parseLong(a),Long.parseLong(b)));
+            java.util.HashSet<String> kept=new java.util.HashSet<>();
+            try(Cursor c=db.rawQuery("SELECT norm FROM keys WHERE dict=? AND rec=? AND norm IN (SELECT r.norm FROM records r WHERE r.id=?)",new String[]{Long.toString(dict),ids[0],ids[0]})){while(c.moveToNext())kept.add(c.getString(0));}
+            JSONArray keepRow=Store.rows(db,"SELECT y.reading FROM ytext y WHERE y.rec=?",ids[0]);
+            if(keepRow.length()>0)kept.add(HtmlText.normalize(keepRow.getJSONObject(0).getString("reading")));
+            for(int k=1;k<ids.length;k++){
+                JSONArray other=Store.rows(db,"SELECT r.key,y.reading FROM records r JOIN ytext y ON y.rec=r.id WHERE r.id=?",ids[k]);
+                if(other.length()==0)continue;
+                for(String w:new String[]{other.getJSONObject(0).getString("key"),other.getJSONObject(0).getString("reading")}){
+                    String n=HtmlText.normalize(w);if(n.isEmpty())continue;
+                    if(kept.add(n))db.execSQL("UPDATE keys SET rec=? WHERE norm=? AND dict=? AND rec=?",new Object[]{ids[0],n,dict,ids[k]});
+                    else db.execSQL("DELETE FROM keys WHERE norm=? AND dict=? AND rec=?",new Object[]{n,dict,ids[k]});
+                }
+                db.execSQL("DELETE FROM ytext WHERE rec=?",new Object[]{ids[k]});
+                db.execSQL("DELETE FROM records WHERE id=?",new Object[]{ids[k]});
+                merged++;
+            }
+        }
+        return merged;
     }
 
     static int parseIntOr(String s,int fallback){try{return Integer.parseInt(s.trim());}catch(Exception e){return fallback;}}
@@ -1047,6 +1088,11 @@ public class Library {
         }
         boolean more=items.length()>limit;
         if(more)items.remove(limit);
+        // One result per page: a page with several matching keys (おちあう, おちあう【落ち合う】) keeps its first, closest one.
+        java.util.HashSet<String> pages=new java.util.HashSet<>();
+        JSONArray unique=new JSONArray();
+        for(int i=0;i<items.length();i++){JSONObject r=items.getJSONObject(i);if(pages.add(r.optLong("dict")+":"+r.optLong("rec")))unique.put(r);}
+        items=unique;
         addRanks(items);
         return new JSONObject().put("items",items).put("more",more);
     }
@@ -1099,7 +1145,11 @@ public class Library {
                 if(k.equals(row.optString("page")))score-=2;
                 if(score<bestScore){bestScore=score;best=k;}
             }
-            row.put("key",stripMarks(best==null?row.optString("page"):best).trim());
+            // Keys that carry their spelling (おちあう【落ち合う】, 日韓辞典's おちあう【落ち合う) show as the word itself.
+            String shown=stripMarks(best==null?row.optString("page"):best).trim();
+            int bracket=shown.indexOf('【');
+            if(bracket>0)shown=shown.substring(0,bracket).trim();
+            row.put("key",shown);
             row.put("page",stripMarks(row.optString("page")));
             row.remove("keys");
         }
