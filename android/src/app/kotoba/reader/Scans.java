@@ -24,15 +24,12 @@ public class Scans {
 
     public Scans(File dir,Ocr ocr){this.dir=dir;this.ocr=ocr;dir.mkdirs();}
 
-    /** A new file for the camera app to write into. */
-    public File newFile(){return new File(dir,"scan-"+System.currentTimeMillis()+".jpg");}
-
     public File file(String name){
         if(!name.matches("scan-\\d+\\.(jpg|png|webp)"))throw new IllegalArgumentException("Bad scan name");
         return new File(dir,name);
     }
 
-    /** Copies a shared or picked image in. */
+    /** Copies a photo from the scanner's camera, or a shared or picked image, in. */
     public String importStream(InputStream in,String mime) throws Exception {
         String ext=mime!=null&&mime.contains("png")?"png":mime!=null&&mime.contains("webp")?"webp":"jpg";
         File f=new File(dir,"scan-"+System.currentTimeMillis()+"."+ext);

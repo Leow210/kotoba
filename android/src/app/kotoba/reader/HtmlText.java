@@ -17,7 +17,7 @@ public final class HtmlText {
         "script","style","link","head","title","rt","rp","ルビg","ルビ仮名","ルビ","entry-index","m-entry-index",
         "sound","m-audio","audio","mdict-audio"));
     static final Set<String> HEAD=new HashSet<>(Arrays.asList(
-        "見出部","m-head","headg","headlineg","見出しg","見出g","head-g","熟語見出部","subheadwordg","子見出部","oyajig","subheadword"));
+        "見出部","yt-head","m-head","headg","headlineg","見出しg","見出g","head-g","熟語見出部","subheadwordg","子見出部","oyajig","subheadword"));
     static final Set<String> EXAMPLE=new HashSet<>(Arrays.asList(
         "用例","用例g","example","m-example-group","m-example-t","m-example-j","m-example-p","言い換え例文g","無礼例文g",
         "accent_example","用例訳","用例訓読g","用例訳g","訳文g"));

@@ -162,6 +162,27 @@ public class Store {
         return rows(db,"SELECT i.id,i.folder_id,i.kind,i.anchor,i.headword,i.review,f.name folder FROM items i JOIN folders f ON f.id=i.folder_id WHERE i.dict=? AND i.page=?",Long.toString(dict),page);
     }
 
+    /**
+     * Cards for the same word saved from any dictionary: same headword, and the same reading whenever both have one,
+     * so homophones (橋/箸 はし) and other readings (人気 にんき/ひとけ) don't count. Kana/width/separators are ignored.
+     */
+    public JSONArray similar(String headword,String reading)throws Exception{
+        String h=HtmlText.normalize(headword),r=readingKey(reading);
+        JSONArray out=new JSONArray();
+        if(h.isEmpty())return out;
+        try(Cursor c=db.rawQuery("SELECT i.id,i.headword,i.reading,i.dict,i.dict_name,i.folder_id,i.review,f.name folder FROM items i JOIN folders f ON f.id=i.folder_id ORDER BY i.updated DESC",null)){
+            while(c.moveToNext()){
+                if(!HtmlText.normalize(c.getString(1)).equals(h))continue;
+                String r2=readingKey(c.getString(2));
+                if(!r.isEmpty()&&!r2.isEmpty()&&!r.equals(r2))continue;
+                out.put(new JSONObject().put("id",c.getLong(0)).put("headword",c.getString(1)).put("reading",c.getString(2)).put("dict",c.getLong(3))
+                    .put("dict_name",c.getString(4)).put("folder_id",c.getLong(5)).put("review",c.getInt(6)).put("folder",c.getString(7)));
+            }
+        }
+        return out;
+    }
+    static String readingKey(String s){return HtmlText.normalize(s==null?"":s).replaceAll("[・･‐\\-=＝\\s]","");}
+
     public JSONObject saveItem(JSONObject data)throws Exception{
         String headword=data.optString("headword","").trim();
         if(headword.isEmpty()||headword.length()>500)throw new Exception("Add the word (up to 500 characters).");
@@ -340,6 +361,31 @@ public class Store {
                .append(csvField(it.getString("note"))).append(',').append(csvField(it.getString("context"))).append(',').append(csvField(it.getString("dict_name"))).append(',')
                .append(csvField(it.getString("folder"))).append(',').append(it.getInt("review")).append(',').append(it.getLong("due")>0?new java.text.SimpleDateFormat("yyyy-MM-dd",java.util.Locale.ROOT).format(new java.util.Date(it.getLong("due")*1000)):"").append('\n');
         }
+        return out.toString();
+    }
+
+    /**
+     * Pleco flashcard import file: "//Category" lines, then headword<TAB>pinyin<TAB>definition per card.
+     * Only Chinese cards go in: saved from a Chinese dictionary, or Hanzi with a Latin (pinyin) reading.
+     * Pleco reads U+EAB1 as a line break inside a definition.
+     */
+    public String exportPleco(long folder,java.util.Set<Long> chineseDicts)throws Exception{
+        StringBuilder out=new StringBuilder();
+        JSONArray items=rows(db,"SELECT i.*,f.name folder FROM items i JOIN folders f ON f.id=i.folder_id"+(folder>0?" WHERE folder_id="+folder:"")+" ORDER BY f.position,f.name,i.id");
+        String category=null;int n=0;
+        for(int i=0;i<items.length();i++){
+            JSONObject it=items.getJSONObject(i);
+            String hw=it.getString("headword").trim(),py=it.getString("reading").trim();
+            boolean han=hw.codePoints().anyMatch(c->Character.UnicodeScript.of(c)==Character.UnicodeScript.HAN);
+            boolean chinese=chineseDicts.contains(it.getLong("dict"))||(han&&py.matches("(?i)[a-zü:āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ0-5\\s'·-]+")&&!py.isEmpty());
+            if(!han||!chinese)continue;
+            String cat="Kotoba/"+it.getString("folder").replace("/","／");
+            if(!cat.equals(category)){out.append("//").append(cat).append('\n');category=cat;}
+            String def=it.getString("back").replace("\r","").trim().replaceAll("\n{2,}","\n").replace("\n","\uEAB1").replace('\t',' ');
+            if(!it.getString("note").trim().isEmpty())def+="\uEAB1"+it.getString("note").trim().replace("\n","\uEAB1").replace('\t',' ');
+            out.append(hw.replace('\t',' ')).append('\t').append(py.replace('\t',' ')).append('\t').append(def).append('\n');n++;
+        }
+        if(n==0)throw new Exception("No Chinese cards to export"+(folder>0?" in this folder":"")+".");
         return out.toString();
     }
 

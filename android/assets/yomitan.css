@@ -1,0 +1,64 @@
+/*
+ * Yomitan dictionaries: Kotoba's heading and definition layout, plus the defaults Yomitan gives structured content
+ * (tables, lists, images). The dictionary's own styles.css loads after this. Dark mode inverts the whole frame.
+ */
+:root{
+  /* Yomitan theme variables that dictionary styles refer to. */
+  --text-color:#1d211f;--background-color:#fffdf9;--accent-color:#2f6b55;--link-color:#2f6b55;
+  --danger-color-lightest:#f7e3dd;--sidebar-button-danger-background-color-active:#b4442f;
+  --tag-default-background-color:#e2ece5;--light-border-color:#e3ddd1;--medium-border-color:#cfc7b8;
+}
+.yt-entry{font-size:1.02rem}
+.yt-entry+.yt-entry{margin-top:1.1em;padding-top:1em;border-top:1px solid #e3ddd1}
+
+/* Heading: the word, its reading and term tags, like the Monokakido dictionaries' 見出し. */
+.yt-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:.15em .6em;margin:.1em 0 .45em}
+.yt-head-dup{display:none}
+.yt-word{font-size:1.45em;font-weight:700;letter-spacing:.01em;line-height:1.35}
+.yt-reading{color:#2f6b55;font-size:1.02em}
+
+/* Tags (品詞, name types, 常用…) as small chips. */
+.yt-tags{display:inline-flex;flex-wrap:wrap;gap:.3em;vertical-align:.1em;margin-right:.35em}
+.yt-tag{font:600 .72em/1.5 system-ui,sans-serif;padding:.05em .55em;border-radius:.45em;background:#e2ece5;color:#2f6b55;white-space:nowrap}
+.yt-tag[data-category="partOfSpeech"]{background:#ece6f5;color:#5b4a86}
+.yt-tag[data-category="name"]{background:#f3e6d6;color:#8a5a1c}
+.yt-tag[data-category="popular"],.yt-tag[data-category="frequent"]{background:#f6ecc9;color:#8a6a10}
+.yt-tag[data-category="archaism"],.yt-tag[data-category="dictionary"]{background:#efebe2;color:#72766f}
+
+/* Definition blocks: each term-bank row. Several rows on one page are separated lightly. */
+.yt-sense{margin:.2em 0}
+.yt-sense+.yt-sense{margin-top:.75em;padding-top:.6em;border-top:1px dashed #e3ddd1}
+.yt-sense>.yt-tags{display:flex;margin:0 0 .25em}
+ol.yt-gloss{margin:.2em 0;padding-left:1.6em}
+ol.yt-gloss>li{margin:.15em 0;padding-left:.15em}
+ol.yt-gloss>li::marker{color:#2f6b55;font-weight:700;font-family:system-ui,sans-serif;font-size:.85em}
+.yt-text{white-space:normal}
+.yt-inline .yt-sep{color:#9aa39c}
+
+/* Structured content defaults (as Yomitan draws them). */
+.gloss-sc-ul,.gloss-sc-ol{padding-left:1.5em;margin:.2em 0}
+.gloss-sc-li{margin:.05em 0}
+.gloss-sc-table-container{overflow-x:auto;max-width:100%;margin:.35em 0}
+.gloss-sc-table{border-collapse:collapse;table-layout:auto;font-size:.92em}
+.gloss-sc-td,.gloss-sc-th{border:1px solid #d6cfc1;padding:.25em .5em;vertical-align:top;word-break:normal;overflow-wrap:normal}
+.gloss-sc-th{background:#f3efe7;font-weight:600}
+.gloss-sc-details{margin:.3em 0;padding:.25em .6em;border-left:3px solid #d6cfc1}
+.gloss-sc-summary{cursor:pointer;color:#2f6b55;font-weight:600}
+.gloss-sc-ruby rt{font-size:.55em}
+a.gloss-sc-a{color:#2f6b55;text-decoration:none;border-bottom:1px solid rgba(47,107,85,.35)}
+a.gloss-sc-a[data-external]{color:#72766f;border-bottom-style:dotted}
+
+/* Images from the dictionary ZIP. Block images get a soft frame; inline ones (gaiji, icons) sit on the line. */
+.gloss-image{display:inline-block;vertical-align:middle;max-width:100%}
+.gloss-image img{max-width:100%;vertical-align:middle}
+.gloss-image.yt-image-block{display:block;margin:.5em 0}
+.gloss-image.yt-image-block img{border-radius:8px;box-shadow:0 0 0 1px rgba(0,0,0,.06)}
+.gloss-image-description{display:block;color:#72766f;font-size:.85em;margin-top:.2em}
+
+/* Kanji-bank entries. */
+.yt-kanji .yt-kanji-char{font-size:3em;line-height:1.1;font-weight:400}
+.yt-kanji-table,.yt-kanji-stats{border-collapse:collapse;margin:.3em 0}
+.yt-kanji-table th,.yt-kanji-stats th{text-align:left;color:#72766f;font-weight:600;padding:.1em .8em .1em 0;white-space:nowrap}
+.yt-kanji-stats{font-size:.88em}
+
+html.kotoba-vertical .yt-head{flex-direction:column}

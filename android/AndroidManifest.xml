@@ -1,6 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="app.kotoba.reader" android:versionCode="3" android:versionName="0.3.0">
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="34"/>
-    <queries><intent><action android:name="android.media.action.IMAGE_CAPTURE"/></intent><package android:name="com.google.android.apps.translate"/><intent><action android:name="android.intent.action.PROCESS_TEXT"/><data android:mimeType="text/plain"/></intent></queries>
+    <!-- The scanner takes its own photos, so nothing is added to the phone's gallery. -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
+    <queries><package android:name="com.google.android.apps.translate"/><intent><action android:name="android.intent.action.PROCESS_TEXT"/><data android:mimeType="text/plain"/></intent></queries>
     <application android:label="Kotoba" android:theme="@android:style/Theme.Material.Light.NoActionBar" android:allowBackup="false" android:usesCleartextTraffic="false" android:icon="@drawable/icon" android:largeHeap="true" android:extractNativeLibs="true" android:debuggable="true">
         <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTask" android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|keyboard|uiMode|density" android:windowSoftInputMode="adjustResize">
             <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
@@ -8,6 +11,5 @@
             <intent-filter android:label="Look up in Kotoba"><action android:name="android.intent.action.SEND"/><category android:name="android.intent.category.DEFAULT"/><data android:mimeType="text/plain"/></intent-filter>
             <intent-filter android:label="Scan text in Kotoba"><action android:name="android.intent.action.SEND"/><category android:name="android.intent.category.DEFAULT"/><data android:mimeType="image/*"/></intent-filter>
         </activity>
-        <provider android:name=".ScanProvider" android:authorities="app.kotoba.reader.scans" android:exported="false" android:grantUriPermissions="true"/>
     </application>
 </manifest>

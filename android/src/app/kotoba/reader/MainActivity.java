@@ -36,7 +36,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class MainActivity extends Activity {
     static final String HOST="appassets.androidplatform.net";
     static final String ORIGIN="https://"+HOST;
-    static final int PICK_FOLDER=51,EXPORT=52,RESTORE=53,PICK_BOOKS=54,PICK_COMIC_TREE=55,PICK_COMIC_FILES=56,PICK_WORDLIST=57,PICK_MIHON=58,PICK_COVER=59,SCAN_CAMERA=60,SCAN_PICK=61;
+    static final int PICK_FOLDER=51,EXPORT=52,RESTORE=53,PICK_BOOKS=54,PICK_COMIC_TREE=55,PICK_COMIC_FILES=56,PICK_WORDLIST=57,PICK_MIHON=58,PICK_COVER=59,SCAN_PICK=61,CAMERA_PERMISSION=62;
     long coverSeries;
 
     KotobaWebView web;
@@ -47,7 +47,7 @@ public class MainActivity extends Activity {
     WordLists wordlists;
     Extras extras;
     Scans scans;
-    File pendingScan;
+    PermissionRequest pendingCamera;
     final ExecutorService pool=Executors.newFixedThreadPool(3);
     final ExecutorService importer=Executors.newSingleThreadExecutor();
     final AtomicBoolean cancelImport=new AtomicBoolean(false);
@@ -118,6 +118,17 @@ public class MainActivity extends Activity {
         web.addJavascriptInterface(new Bridge(),"Kotoba");
         web.setWebChromeClient(new WebChromeClient(){
             @Override public boolean onConsoleMessage(ConsoleMessage m){android.util.Log.d("Kotoba",m.message()+" @"+m.sourceId()+":"+m.lineNumber());return true;}
+            // The scanner's own camera view (getUserMedia): only our page, only video.
+            @Override public void onPermissionRequest(PermissionRequest request){
+                runOnUiThread(()->{
+                    boolean video=java.util.Arrays.asList(request.getResources()).contains(PermissionRequest.RESOURCE_VIDEO_CAPTURE);
+                    if(!video||!HOST.equals(request.getOrigin().getHost())){request.deny();return;}
+                    if(checkSelfPermission(android.Manifest.permission.CAMERA)==android.content.pm.PackageManager.PERMISSION_GRANTED){request.grant(new String[]{PermissionRequest.RESOURCE_VIDEO_CAPTURE});return;}
+                    if(pendingCamera!=null)pendingCamera.deny();
+                    pendingCamera=request;
+                    requestPermissions(new String[]{android.Manifest.permission.CAMERA},CAMERA_PERMISSION);
+                });
+            }
         });
         web.setWebViewClient(new WebViewClient(){
             @Override public WebResourceResponse shouldInterceptRequest(WebView view,WebResourceRequest request){return serve(request);}
@@ -184,11 +195,13 @@ public class MainActivity extends Activity {
         }
         @JavascriptInterface public void copy(String text){runOnUiThread(()->{((ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("Kotoba",text));});}
         @JavascriptInterface public void share(String text){runOnUiThread(()->startActivity(Intent.createChooser(new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT,text),"Share")));}
-        @JavascriptInterface public void pickFolder(){runOnUiThread(()->{
+        @JavascriptInterface public void pickFolder(){pickFolderAt("Download/Monokakido_Ciyue");}
+        /** Folder picker opening at a folder under shared storage (e.g. Download/Yomitan). */
+        @JavascriptInterface public void pickFolderAt(String start){runOnUiThread(()->{
             Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
             i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
             try{
-                Uri initial=DocumentsContract.buildDocumentUri("com.android.externalstorage.documents","primary:Download/Monokakido_Ciyue");
+                Uri initial=DocumentsContract.buildDocumentUri("com.android.externalstorage.documents","primary:"+start);
                 i.putExtra(DocumentsContract.EXTRA_INITIAL_URI,initial);
             }catch(Exception ignored){}
             startActivityForResult(i,PICK_FOLDER);
@@ -201,6 +214,12 @@ public class MainActivity extends Activity {
                     case "backup":text=store.backup().toString(1);mime="application/json";break;
                     case "tsv":text=store.exportTsv(data.optLong("folder",0),data.optBoolean("html",true));mime="text/tab-separated-values";break;
                     case "csv":text=store.exportCsv(data.optLong("folder",0));mime="text/csv";break;
+                    case "pleco":{
+                        java.util.Set<Long> zh=new java.util.HashSet<>();
+                        JSONArray all=library.dictionaries();
+                        for(int i=0;i<all.length();i++){JSONObject x=all.getJSONObject(i);if(x.getString("grp").equals("Chinese")||x.getString("grp").startsWith("Chinese/"))zh.add(x.getLong("id"));}
+                        text=store.exportPleco(data.optLong("folder",0),zh);mime="text/plain";break;
+                    }
                     case "text":text=data.optString("text","");mime="text/plain";break;
                     case "highlights":text=books.exportHighlights(data.getLong("book"));mime="text/markdown";break;
                     default:throw new Exception("Unknown export");
@@ -239,14 +258,6 @@ public class MainActivity extends Activity {
         @JavascriptInterface public void pickComicCover(long series){runOnUiThread(()->{
             coverSeries=series;
             startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("image/*"),PICK_COVER);
-        });}
-        /** Scanner: the phone's camera app writes the photo straight into files/scans/ through ScanProvider. */
-        @JavascriptInterface public void scanCamera(){runOnUiThread(()->{
-            pendingScan=scans().newFile();
-            Intent i=new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE).putExtra(android.provider.MediaStore.EXTRA_OUTPUT,ScanProvider.uri(pendingScan))
-                .addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION|Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            i.setClipData(android.content.ClipData.newRawUri("scan",ScanProvider.uri(pendingScan)));
-            try{startActivityForResult(i,SCAN_CAMERA);}catch(android.content.ActivityNotFoundException e){event("toast","No camera app found");}
         });}
         @JavascriptInterface public void scanPick(){runOnUiThread(()->startActivityForResult(new Intent(Intent.ACTION_GET_CONTENT).addCategory(Intent.CATEGORY_OPENABLE).setType("image/*"),SCAN_PICK));}
         @JavascriptInterface public void pickMihonBackup(){runOnUiThread(()->{
@@ -317,6 +328,7 @@ public class MainActivity extends Activity {
             case "forms":return library.forms(d.getString("q"));
             case "audio":return library.audioFor(d.getString("key"),d.optString("reading",""),d.optLong("dict",0));
             case "exact":return library.exact(d.getString("key"),null);
+            case "freq":return library.frequencies(d.getString("key"),d.optString("reading",""));
             case "lookup":return library.lookup(d.getString("text"),d.optString("lang",""));
             case "record":{
                 JSONObject r=library.record(d.getLong("rec"));
@@ -342,6 +354,7 @@ public class MainActivity extends Activity {
                 library.delete(d.getLong("id"));return null;
             }
             case "library.scan":return scan(Uri.parse(d.getString("tree")));
+            case "library.relink":return relink(d.getString("tree"));
             case "library.scanLocal":{
                 JSONArray found=new JSONArray();
                 File root=getExternalFilesDir(null);
@@ -409,6 +422,11 @@ public class MainActivity extends Activity {
             case "scan.read":return scans().read(d.getString("name"),d.optString("lang","ja"),d.optJSONArray("crop"));
             case "scan.list":return scans().list();
             case "scan.delete":scans().delete(d.getString("name"));return null;
+            case "scan.save":{
+                // A photo from the scanner's own camera view, as base64 JPEG.
+                byte[] b=android.util.Base64.decode(d.getString("data"),android.util.Base64.DEFAULT);
+                return new JSONObject().put("name",scans().importStream(new ByteArrayInputStream(b),d.optString("mime","image/jpeg")));
+            }
             case "appendix":return extras.appendix(d.getLong("dict"));
             case "appendix.counts":return extras.counts();
             case "dictlists":return extras.lists();
@@ -427,6 +445,7 @@ public class MainActivity extends Activity {
             case "folder.delete":store.deleteFolder(d.getLong("id"),d.optBoolean("items",false));return null;
             case "folder.reorder":store.reorderFolders(d.getJSONArray("ids"));return null;
             case "items":return store.items(d);
+            case "item.similar":return store.similar(d.getString("headword"),d.optString("reading",""));
             case "item":return store.item(d.getLong("id"));
             case "item.save":return store.saveItem(d);
             case "item.delete":store.deleteItems(d.getJSONArray("ids"));return null;
@@ -444,6 +463,68 @@ public class MainActivity extends Activity {
     }
 
     // ---------- importing ----------
+
+    /**
+     * Dictionaries whose files were moved or deleted are pointed at files with the same name and size in the chosen
+     * folder ("local" = the app's own folder). Indexes stay as they are, so nothing is re-imported.
+     */
+    JSONObject relink(String tree) throws Exception {
+        Map<String,List<String>> found=new HashMap<>();// name/size → uris
+        if(tree.equals("local")){
+            File root=getExternalFilesDir(null);
+            if(root!=null)collectLocal(root,0,found);
+        }else{
+            Uri t=Uri.parse(tree);
+            collectTree(t,DocumentsContract.getTreeDocumentId(t),0,found);
+        }
+        int fixed=0,missing=0;
+        JSONArray all=library.dictionaries();
+        for(int i=0;i<all.length();i++){
+            JSONObject d=all.getJSONObject(i);
+            JSONArray files=new JSONArray().put(d.getString("mdx"));
+            JSONArray mdd=new JSONArray(d.getString("mdd"));for(int k=0;k<mdd.length();k++)files.put(mdd.getString(k));
+            JSONArray sizes=library.fileSizes(d.getLong("id"));
+            boolean changed=false;
+            for(int k=0;k<files.length();k++){
+                String u=relinked(files.getString(k),sizes.optLong(k,-1),found);
+                if(u==null)missing++;else if(!u.equals(files.getString(k))){files.put(k,u);changed=true;}
+            }
+            if(changed){
+                JSONArray m=new JSONArray();for(int k=1;k<files.length();k++)m.put(files.getString(k));
+                library.setFiles(d.getLong("id"),files.getString(0),m);fixed++;
+            }
+        }
+        return new JSONObject().put("fixed",fixed).put("missing",missing);
+    }
+
+    /** The file's current uri when it still opens, else a file with the same name and size (the index points into it), else null. */
+    String relinked(String uri,long size,Map<String,List<String>> found){
+        try(FileChannel c=openChannel(uri)){return uri;}catch(Exception e){/* moved or deleted */}
+        if(size<0)return null;
+        String name=Uri.decode(uri);
+        name=name.substring(name.lastIndexOf('/')+1);
+        List<String> same=found.get(name+"\u0000"+size);
+        return same==null?null:same.get(0);
+    }
+
+    void collectLocal(File dir,int depth,Map<String,List<String>> found){
+        File[] files=dir.listFiles();if(files==null)return;
+        for(File f:files){
+            if(f.isDirectory()){if(depth<3)collectLocal(f,depth+1,found);continue;}
+            if(f.getName().matches("(?i).+\\.(mdx|mdd|zip)"))found.computeIfAbsent(f.getName()+"\u0000"+f.length(),k->new ArrayList<>()).add(f.getPath());
+        }
+    }
+
+    void collectTree(Uri tree,String docId,int depth,Map<String,List<String>> found){
+        Uri children=DocumentsContract.buildChildDocumentsUriUsingTree(tree,docId);
+        try(Cursor c=getContentResolver().query(children,new String[]{DocumentsContract.Document.COLUMN_DOCUMENT_ID,DocumentsContract.Document.COLUMN_DISPLAY_NAME,DocumentsContract.Document.COLUMN_MIME_TYPE,DocumentsContract.Document.COLUMN_SIZE},null,null,null)){
+            while(c!=null&&c.moveToNext()){
+                if(DocumentsContract.Document.MIME_TYPE_DIR.equals(c.getString(2))){if(depth<3)collectTree(tree,c.getString(0),depth+1,found);continue;}
+                String n=c.getString(1);
+                if(n!=null&&n.matches("(?i).+\\.(mdx|mdd|zip)"))found.computeIfAbsent(n+"\u0000"+(c.isNull(3)?0:c.getLong(3)),k->new ArrayList<>()).add(DocumentsContract.buildDocumentUriUsingTree(tree,c.getString(0)).toString());
+            }
+        }catch(Exception e){android.util.Log.w("Kotoba","relink scan",e);}
+    }
 
     /** Lists MDX dictionaries (with matching MDD resource files) in the chosen folder and its subfolders. */
     JSONArray scan(Uri tree) throws Exception {
@@ -465,6 +546,11 @@ public class MainActivity extends Activity {
         }
         for(String[] f:files){
             String name=f[1];
+            if(name.toLowerCase(Locale.ROOT).endsWith(".zip")){
+                String uri=DocumentsContract.buildDocumentUriUsingTree(tree,f[0]).toString();
+                addYomitan(uri,name,path,Long.parseLong(f[3]),found,imported);
+                continue;
+            }
             if(!name.toLowerCase(Locale.ROOT).endsWith(".mdx"))continue;
             String base=name.substring(0,name.length()-4);
             JSONArray mdd=new JSONArray();long size=Long.parseLong(f[3]);
@@ -489,6 +575,17 @@ public class MainActivity extends Activity {
         if(depth<3)for(String[] dir:dirs)scanDirectory(tree,dir[0],path.isEmpty()?dir[1]:path+"/"+dir[1],depth+1,found,imported);
     }
 
+    /** A Yomitan dictionary ZIP (index.json + banks); other ZIPs are ignored. */
+    void addYomitan(String uri,String file,String folder,long size,JSONArray found,JSONArray imported) throws Exception {
+        String title;
+        try(ZipSource z=new ZipSource(openChannel(uri))){title=Library.yomitanTitle(z);}catch(Exception e){return;}
+        if(title==null)return;
+        boolean already=false;
+        for(int i=0;i<imported.length();i++){JSONObject d=imported.getJSONObject(i);if(d.getString("mdx").equals(uri)||d.getString("title").equals(title))already=true;}
+        String base=file.replaceFirst("(?i)\\.zip$","");
+        found.put(new JSONObject().put("name",base).put("title",title).put("folder",folder).put("mdx",uri).put("mdd",new JSONArray()).put("size",size).put("imported",already).put("format","yomitan"));
+    }
+
     /** Dictionaries copied into the app's own folder (Android/data/app.kotoba.reader/files) over USB. */
     void scanFiles(File dir,String path,int depth,JSONArray found,JSONArray imported) throws Exception {
         File[] files=dir.listFiles();if(files==null)return;
@@ -496,6 +593,7 @@ public class MainActivity extends Activity {
         for(File f:files){
             if(f.isDirectory()){if(depth<3)scanFiles(f,path.isEmpty()?f.getName():path+"/"+f.getName(),depth+1,found,imported);continue;}
             String name=f.getName();
+            if(name.toLowerCase(Locale.ROOT).endsWith(".zip")){addYomitan(f.getPath(),name,path,f.length(),found,imported);continue;}
             if(!name.toLowerCase(Locale.ROOT).endsWith(".mdx"))continue;
             String base=name.substring(0,name.length()-4);
             JSONArray mdd=new JSONArray();long size=f.length();
@@ -528,7 +626,7 @@ public class MainActivity extends Activity {
                         ArrayList<String> mdd=new ArrayList<>();
                         JSONArray m=item.optJSONArray("mdd");
                         if(m!=null)for(int k=0;k<m.length();k++)mdd.add(m.getString(k));
-                        library.importDictionary(item.getString("name"),item.getString("mdx"),mdd,fulltext,new Library.Progress(){
+                        Library.Progress progress=new Library.Progress(){
                             long last=0;
                             @Override public void update(String stage,long a,long b){
                                 long t=System.currentTimeMillis();
@@ -537,7 +635,9 @@ public class MainActivity extends Activity {
                                 try{event("import",new JSONObject().put("title",title).put("index",index).put("count",items.length()).put("stage",stage).put("done",a).put("total",b));}catch(Exception ignored){}
                             }
                             @Override public boolean cancelled(){return cancelImport.get();}
-                        });
+                        };
+                        if("yomitan".equals(item.optString("format")))library.importYomitan(item.getString("name"),item.getString("mdx"),fulltext,progress);
+                        else library.importDictionary(item.getString("name"),item.getString("mdx"),mdd,fulltext,progress);
                         done++;
                         android.util.Log.i("Kotoba","Imported "+title+" in "+(System.currentTimeMillis()-started)+"ms");
                     }catch(Throwable e){
@@ -555,14 +655,15 @@ public class MainActivity extends Activity {
         });
     }
 
+    @Override public void onRequestPermissionsResult(int request,String[] permissions,int[] results){
+        if(request!=CAMERA_PERMISSION||pendingCamera==null)return;
+        PermissionRequest r=pendingCamera;pendingCamera=null;
+        if(results.length>0&&results[0]==android.content.pm.PackageManager.PERMISSION_GRANTED)r.grant(new String[]{PermissionRequest.RESOURCE_VIDEO_CAPTURE});
+        else r.deny();
+    }
+
     @Override protected void onActivityResult(int request,int result,Intent intent){
         super.onActivityResult(request,result,intent);
-        if(request==SCAN_CAMERA){
-            File f=pendingScan;pendingScan=null;
-            if(result==RESULT_OK&&f!=null&&f.length()>0){scans().prune();try{event("scan-ready",new JSONObject().put("name",f.getName()));}catch(Exception ignored){}}
-            else if(f!=null)f.delete();
-            return;
-        }
         if(request==SCAN_PICK&&result==RESULT_OK&&intent!=null&&intent.getData()!=null){
             Uri u=intent.getData();
             pool.execute(()->{
@@ -755,7 +856,7 @@ public class MainActivity extends Activity {
                 if(bytes==null)bytes=extras.file(dict,"files/"+name.substring(name.lastIndexOf('/')+1));
                 if(bytes==null)return response("text/plain",("Missing: "+name).getBytes(StandardCharsets.UTF_8),404,null);
                 String mime=Library.mime(name);
-                if(mime.equals("text/css"))bytes=MarkupFix.css(new String(bytes,StandardCharsets.UTF_8)).getBytes(StandardCharsets.UTF_8);
+                if(mime.equals("text/css")&&!library.isYomitan(dict))bytes=MarkupFix.css(new String(bytes,StandardCharsets.UTF_8)).getBytes(StandardCharsets.UTF_8);
                 if(mime.equals("text/html")){
                     // Appendix pages: same treatment as entries (no scripts, renderable markup, base styles).
                     String h=MarkupFix.html(new String(bytes,StandardCharsets.UTF_8));

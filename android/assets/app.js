@@ -32,6 +32,7 @@ const icons={
   down:'<path d="M12 5v14M6 13l6 6 6-6"/>',
   play:'<path d="M8 5v14l11-7z"/>',
   export:'<path d="M12 15V3M7 10l5 5 5-5"/><path d="M5 17v2a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2"/>',
+  torch:'<path d="M8 3h8l-1.5 5h-5z"/><path d="M9.5 8h5v4l-1 9h-3l-1-9z"/><path d="M12 12v2"/>',
   shuffle:'<path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/>',
   refresh:'<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 5v6h-6"/>',
   prev:'<path d="M15 5l-7 7 7 7"/>',
@@ -189,35 +190,71 @@ async function loadDicts(){
 
 // ---------- search ----------
 const search={mode:'headword',dict:'',offset:0,items:[],version:0,more:false};
-const GROUP_ORDER=['Japanese','Kanji','Pronunciation','Korean','Chinese','Thai','Russian','English'];
+const GROUP_ORDER=['Japanese','Kanji','Korean','Chinese','Thai','Russian','English'];
 const GROUP_LABEL={Japanese:'Japanese 国語',Kanji:'Kanji 漢字',Pronunciation:'Pronunciation 発音',Korean:'Korean 韓',Chinese:'Chinese 中',Thai:'Thai タイ',Russian:'Russian 露',English:'English 英'};
-function groupsPresent(){
-  const g=[...new Set(dicts.filter(d=>d.enabled).map(d=>d.grp||'Japanese'))];
-  return g.sort((a,b)=>(GROUP_ORDER.indexOf(a)+1||99)-(GROUP_ORDER.indexOf(b)+1||99)||a.localeCompare(b));
+const MORE_LABEL={Japanese:'More 日本語',Korean:'More 한국어',Chinese:'More 中文'};
+// Groups nest one level: "Japanese/古語" is a type of Japanese dictionary. Frequency dictionaries have no entries to search.
+const parentOf=(g)=>String(g||'Japanese').split('/')[0];
+const childOf=(g)=>String(g||'').split('/')[1]||'';
+const groupLabel=(g)=>childOf(g)||GROUP_LABEL[g]||g;
+const searchable=(d)=>d.kind!=='freq';
+function groupOrder(){try{const o=JSON.parse(localStorage.getItem('groupOrder')||'null');if(Array.isArray(o))return o;}catch(e){}return GROUP_ORDER;}
+function groupRank(g){
+  const order=groupOrder(),i=order.indexOf(g);
+  if(i>=0)return i;
+  const p=order.indexOf(parentOf(g));
+  return (p>=0?p:98)+(childOf(g)?0.5:0.9);
 }
+function sortGroups(list){return list.sort((a,b)=>groupRank(a)-groupRank(b)||a.localeCompare(b));}
+function groupsPresent(){return sortGroups([...new Set(dicts.filter(d=>d.enabled&&searchable(d)).map(d=>d.grp||'Japanese'))]);}
 function renderDictChips(){
-  const enabled=dicts.filter(d=>d.enabled);
+  const enabled=dicts.filter(d=>d.enabled&&searchable(d));
   const groups=groupsPresent();
-  if(search.dict.startsWith('g:')&&!groups.includes(search.dict.slice(2)))search.dict='';
+  const valid=(v)=>v.endsWith('/*')?groups.some(g=>parentOf(g)===v.slice(2,-2)):groups.includes(v.slice(2));
+  if(search.dict.startsWith('g:')&&!valid(search.dict))search.dict='';
   if(search.dict&&!search.dict.startsWith('g:')&&!enabled.some(d=>String(d.id)===String(search.dict)))search.dict='';
   $('dict-chips').hidden=enabled.length<2;
   const single=search.dict&&!search.dict.startsWith('g:')?dictById(search.dict):null;
-  $('dict-chips').innerHTML=`<button class="chip small ${search.dict===''?'on':''}" data-dict="">All</button>`+
-    (groups.length>1?groups.map(g=>`<button class="chip small ${search.dict==='g:'+g?'on':''}" data-dict="g:${esc(g)}">${esc(GROUP_LABEL[g]||g)}</button>`).join(''):'')+
+  const tops=groups.filter(g=>!childOf(g));
+  const kids={};for(const g of groups)if(childOf(g))(kids[parentOf(g)]=kids[parentOf(g)]||[]).push(g);
+  const chip=(g)=>`<button class="chip small ${search.dict==='g:'+g?'on':''}" data-dict="g:${esc(g)}">${esc(GROUP_LABEL[g]||g)}</button>`;
+  const more=(p)=>{
+    const sel=search.dict.startsWith('g:')&&parentOf(search.dict.slice(2))===p&&(childOf(search.dict.slice(2))||search.dict.endsWith('/*'));
+    const label=sel?(search.dict.endsWith('/*')?'All '+(GROUP_LABEL[p]||p):childOf(search.dict.slice(2))):(MORE_LABEL[p]||'More '+p);
+    return `<button class="chip small ${sel?'on':''}" data-more="${esc(p)}">${esc(label)} ▾</button>`;
+  };
+  // Japanese types come right after Kanji: 国語 · 漢字 · More 日本語 ▾.
+  const html=[];const pendingMore=[];
+  for(const g of tops){
+    html.push(chip(g));
+    if(kids[g]){if(g==='Japanese'&&tops.includes('Kanji'))pendingMore.push(g);else html.push(more(g));}
+    if(g==='Kanji')while(pendingMore.length)html.push(more(pendingMore.shift()));
+  }
+  for(const p of pendingMore)html.push(more(p));
+  for(const p of Object.keys(kids))if(!tops.includes(p))html.push(more(p));
+  $('dict-chips').innerHTML=`<button class="chip small ${search.dict===''?'on':''}" data-dict="">All</button>`+(groups.length>1?html.join(''):'')+
     `<button class="chip small ${single?'on':''}" data-pick="1">${single?esc(shortName(single.name))+' ▾':'One dictionary ▾'}</button>`;
   $('dict-chips').querySelectorAll('[data-dict]').forEach(b=>b.onclick=()=>{search.dict=b.dataset.dict;renderDictChips();runSearch();});
+  $('dict-chips').querySelectorAll('[data-more]').forEach(b=>b.onclick=handle(async()=>{
+    const p=b.dataset.more;
+    const items=kids[p].map(g=>({label:`${childOf(g)}  ·  ${enabled.filter(d=>d.grp===g).map(d=>shortName(d.name)).join('、')}`,icon:search.dict==='g:'+g?'check':'book',v:'g:'+g}));
+    items.push('-',{label:'Every '+(GROUP_LABEL[p]||p)+' dictionary',icon:search.dict==='g:'+p+'/*'?'check':'book',v:'g:'+p+'/*'});
+    const c=await menuSheet(MORE_LABEL[p]||'More '+p,items);
+    if(!c)return;search.dict=c.v;renderDictChips();runSearch();
+  }));
   $('dict-chips').querySelector('[data-pick]').onclick=handle(async()=>{
     const items=[];
-    for(const g of groupsPresent()){items.push({heading:GROUP_LABEL[g]||g});for(const d of enabled.filter(x=>(x.grp||'Japanese')===g))items.push({label:d.name,icon:'book',id:d.id});}
+    for(const g of groupsPresent()){items.push({heading:childOf(g)?(GROUP_LABEL[parentOf(g)]||parentOf(g))+' › '+childOf(g):GROUP_LABEL[g]||g});for(const d of enabled.filter(x=>(x.grp||'Japanese')===g))items.push({label:d.name,icon:'book',id:d.id});}
     const c=await menuSheet('Search one dictionary',items);
     if(!c)return;search.dict=String(c.id);renderDictChips();runSearch();
   });
 }
 function shortName(name){
-  let n=String(name).replace(/　/g,' ').trim();
+  // Dates and versions from Yomitan titles: "JMnedict [2026-08-10]", "類語辞典オンライン (2024-02-09)".
+  let n=String(name).replace(/　/g,' ').replace(/\s*[\[(（][\d\-. v]+[\])）]\s*$/,'').trim();
   if(/NHK/.test(n))return 'NHK';
   n=n.replace(/^(小学館|三省堂|研究社|大修館|旺文社)\s*/,'').replace(/^全訳\s*/,'').replace(/\s*第.版$/,'').replace(/^プログレッシブ\s*/,'');
-  n=n.replace(/^新明解国語辞典.*/,'新明解').replace(/^漢検\s*漢字辞典.*/,'漢検').replace(/^大辞林.*/,'大辞林');
+  n=n.replace(/^新明解国語辞典.*/,'新明解').replace(/^明鏡国語辞典.*/,'明鏡').replace(/^精選版\s*日本国語大辞典.*/,'日国').replace(/^三省堂国語辞典.*/,'三国').replace(/^現代国語例解辞典.*/,'現代例解').replace(/^漢検\s*漢字辞典.*/,'漢検').replace(/^大辞林.*/,'大辞林');
   if(n.length>4)n=n.replace(/辞典$/,'');
   return n.slice(0,12);
 }
@@ -235,16 +272,34 @@ const debouncedSearch=debounce(()=>handle(runSearch)(),140);
 function remember(){const q=$('q').value.trim();if(q)api('history.add',{q}).catch(()=>{});}
 
 function groupResults(items){
-  // Consecutive rows with the same headword become one row with a tag per dictionary.
+  // Rows with the same headword become one row with a tag per dictionary. Pages filed under a reading
+  // (大辞林 ことば / けとば) keep their reading apart, and other dictionaries join the row with the same reading.
   const groups=[];
+  const text=search.mode==='definition'||search.mode==='examples';
   for(const it of items){
-    const last=groups[groups.length-1];
-    const k=norm(it.key);
-    if(last&&last.norm===k&&search.mode!=='definition'&&search.mode!=='examples'&&!last.items.some(x=>x.dict===it.dict))last.items.push(it);
-    else if(last&&last.norm===k&&last.items.some(x=>x.dict===it.dict&&x.rec===it.rec))continue;
-    else groups.push({norm:k,key:it.key,items:[it]});
+    const k=norm(it.key),pg=norm(it.page||'');
+    const reading=pg&&pg!==k?pg:'';
+    const same=groups.filter(g=>g.norm===k);
+    if(same.some(g=>g.items.some(x=>x.dict===it.dict&&x.rec===it.rec)))continue;
+    const free=(g)=>!g.items.some(x=>x.dict===it.dict);
+    const target=text?null:same.find(g=>free(g)&&(g.reading===reading||!reading||!g.reading));
+    if(target){target.items.push(it);if(!target.reading&&reading){target.reading=reading;target.readingText=it.page;}}
+    else groups.push({norm:k,key:it.key,reading,readingText:reading?it.page:'',items:[it]});
   }
   return groups;
+}
+// Frequency: four bars from a word's rank (1 = most common). Top ~2k, 8k, 25k, then the long tail.
+function freqLevel(rank){return !rank?0:rank<=2000?4:rank<=8000?3:rank<=25000?2:1;}
+function freqBars(rank){
+  const l=freqLevel(rank);if(!l)return '';
+  return `<span class="fbars l${l}" title="Frequency rank ${Number(rank).toLocaleString()}" aria-label="Frequency rank ${Number(rank).toLocaleString()}"><i></i><i></i><i></i><i></i></span>`;
+}
+const freqName=(n)=>String(n).replace(/^\[.*?\]\s*/,'').replace(/[\s_-]*(Korean|Japanese)$/i,'').replace(/v\d[\d.]*.*$/i,'').replace(/[\s_-]*㋕$/,'')||n;
+/** Frequency ranks (and pitch notes) for a word from the frequency dictionaries, as chips. */
+function freqChips(rows){
+  return rows.map(r=>r.mode==='freq'
+    ?`<span class="fq" title="${esc(r.dictionary)}">${freqBars(r.value)}<b>${esc(freqName(r.dictionary))}</b>${esc(r.display)}</span>`
+    :`<span class="fq pitch" title="${esc(r.dictionary)}"><b>${esc(freqName(r.dictionary))}</b>${esc(r.mode==='pitch'?'['+r.display+']':r.display)}</span>`).join('');
 }
 function snippetHtml(s){return esc(s).replace(/\u0001/g,'<mark>').replace(/\u0002/g,'</mark>');}
 
@@ -271,8 +326,9 @@ async function runSearch(append=false){
   const groups=groupResults(search.items);
   $('results').innerHTML=groups.map((g,i)=>{
     const first=g.items[0];
-    const page=first.page&&norm(first.page)!==norm(first.key)?`<span class="pg">${esc(first.page)}</span>`:'';
-    const tags=g.items.map(it=>`<span class="tag ${it.kind==='kanji'?'kanji':''}">${esc(shortName(it.dictionary))}</span>`).join('');
+    const page=g.readingText?`<span class="pg">${esc(g.readingText)}</span>`:'';
+    const rank=(g.items.find(it=>it.rank)||{}).rank;
+    const tags=freqBars(rank)+g.items.map(it=>`<span class="tag ${it.kind==='kanji'?'kanji':''}">${esc(shortName(it.dictionary))}</span>`).join('');
     const snip=first.snippet?`<div class="snip">${snippetHtml(first.snippet)}</div>`:'';
     return `<button class="row" data-g="${i}"><div class="line"><div class="hw">${esc(first.key)}${page}</div><div class="meta">${tags}</div></div>${snip}</button>`;
   }).join('');
@@ -341,11 +397,11 @@ window.externalLookup=(text)=>{
 function closeAllOverlays(){while(sheetStack.length)closeSheet();while(pageStack.length)popPage(true);}
 
 // ---------- entry structure (works on each dictionary's own markup) ----------
-const UNIT=new Set(['項目','子項目','句項目','subhead','m-body','entry','dic-item','熟語','jyukugog','親字g','派生m','子見出g']);
-const HEAD=new Set(['見出部','m-head','headg','headlineg','見出しg','見出g','head-g','熟語見出部','subheadwordg','子見出部','oyajig','jyukugohyokig','subheadword','head','親字td']);
-const WORD=new Set(['標準表記','句表記','headword','subheadword','見出し','見出','熟語見出','jyukugohyoki','thai','oyajicharacter','表記','見出語','kanji','cn','親字-常用','親字-常用外','親字-表外','親字-重要']);
-const READING=new Set(['見出仮名','pron','pinyin','発音','m-headword-pron-kana','熟語読','jyukugoyomi','yomi','表音表記']);
-const SENSE=new Set(['語義g','meaningg','m-meaning-group','meaning','語義','imisub','熟語語義','語義g2','parag','言い換えg','無礼例文g']);
+const UNIT=new Set(['yt-entry','項目','子項目','句項目','subhead','m-body','entry','dic-item','熟語','jyukugog','親字g','派生m','子見出g']);
+const HEAD=new Set(['yt-head','見出部','m-head','headg','headlineg','見出しg','見出g','head-g','熟語見出部','subheadwordg','子見出部','oyajig','jyukugohyokig','subheadword','head','親字td']);
+const WORD=new Set(['yt-word','標準表記','句表記','headword','subheadword','見出し','見出','熟語見出','jyukugohyoki','thai','oyajicharacter','表記','見出語','kanji','cn','親字-常用','親字-常用外','親字-表外','親字-重要']);
+const READING=new Set(['yt-reading','見出仮名','pron','pinyin','発音','m-headword-pron-kana','熟語読','jyukugoyomi','yomi','表音表記']);
+const SENSE=new Set(['yt-sense','語義g','meaningg','m-meaning-group','meaning','語義','imisub','熟語語義','語義g2','parag','言い換えg','無礼例文g']);
 const EXAMPLE=new Set(['用例g','用例','example','m-example-group','慣用句g','諺g','言い換え例文g']);
 const SKIPTEXT='rt,rp,[data-name="ルビG"],[data-name="ルビ仮名"],[data-name="entry-index"],m-entry-index,#index,m-audio,sound,script,style';
 function names(el){
@@ -454,7 +510,9 @@ function partsOf(unit){
   const parts=[];
   const head=headOf(unit);
   if(head)parts.push({kind:'Heading',el:[head],text:textOf(head)});
-  const senses=ownDescendants(unit,SENSE).filter((s,i,arr)=>!arr.some(o=>o!==s&&o.contains(s)));
+  // A Yomitan definition block that contains the dictionary's own numbered senses (語義) yields those instead.
+  const found=ownDescendants(unit,SENSE);
+  const senses=found.filter(s=>!(s.classList.contains('yt-sense')&&found.some(o=>o!==s&&s.contains(o)))).filter((s,i,arr)=>!arr.some(o=>o!==s&&o.contains(s)));
   for(const s of senses){
     const els=[s];
     let sib=s.nextElementSibling;
@@ -718,6 +776,7 @@ function entryPage(){
     </div>
     <div class="dict-tabs" data-f="tabs" hidden></div>
     <div class="entry-scroll" data-f="scroll">
+      <div class="entry-info" data-f="info" hidden></div>
       <iframe class="entry-frame" data-f="frame" title="Dictionary entry"></iframe>
       <div class="focus-note" data-f="focusnote" hidden></div>
       <div class="contents" data-f="contents" hidden></div>
@@ -737,7 +796,7 @@ async function openEntry(target,existing){
   async function load(t,pushHistory){
     if(pushHistory&&state.rec)state.history.push({rec:state.rec,dict:state.dict,key:state.key,anchor:state.anchor,alternatives:state.alternatives});
     const askedWhole=t.whole;
-    Object.assign(state,t);state.whole=!!t.whole;
+    Object.assign(state,t);state.whole=!!t.whole;state.autoplayed=false;
     const rec=await api('record',{rec:state.rec});
     state.dict=rec.dict;state.page=rec.key;state.dictName=rec.dictionary;state.saved=rec.saved||[];
     if(!state.key)state.key=rec.key;
@@ -759,6 +818,7 @@ async function openEntry(target,existing){
     // A kanji itself in a kanji dictionary: the whole entry is the point (readings, meanings, compounds).
     if(askedWhole===undefined&&kanjiHead(state.dict,state.key))state.whole=true;
     renderFocus();
+    renderInfo();
     if(state.highlight)highlight(doc,state.highlight);
     if(anchorEl&&!focus){anchorEl.scrollIntoView({block:'center'});anchorEl.classList.add('kotoba-flash');}
     else if(anchorEl&&anchorEl!==focus){setTimeout(()=>{scrollToEl(anchorEl);anchorEl.classList.add('kotoba-flash');},50);}
@@ -836,10 +896,41 @@ async function openEntry(target,existing){
     b.innerHTML=`<button data-b="prev" ${n.prev?'':'disabled'}>${icon('prev')}<span>${esc(n.prev?n.prev.key:'')}</span></button><button data-b="next" ${n.next?'':'disabled'}><span>${esc(n.next?n.next.key:'')}</span>${icon('next')}</button>`;
     b.querySelectorAll('[data-b]').forEach(x=>x.onclick=handle(()=>{const t=n[x.dataset.b];if(t)return load({rec:t.rec,dict:state.dict,key:t.key,anchor:'',alternatives:null,highlight:''},true);}));
   }
+  /**
+   * Above the entry: the word's frequency in the frequency dictionaries, and cards already saved for this word
+   * from other dictionaries (same word and reading, so homophones don't count).
+   */
+  let infoFor='';
+  async function renderInfo(){
+    const info=current&&current.info;if(!info)return;
+    const word=info.word||state.key,reading=info.reading||'';
+    const key=state.rec+'|'+word+'|'+reading;if(key===infoFor)return;infoFor=key;
+    // Entries without audio of their own (大辞林, 明鏡…) borrow the pronunciation dictionary's clip (NHK).
+    const scope=(!state.whole&&current.focus)||current.doc.body;
+    const ownAudio=[...scope.querySelectorAll('a[href]')].some(a=>!a.closest('.kotoba-hidden')&&(/^sound:\/\//i.test(a.getAttribute('href'))||AUDIO_RE.test(a.getAttribute('href'))));
+    const [freq,similar,clips]=await Promise.all([api('freq',{key:word,reading}).catch(()=>[]),api('item.similar',{headword:word,reading}).catch(()=>[]),
+      ownAudio||!/[\u3040-\u30ff\u4e00-\u9fff]/.test(word)?[]:api('audio',{key:word,reading,dict:state.dict}).catch(()=>[])]);
+    if(infoFor!==key)return;
+    const here=new Set((state.saved||[]).map(x=>x.id));
+    const others=similar.filter(x=>!here.has(x.id));
+    state.similar=others;
+    const box=f('info');
+    const saved=others.length?`<button class="saved-note" data-open="${others[0].id}">${icon('star','i sm')}<span>Already a card${others.length>1?` (${others.length})`:''}: <b>${esc(others[0].headword)}</b>${others[0].reading?' '+esc(others[0].reading):''} from ${esc(shortName(others[0].dict_name||'your notes'))} · ${esc(others[0].folder)}</span></button>`:'';
+    const pron=clips.filter(c=>/\/発音$|^Pronunciation$/.test(c.group||'')&&c.dict!==state.dict&&(c.headed||c.pageMatch)).slice(0,1);
+    const audio=pron.map((c,i)=>`<button class="fq audio" data-clip="${i}" aria-label="Play pronunciation from ${esc(c.dictionary)}">${SPEAKER_SVG}<b>${esc(shortName(c.dictionary))}</b></button>`).join('');
+    box.innerHTML=(freq.length||audio?`<div class="fq-row">${audio}${freqChips(freq)}</div>`:'')+saved;
+    box.querySelectorAll('[data-clip]').forEach(b=>b.onclick=()=>playClip(pron[+b.dataset.clip]));
+    if(pron.length&&settings.autoplay_entry&&!state.autoplayed){state.autoplayed=true;playClip(pron[0]);}
+    box.hidden=!box.innerHTML;
+    const b=box.querySelector('[data-open]');if(b)b.onclick=handle(()=>openItem(+b.dataset.open));
+    updateBookmark();
+  }
   function updateBookmark(){
     const info=current&&current.info;
     const saved=(state.saved||[]).filter(s=>!info||cleanKey(s.headword)===cleanKey(info.word)||cleanKey(s.headword)===cleanKey(state.key));
     el.querySelector('[data-act="bookmark"]').classList.toggle('on',saved.length>0);
+    el.querySelector('[data-act="bookmark"]').classList.toggle('elsewhere',!saved.length&&!!(state.similar||[]).length);
+    if(current&&current.info)renderInfo();
   }
   async function onLink(href){
     if(href.startsWith('#')){
@@ -1203,6 +1294,7 @@ async function openSaveSheet(o){
   let source={dict:o.dict||0,dict_name:o.dict_name||'',page:o.page||'',anchor:o.anchor||'',kind:o.kind||'entry',doc:o.doc,unit:o.unit};
   const composeText=()=>parts.filter((p,i)=>checked[i]&&p.kind!=='Heading').map(p=>p.text).join('\n')||parts.filter((p,i)=>checked[i]).map(p=>p.text).join('\n');
   const html=`<div class="sheet-body">
+    <div id="sv-dup" hidden></div>
     <label class="f">Word</label><input class="input big" id="sv-word" maxlength="500">
     <label class="f">Reading</label><input class="input" id="sv-reading" maxlength="200" placeholder="Optional">
     <div id="sv-source-wrap"><label class="f">Definition from</label><div class="chips" id="sv-sources" style="margin-top:6px"></div></div>
@@ -1219,6 +1311,15 @@ async function openSaveSheet(o){
   const s=openSheet(html,{title:o.existing||o.item?'Saved word':'Save to folder',tall:true,onClose:o.onClose});
   const q=(id)=>s.sheet.querySelector('#'+id);
   q('sv-word').value=o.headword||'';q('sv-reading').value=o.reading||'';
+  // Same word already saved from another dictionary (not homophones: the reading must match too).
+  const checkDup=debounce(handle(async()=>{
+    const w=q('sv-word').value.trim();if(!w){q('sv-dup').hidden=true;return;}
+    const skip=new Set([o.existing&&o.existing.id,o.item&&o.item.id].filter(Boolean));
+    const list=(await api('item.similar',{headword:w,reading:q('sv-reading').value.trim()})).filter(x=>!skip.has(x.id));
+    const box=q('sv-dup');box.hidden=!list.length;
+    box.innerHTML=list.length?`<div class="dup-note">${icon('star','i sm')}<div><b>Already a card</b>${list.slice(0,3).map(x=>`<small>${esc(x.headword)}${x.reading?' · '+esc(x.reading):''} — ${esc(shortName(x.dict_name||'your notes'))} · ${esc(x.folder)}</small>`).join('')}</div></div>`:'';
+  }),250);
+  checkDup();q('sv-word').addEventListener('input',checkDup);q('sv-reading').addEventListener('input',checkDup);
   q('sv-context').value=o.context||'';q('sv-note').value=o.note||'';
 
   const renderParts=()=>{
@@ -1326,6 +1427,7 @@ async function openFolder(folderId,folders){
     '-',
     {label:'Export for Anki (TSV)',icon:'export',run:()=>Kotoba.exportFile(`kotoba-${folder.name}.txt`,'tsv',JSON.stringify({folder:folderId,html:true}))},
     {label:'Export spreadsheet (CSV)',icon:'export',run:()=>Kotoba.exportFile(`kotoba-${folder.name}.csv`,'csv',JSON.stringify({folder:folderId}))},
+    {label:'Export Chinese cards for Pleco',icon:'export',run:()=>Kotoba.exportFile(`kotoba-${folder.name}-pleco.txt`,'pleco',JSON.stringify({folder:folderId}))},
     ...(folderId>1?['-',
       {label:'Rename folder',icon:'edit',run:async()=>{const name=await prompt2('Rename folder',folder.name);if(!name)return;await api('folder.save',{id:folderId,name});folder.name=name;el.querySelector('.title b').textContent=name;}},
       {label:'Delete folder',icon:'trash',danger:true,run:async()=>{
@@ -1535,16 +1637,24 @@ on('folder',uri=>handle(async()=>{await scanAndChoose(uri);})());
 on('import',p=>{importState=p;renderImportProgress();});
 on('import-error',e=>{toast((e.title?e.title+': ':'')+(e.error||e),5000);});
 async function autoOrder(force){
-  // Until the user reorders by hand: group order (Japanese, Kanji, Pronunciation…), larger dictionaries first.
+  // Until the user reorders by hand: group order (Japanese, its types, Kanji, Pronunciation…), larger dictionaries first.
   let manual=false;try{manual=localStorage.getItem('manualOrder')==='1';}catch(e){}
   if(manual&&!force)return;
-  const rank=(g)=>{const i=GROUP_ORDER.indexOf(g);return i<0?99:i;};
-  const ids=[...dicts].sort((a,b)=>rank(a.grp)-rank(b.grp)||b.entries-a.entries).map(d=>d.id);
+  const ids=[...dicts].sort((a,b)=>groupRank(a.grp)-groupRank(b.grp)||(a.grp||'').localeCompare(b.grp||'')||b.entries-a.entries).map(d=>d.id);
+  await api('dict.reorder',{ids});await loadDicts();
+}
+/** New dictionaries join the end of their group when the user has an order of their own. */
+async function placeNew(before){
+  let manual=false;try{manual=localStorage.getItem('manualOrder')==='1';}catch(e){}
+  if(!manual)return;
+  const known=new Set(before);
+  const ids=[...dicts].sort((a,b)=>groupRank(a.grp)-groupRank(b.grp)||(a.grp||'').localeCompare(b.grp||'')||(known.has(a.id)?0:1)-(known.has(b.id)?0:1)||a.position-b.position).map(d=>d.id);
   await api('dict.reorder',{ids});await loadDicts();
 }
 on('import-done',async r=>{
   importState=null;
-  await loadDicts();await autoOrder(false);
+  const before=dicts.map(d=>d.id);
+  await loadDicts();await autoOrder(false);await placeNew(before);
   if(tab==='library')renderLibrary();
   toast(r.cancelled?'Import cancelled':`Imported ${r.done} ${r.done===1?'dictionary':'dictionaries'}${r.failed?` · ${r.failed} failed`:''}`,4000);
   if(!$('q').value)renderSearchEmpty();
@@ -1555,13 +1665,17 @@ function pickFolder(){Kotoba.pickFolder();}
 async function scanAndChoose(uri){
   const s=openSheet(`<div class="sheet-body"><div class="loading"><div class="spinner"></div><p>Looking for dictionaries…</p></div></div>`,{title:'Import dictionaries',tall:true});
   let found;
+  // Dictionaries whose files moved into this folder are pointed at them again, without re-importing.
+  try{const r=await api('library.relink',{tree:uri});if(r.fixed)toast(`Found the files of ${r.fixed} ${r.fixed===1?'dictionary':'dictionaries'} here`,3500);}catch(e){}
   try{found=uri==='local'?(await api('library.scanLocal')).items:await api('library.scan',{tree:uri});}catch(e){closeSheet(s);throw e;}
   const body=s.sheet.querySelector('.sheet-body');
   if(!found.length){body.innerHTML=`<p class="hint">No .mdx files in that folder. Choose the folder that contains your dictionary folders (for example Download/Monokakido_Ciyue).</p>`;return;}
+  // Already-imported dictionaries can't be chosen again (that would add a second copy); remove one first to re-import it.
   const chosen=found.map(f=>!f.imported);
+  if(found.every(f=>f.imported)){body.innerHTML=`<p class="hint" style="margin-top:0">Every dictionary in this folder is already in your library.</p>`;return;}
   const size=(n)=>n>1e9?(n/1e9).toFixed(1)+' GB':n>1e6?Math.round(n/1e6)+' MB':Math.round(n/1e3)+' KB';
   body.innerHTML=`<p class="hint" style="margin-top:0">Found ${found.length} ${found.length===1?'dictionary':'dictionaries'}. Files stay where they are — keep them in this folder.</p>`+
-    found.map((f,i)=>`<label class="cand"><input type="checkbox" data-c="${i}" ${chosen[i]?'checked':''}><span><b>${esc(f.title)}</b><small>${esc(f.folder||f.name)} · ${size(f.size)}${f.mdd.length?' · with images/audio':''}${f.imported?' · <span style="color:var(--warn)">already imported</span>':''}</small></span></label>`).join('')+
+    found.map((f,i)=>`<label class="cand${f.imported?' done':''}"><input type="checkbox" data-c="${i}" ${chosen[i]?'checked':''} ${f.imported?'disabled':''}><span><b>${esc(f.title)}</b><small>${esc(f.folder||f.name)} · ${size(f.size)}${f.format==='yomitan'?' · Yomitan':''}${f.mdd.length?' · with images/audio':''}${f.imported?' · already in your library':''}</small></span></label>`).join('')+
     `<div class="switch-row"><div><b>Definition & example search</b><small>Builds a full-text index. Takes longer and uses more space.</small></div><label class="toggle"><input type="checkbox" id="imp-ft" ${settings.fulltext?'checked':''}><span></span></label></div>`;
   const foot=document.createElement('div');foot.className='sheet-foot';foot.innerHTML=`<button class="btn wide" data-close>Cancel</button><button class="btn primary wide" id="imp-go">Import</button>`;
   s.sheet.appendChild(foot);foot.querySelector('[data-close]').onclick=()=>closeSheet(s);
@@ -1593,9 +1707,9 @@ async function renderLibrary(){
   $('library-sub').textContent=dicts.length?`${dicts.length} ${dicts.length===1?'dictionary':'dictionaries'} · ${stats.library.keys.toLocaleString()} headwords`:'Dictionaries and settings';
   $('library-home').innerHTML=`<div id="import-progress"></div>
     <div class="section-label">Dictionaries<button id="lib-add">${icon('plus','i')}</button></div>
-    <div id="dict-list">${dicts.length?dicts.map((d,i)=>`<div class="dict-row ${d.enabled?'':'off'}"><button class="db" data-d="${i}" style="text-align:left"><b>${esc(d.name)}</b><small>${esc(GROUP_LABEL[d.grp]||d.grp)} · ${d.keys.toLocaleString()} headwords${d.resources?' · media':''}</small></button><label class="toggle"><input type="checkbox" data-en="${i}" ${d.enabled?'checked':''}><span></span></label></div>`).join(''):
-      `<div class="empty" style="padding:20px 28px">No dictionaries yet.</div>`}</div>
-    <div style="padding:14px 16px"><button class="btn primary" id="lib-import" style="width:100%">${icon('folder')} Import from a folder…</button><p class="hint">Pick the folder with your .mdx/.mdd files, e.g. <b>Download/Monokakido_Ciyue</b>. Tap a dictionary to reorder, rename or set it as a kanji dictionary.</p><button class="btn small" id="lib-local" style="margin-top:6px">Scan the app’s own folder</button><p class="hint">For dictionaries copied over USB into <b>Android/data/app.kotoba.reader/files</b>.</p></div>
+    ${dicts.length?`<p class="hint lib-hint">Drag <b>≡</b> to choose which dictionary comes first when several have a word. Switch a group or a dictionary off to leave it out of searches and lookups.</p>`:''}
+    <div id="dict-list">${dicts.length?'':`<div class="empty" style="padding:20px 28px">No dictionaries yet.</div>`}</div>
+    <div style="padding:14px 16px"><button class="btn primary" id="lib-import" style="width:100%">${icon('folder')} Import from a folder…</button><p class="hint">Pick a folder with .mdx/.mdd files (e.g. <b>Download/Monokakido_Ciyue</b>) or Yomitan .zip dictionaries (e.g. <b>Download/Yomitan</b>). Tap a dictionary to rename it, move it to another group or set it as a kanji dictionary.</p><button class="btn small" id="lib-local" style="margin-top:6px">Scan the app’s own folder</button><p class="hint">For dictionaries copied over USB into <b>Android/data/app.kotoba.reader/files</b>.</p></div>
     <div class="section-label">Reading</div>
     <div class="settings">
       <div class="switch-row"><div><b>Entry text size</b><small>Also adjustable from any entry’s ⋯ menu</small></div><div class="stepper"><button data-z="-0.1">−</button><span id="zv">${Math.round(settings.zoom*100)}%</span><button data-z="0.1">+</button></div></div>
@@ -1615,13 +1729,13 @@ async function renderLibrary(){
       <div class="switch-row"><div><b>Restore backup</b><small>Merges into what’s here; duplicates are skipped</small></div><button class="btn small" id="restore">Open…</button></div>
       <div class="switch-row"><div><b>Export everything for Anki</b><small>Tab-separated, with dictionary formatting</small></div><button class="btn small" id="export-all">Export…</button></div>
       <div class="switch-row"><div><b>Export as spreadsheet</b><small>CSV for Excel, Sheets or Numbers</small></div><button class="btn small" id="export-csv">Export…</button></div>
+      <div class="switch-row"><div><b>Export Chinese cards for Pleco</b><small>Pleco flashcard text file; each folder becomes a category (Import Cards in Pleco)</small></div><button class="btn small" id="export-pleco">Export…</button></div>
     </div>
     <p class="hint" style="text-align:center;padding:10px 20px 30px">Kotoba 0.3 · works fully offline · nothing leaves your phone</p>`;
   renderImportProgress();
   if(status.importing&&!importState)$('import-progress').innerHTML='<div class="import-card"><b>Import in progress…</b></div>';
   $('lib-add').onclick=pickFolder;$('lib-import').onclick=pickFolder;$('lib-local').onclick=handle(()=>scanAndChoose('local'));
-  $('dict-list').querySelectorAll('[data-en]').forEach(c=>c.onchange=handle(async()=>{const d=dicts[+c.dataset.en];await api('dict.update',{id:d.id,enabled:c.checked});await loadDicts();c.closest('.dict-row').classList.toggle('off',!c.checked);}));
-  $('dict-list').querySelectorAll('[data-d]').forEach(b=>b.onclick=handle(()=>dictMenu(+b.dataset.d)));
+  renderDictGroups();
   $('library-home').querySelectorAll('[data-z]').forEach(b=>b.onclick=()=>{settings.zoom=Math.max(0.7,Math.min(2.6,+(settings.zoom+ +b.dataset.z).toFixed(2)));saveLocalSettings();$('zv').textContent=Math.round(settings.zoom*100)+'%';});
   $('set-vertical').onchange=e=>{settings.vertical=e.target.checked;saveLocalSettings();};
   $('set-front').onchange=e=>{settings.front_reading=e.target.checked;saveLocalSettings();};
@@ -1633,23 +1747,141 @@ async function renderLibrary(){
   $('restore').onclick=()=>Kotoba.restoreBackup();
   $('export-all').onclick=()=>Kotoba.exportFile('kotoba-anki.txt','tsv',JSON.stringify({folder:0,html:true}));
   $('export-csv').onclick=()=>Kotoba.exportFile('kotoba-vocabulary.csv','csv','{}');
+  $('export-pleco').onclick=()=>Kotoba.exportFile('kotoba-pleco.txt','pleco','{}');
 }
-async function dictMenu(i){
-  const d=dicts[i];
+// ---------- dictionary groups in Library ----------
+function collapsedGroups(){try{return new Set(JSON.parse(localStorage.getItem('collapsedGroups')||'[]'));}catch(e){return new Set();}}
+function setCollapsed(g,v){const c=collapsedGroups();v?c.add(g):c.delete(g);try{localStorage.setItem('collapsedGroups',JSON.stringify([...c]));}catch(e){}}
+function dictMeta(d){
+  if(d.kind==='freq')return `${d.keys.toLocaleString()} ranked words · frequency`;
+  return `${d.keys.toLocaleString()} headwords${d.resources?' · media':''}${d.format==='yomitan'?' · Yomitan':''}${d.kind==='kanji'?' · kanji':''}`;
+}
+function renderDictGroups(){
+  const box=$('dict-list');if(!box||!dicts.length)return;
+  const all=sortGroups([...new Set(dicts.map(d=>d.grp||'Japanese'))]);
+  const parents=sortGroups([...new Set(all.map(parentOf))]);
+  const collapsed=collapsedGroups();
+  const row=(d)=>`<div class="dict-row ${d.enabled?'':'off'}" data-id="${d.id}"><span class="drag" aria-label="Drag to reorder">≡</span><button class="db" data-d="${d.id}" style="text-align:left"><b>${esc(d.name)}</b><small>${esc(dictMeta(d))}</small></button><label class="toggle"><input type="checkbox" data-en="${d.id}" ${d.enabled?'checked':''}><span></span></label></div>`;
+  const section=(g,sub)=>{
+    const list=dicts.filter(d=>(d.grp||'Japanese')===g);
+    const on=list.filter(d=>d.enabled).length;
+    const closed=collapsed.has(g);
+    return `<div class="dgroup ${sub?'sub':''} ${closed?'closed':''}" data-g="${esc(g)}">
+      <div class="dgroup-head"><button class="dg-name" data-collapse="${esc(g)}"><span class="caret">▾</span>${esc(sub?childOf(g):GROUP_LABEL[g]||g)}<small>${list.length?`${on} of ${list.length} on`:''}</small></button>
+        <button class="icon-btn sm" data-gmenu="${esc(g)}" aria-label="Group options">${icon('more')}</button>
+        ${list.length?`<label class="toggle"><input type="checkbox" data-gen="${esc(g)}" ${on?'checked':''}><span></span></label>`:''}</div>
+      <div class="dgroup-list" data-list="${esc(g)}">${list.map(row).join('')}</div>
+    </div>`;
+  };
+  box.innerHTML=parents.map(p=>{
+    const kids=all.filter(g=>parentOf(g)===p&&childOf(g));
+    return `<div class="dgroup-top">${section(p,false)}${kids.map(k=>section(k,true)).join('')}</div>`;
+  }).join('');
+  box.querySelectorAll('[data-en]').forEach(c=>c.onchange=handle(async()=>{await api('dict.update',{id:+c.dataset.en,enabled:c.checked});await loadDicts();renderDictGroups();}));
+  box.querySelectorAll('[data-gen]').forEach(c=>c.onchange=handle(async()=>{
+    for(const d of dicts.filter(x=>(x.grp||'Japanese')===c.dataset.gen))if(!!d.enabled!==c.checked)await api('dict.update',{id:d.id,enabled:c.checked});
+    await loadDicts();renderDictGroups();
+  }));
+  box.querySelectorAll('[data-collapse]').forEach(b=>b.onclick=()=>{const g=b.dataset.collapse;const el=b.closest('.dgroup');el.classList.toggle('closed');setCollapsed(g,el.classList.contains('closed'));});
+  box.querySelectorAll('[data-gmenu]').forEach(b=>b.onclick=handle(()=>groupMenu(b.dataset.gmenu)));
+  box.querySelectorAll('[data-d]').forEach(b=>b.onclick=handle(()=>dictMenu(+b.dataset.d)));
+  box.querySelectorAll('.drag').forEach(h=>enableDrag(h));
+}
+/** Every dictionary in display order (groups, then their rows as shown), saved as the result order. */
+async function saveDisplayOrder(){
+  const ids=[...$('dict-list').querySelectorAll('.dict-row')].map(r=>+r.dataset.id);
+  try{localStorage.setItem('manualOrder','1');}catch(e){}
+  await api('dict.reorder',{ids});await loadDicts();
+}
+/** Press and drag the ≡ handle to move a dictionary within its group. */
+function enableDrag(handleEl){
+  handleEl.addEventListener('pointerdown',e=>{
+    e.preventDefault();
+    const rowEl=handleEl.closest('.dict-row'),list=rowEl.parentElement;
+    handleEl.setPointerCapture(e.pointerId);
+    rowEl.classList.add('dragging');
+    let lastY=e.clientY,moved=false;
+    const move=ev=>{
+      const dy=ev.clientY-lastY;
+      rowEl.style.transform=`translateY(${dy}px)`;
+      const rows=[...list.children].filter(r=>r!==rowEl);
+      const mid=rowEl.getBoundingClientRect().top+rowEl.offsetHeight/2;
+      for(const r of rows){
+        const rr=r.getBoundingClientRect(),c=rr.top+rr.height/2;
+        const after=r.compareDocumentPosition(rowEl)&Node.DOCUMENT_POSITION_FOLLOWING;
+        if(after&&mid>c){const top=rowEl.getBoundingClientRect().top;r.after(rowEl);lastY+=rowEl.getBoundingClientRect().top-top;rowEl.style.transform=`translateY(${ev.clientY-lastY}px)`;moved=true;break;}
+        if(!after&&mid<c){const top=rowEl.getBoundingClientRect().top;r.before(rowEl);lastY+=rowEl.getBoundingClientRect().top-top;rowEl.style.transform=`translateY(${ev.clientY-lastY}px)`;moved=true;break;}
+      }
+    };
+    const end=()=>{
+      handleEl.removeEventListener('pointermove',move);handleEl.removeEventListener('pointerup',end);handleEl.removeEventListener('pointercancel',end);
+      rowEl.classList.remove('dragging');rowEl.style.transform='';
+      if(moved)handle(saveDisplayOrder)();
+    };
+    handleEl.addEventListener('pointermove',move);handleEl.addEventListener('pointerup',end);handleEl.addEventListener('pointercancel',end);
+  });
+}
+async function moveGroup(g,dir){
+  // Reorders among siblings (top-level groups, or the types inside one language).
+  const all=sortGroups([...new Set(dicts.map(d=>d.grp||'Japanese').concat(dicts.map(d=>parentOf(d.grp))))]);
+  const sibs=all.filter(x=>childOf(g)?parentOf(x)===parentOf(g)&&childOf(x):!childOf(x));
+  const i=sibs.indexOf(g),j=i+dir;if(i<0||j<0||j>=sibs.length)return;
+  [sibs[i],sibs[j]]=[sibs[j],sibs[i]];
+  const order=sortGroups(all.slice());
+  const rest=order.filter(x=>!sibs.includes(x));
+  // Rebuild the full order: siblings in their new order, each followed by its own types.
+  let out;
+  if(childOf(g)){const p=parentOf(g);out=[];for(const x of order){if(sibs.includes(x))continue;out.push(x);if(x===p)out.push(...sibs);}if(!out.includes(sibs[0]))out.push(...sibs);}
+  else{out=[];for(const t of sibs){out.push(t);out.push(...rest.filter(x=>parentOf(x)===t&&x!==t));}out.push(...rest.filter(x=>!out.includes(x)));}
+  try{localStorage.setItem('groupOrder',JSON.stringify(out));}catch(e){}
+  renderDictGroups();await saveDisplayOrder();renderDictChips();
+}
+async function groupMenu(g){
+  const list=dicts.filter(d=>(d.grp||'Japanese')===g);
+  const setAll=async(on)=>{for(const d of list)if(!!d.enabled!==on)await api('dict.update',{id:d.id,enabled:on});await loadDicts();renderDictGroups();};
+  await menuSheet(childOf(g)?(GROUP_LABEL[parentOf(g)]||parentOf(g))+' › '+childOf(g):GROUP_LABEL[g]||g,[
+    {label:'Move group up',icon:'up',run:()=>moveGroup(g,-1)},
+    {label:'Move group down',icon:'down',run:()=>moveGroup(g,1)},
+    {label:'Turn all on',icon:'check',run:()=>setAll(true)},
+    {label:'Turn all off',icon:'close',run:()=>setAll(false)},
+    {label:'Rename group',icon:'edit',run:async()=>{
+      const name=await prompt2('Rename group',childOf(g)||g,childOf(g)?'e.g. 古語':'e.g. Japanese');if(!name||name.includes('/'))return;
+      const to=childOf(g)?parentOf(g)+'/'+name.trim():name.trim();
+      for(const d of dicts){const x=d.grp||'Japanese';if(x===g)await api('dict.update',{id:d.id,grp:to});else if(!childOf(g)&&parentOf(x)===g)await api('dict.update',{id:d.id,grp:to+'/'+childOf(x)});}
+      try{localStorage.setItem('groupOrder',JSON.stringify(groupOrder().map(x=>x===g?to:x)));}catch(e){}
+      await loadDicts();renderDictGroups();}},
+  ]);
+}
+async function chooseGroup(d){
+  const names=sortGroups([...new Set(GROUP_ORDER.concat(dicts.map(x=>x.grp||'Japanese')))]);
+  const c=await menuSheet('Group for '+d.name,names.map(n=>({label:childOf(n)?'　'+(GROUP_LABEL[parentOf(n)]||parentOf(n))+' › '+childOf(n):GROUP_LABEL[n]||n,icon:n===d.grp?'check':'folder',v:n}))
+    .concat(['-',{label:'New type inside '+(GROUP_LABEL[parentOf(d.grp)]||parentOf(d.grp))+'…',icon:'plus',v:'sub'},{label:'New top-level group…',icon:'plus',v:''}]));
+  if(!c)return null;
+  if(c.v==='sub'){const n=await prompt2('New type of '+parentOf(d.grp)+' dictionary','','e.g. 古語, 類語, Slang');return n&&!n.includes('/')?parentOf(d.grp)+'/'+n.trim():null;}
+  if(!c.v){const n=await prompt2('New group','','e.g. Classical, Slang');return n&&!n.includes('/')?n.trim():null;}
+  return c.v;
+}
+async function dictMenu(id){
+  const d=dictById(id);if(!d)return;
+  const inGroup=dicts.filter(x=>(x.grp||'Japanese')===(d.grp||'Japanese'));
+  const move=async(dir)=>{
+    const i=inGroup.indexOf(d),j=i+dir;if(j<0||j>=inGroup.length)return;
+    const rows=$('dict-list').querySelectorAll(`.dict-row[data-id="${d.id}"]`)[0],other=$('dict-list').querySelector(`.dict-row[data-id="${inGroup[j].id}"]`);
+    if(rows&&other){dir<0?other.before(rows):other.after(rows);}
+    await saveDisplayOrder();renderDictGroups();
+  };
   await menuSheet(d.name,[
-    {label:'Move up',icon:'up',run:async()=>{if(i===0)return;try{localStorage.setItem('manualOrder','1');}catch(e){}const ids=dicts.map(x=>x.id);[ids[i-1],ids[i]]=[ids[i],ids[i-1]];await api('dict.reorder',{ids});renderLibrary();}},
-    {label:'Move down',icon:'down',run:async()=>{if(i===dicts.length-1)return;try{localStorage.setItem('manualOrder','1');}catch(e){}const ids=dicts.map(x=>x.id);[ids[i+1],ids[i]]=[ids[i],ids[i+1]];await api('dict.reorder',{ids});renderLibrary();}},
-    {label:'Sort all by group and size',icon:'refresh',run:async()=>{try{localStorage.removeItem('manualOrder');}catch(e){}await autoOrder(true);renderLibrary();}},
+    {label:'Move up in '+groupLabel(d.grp),icon:'up',run:()=>move(-1)},
+    {label:'Move down in '+groupLabel(d.grp),icon:'down',run:()=>move(1)},
+    {label:'Group: '+(childOf(d.grp)?(GROUP_LABEL[parentOf(d.grp)]||parentOf(d.grp))+' › '+childOf(d.grp):GROUP_LABEL[d.grp]||d.grp)+' (change)',icon:'folder',run:async()=>{
+      const g=await chooseGroup(d);if(!g||g===d.grp)return;
+      await api('dict.update',{id:d.id,grp:g});await loadDicts();await placeNew(dicts.map(x=>x.id).filter(x=>x!==d.id));toast('Moved to '+groupLabel(g));renderLibrary();}},
     {label:'Rename',icon:'edit',run:async()=>{const name=await prompt2('Rename dictionary',d.name);if(!name)return;await api('dict.update',{id:d.id,name});renderLibrary();}},
-    {label:d.kind==='kanji'?'Treat as a word dictionary':'Treat as a kanji dictionary',icon:'text',run:async()=>{await api('dict.update',{id:d.id,kind:d.kind==='kanji'?'term':'kanji'});toast(d.kind==='kanji'?'Now a word dictionary':'Now shown in the kanji strip');renderLibrary();}},
-    {label:'Group: '+(GROUP_LABEL[d.grp]||d.grp)+' (change)',icon:'folder',run:async()=>{
-      const names=[...new Set(GROUP_ORDER.concat(dicts.map(x=>x.grp)))].filter(Boolean);
-      const c=await menuSheet('Group for '+d.name,names.map(n=>({label:GROUP_LABEL[n]||n,icon:n===d.grp?'check':'folder',v:n})).concat([{label:'New group…',icon:'plus',v:''}]));
-      if(!c)return;let g=c.v;if(!g){g=await prompt2('New group','','e.g. Classical, Slang');if(!g)return;}
-      await api('dict.update',{id:d.id,grp:g});toast('Moved to '+(GROUP_LABEL[g]||g));renderLibrary();}},
+    ...(d.kind==='freq'?[]:[{label:d.kind==='kanji'?'Treat as a word dictionary':'Treat as a kanji dictionary',icon:'text',run:async()=>{await api('dict.update',{id:d.id,kind:d.kind==='kanji'?'term':'kanji'});toast(d.kind==='kanji'?'Now a word dictionary':'Now shown in the kanji strip');renderLibrary();}},
     {label:'Browse this dictionary',icon:'book',run:()=>openBrowse(d.id)},
-    {label:'Appendix / 付録',icon:'book',run:async()=>{const a=await api('appendix',{dict:d.id});if(!a.length){toast('This dictionary has no appendix pages');return;}openAppendix(d.id);}},
+    {label:'Appendix / 付録',icon:'book',run:async()=>{const a=await api('appendix',{dict:d.id});if(!a.length){toast(d.format==='yomitan'?'Yomitan dictionaries have no appendix (付録) pages':'This dictionary has no appendix pages');return;}openAppendix(d.id);}}]),
     ...(d.kind==='kanji'?[{label:'Kanji grid',icon:'expand',run:()=>openKanjiGrid(d.id)}]:[]),
+    {label:'Sort all by group and size',icon:'refresh',run:async()=>{try{localStorage.removeItem('manualOrder');}catch(e){}await autoOrder(true);renderLibrary();}},
     '-',
     {label:'Remove from library',icon:'trash',danger:true,run:async()=>{if(!await confirm2('Remove '+d.name+'?','The dictionary files on your phone are not deleted, and your saved words stay. You can import it again later.','Remove',true))return;await api('dict.delete',{id:d.id});toast('Removed');renderLibrary();}},
   ]);

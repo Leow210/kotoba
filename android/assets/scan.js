@@ -9,6 +9,68 @@ const SCAN_LANGS=[['ja','日本語','Japanese'],['zh','中文','Chinese, simplif
 let scanPage=null;// the open scanner, so a new photo lands in it
 on('scan-ready',r=>openScan(r.name));
 
+/*
+ * The scanner's own camera. The phone's camera app (the old route) also files every shot in the gallery,
+ * so photos are taken here instead and go only to files/scans/. Resolves to the scan's name, or null.
+ */
+function openCamera(){
+  return new Promise(resolve=>{
+    let stream=null,done=false,track=null;
+    const el=document.createElement('div');el.className='cam-page';
+    el.innerHTML=`<video data-f="video" autoplay playsinline muted></video>
+      <div class="cam-hint" data-f="hint">Starting the camera…</div>
+      <div class="cam-bar">
+        <button class="cam-side" data-a="close" aria-label="Close">${icon('back')}</button>
+        <button class="cam-shutter" data-a="shoot" aria-label="Take photo" disabled></button>
+        <button class="cam-side" data-a="torch" aria-label="Flashlight" hidden>${icon('torch')}</button>
+      </div>`;
+    const f=n=>el.querySelector(`[data-f="${n}"]`),video=f('video');
+    const finish=name=>{
+      if(done)return;done=true;
+      if(stream)stream.getTracks().forEach(t=>t.stop());
+      if(pageStack.length&&pageStack[pageStack.length-1].el===el)popPage();
+      resolve(name);
+    };
+    pushPage(el,{onClose:()=>{if(!done){done=true;if(stream)stream.getTracks().forEach(t=>t.stop());resolve(null);}}});
+    el.querySelector('[data-a="close"]').onclick=()=>finish(null);
+    (async()=>{
+      try{
+        stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:3840},height:{ideal:2160}}});
+      }catch(e){
+        f('hint').textContent='Kotoba needs camera access to take photos. Allow it in Android settings, or use Image to open a screenshot.';
+        return;
+      }
+      if(done){stream.getTracks().forEach(t=>t.stop());return;}
+      video.srcObject=stream;track=stream.getVideoTracks()[0];
+      try{await track.applyConstraints({advanced:[{focusMode:'continuous'}]});}catch(e){}
+      const caps=track.getCapabilities?track.getCapabilities():{};
+      if(caps.torch){
+        const t=el.querySelector('[data-a="torch"]');t.hidden=false;let on=false;
+        t.onclick=async()=>{on=!on;try{await track.applyConstraints({advanced:[{torch:on}]});t.classList.toggle('on',on);}catch(e){}};
+      }
+      f('hint').textContent='Fill the frame with the text';
+      el.querySelector('[data-a="shoot"]').disabled=false;
+    })();
+    el.querySelector('[data-a="shoot"]').onclick=handle(async()=>{
+      if(!track||done)return;
+      const btn=el.querySelector('[data-a="shoot"]');btn.disabled=true;el.classList.add('flash');
+      let blob=null;
+      // A full-resolution still where the WebView supports it; otherwise the current video frame.
+      let source=video,w=video.videoWidth,h=video.videoHeight;
+      if(window.ImageCapture){try{const b=await new ImageCapture(track).takePhoto();source=await createImageBitmap(b);w=source.width;h=source.height;}catch(e){}}
+      // Stills come out at ~9 MB; 4000 px keeps enough detail for Select area at a third of the size.
+      const k=Math.min(1,4000/Math.max(w,h));
+      const c=document.createElement('canvas');c.width=Math.round(w*k);c.height=Math.round(h*k);
+      c.getContext('2d').drawImage(source,0,0,c.width,c.height);
+      blob=await new Promise(r=>c.toBlob(r,'image/jpeg',.9));
+      const data=await new Promise((r,j)=>{const fr=new FileReader();fr.onload=()=>r(String(fr.result).split(',')[1]);fr.onerror=j;fr.readAsDataURL(blob);});
+      const saved=await api('scan.save',{data,mime:blob.type||'image/jpeg'});
+      finish(saved.name);
+    });
+  });
+}
+async function takeScanPhoto(){const name=await openCamera();if(name)openScan(name);}
+
 window.openScan=async function(name){
   if(scanPage){scanPage.show(name);return;}
   let lang='ja';try{lang=localStorage.getItem('scanLang')||'ja';}catch(e){}
@@ -36,7 +98,7 @@ window.openScan=async function(name){
     lang=c.v;try{localStorage.setItem('scanLang',lang);}catch(e){}setLang();if(current)await read(null);
   });
   el.querySelector('[data-a="back"]').onclick=()=>popPage();
-  el.querySelector('[data-a="camera"]').onclick=()=>Kotoba.scanCamera();
+  el.querySelector('[data-a="camera"]').onclick=handle(takeScanPhoto);
   el.querySelector('[data-a="pick"]').onclick=()=>Kotoba.scanPick();
   const selBtn=el.querySelector('[data-a="select"]');
   const setSelecting=v=>{selecting=v&&!!current;selBtn.classList.toggle('on',selecting);el.classList.toggle('selecting',selecting);if(selecting)status('Drag over the text you want to read');};
@@ -131,7 +193,7 @@ window.openScan=async function(name){
   }
   scanPage={show};
   if(name)show(name);
-  else Kotoba.scanCamera();
+  else takeScanPhoto();
 };
 
 // Explore: a Scan chip next to the kanji grid and word lists.

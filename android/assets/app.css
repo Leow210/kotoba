@@ -468,3 +468,58 @@ svg.i.sm{width:16px;height:16px}
 .scan-foot{flex:none;display:flex;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:var(--surface);border-top:1px solid var(--line)}
 .scan-foot .btn{flex:1;justify-content:center}
 .scan-foot .btn.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+
+/* Scanner camera: photos stay inside Kotoba (the camera app would also save them to the gallery). */
+.cam-page{background:#000;display:flex;flex-direction:column}
+.cam-page video{flex:1;min-height:0;width:100%;object-fit:contain;background:#000}
+.cam-hint{position:absolute;left:50%;transform:translateX(-50%);top:calc(16px + env(safe-area-inset-top));max-width:calc(100% - 48px);text-align:center;color:#fff;font-size:15px;line-height:1.4;background:rgba(0,0,0,.55);border-radius:18px;padding:7px 16px;pointer-events:none}
+.cam-bar{flex:none;display:flex;align-items:center;justify-content:space-around;padding:18px 20px calc(22px + env(safe-area-inset-bottom));background:#000}
+.cam-side{width:48px;height:48px;border-radius:50%;border:0;background:rgba(255,255,255,.14);color:#fff;display:grid;place-items:center}
+.cam-side.on{background:#f5d142;color:#000}
+.cam-side[hidden]{visibility:hidden;display:grid}
+.cam-shutter{width:74px;height:74px;border-radius:50%;border:4px solid #fff;background:rgba(255,255,255,.9);box-shadow:0 0 0 3px rgba(0,0,0,.5) inset}
+.cam-shutter:disabled{opacity:.4}
+.cam-shutter:active{transform:scale(.94)}
+.cam-page.flash video{animation:cam-flash .25s}
+@keyframes cam-flash{from{opacity:.2}to{opacity:1}}
+.cand.done{opacity:.55}
+
+/* Library: dictionaries in groups (Japanese › 古語 …), each switchable, rows reordered by dragging ≡. */
+.lib-hint{margin:0 18px 8px}
+.dgroup-top{margin:0 12px 10px;background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.dgroup+.dgroup{border-top:1px solid var(--line)}
+.dgroup-head{display:flex;align-items:center;gap:4px;padding:6px 10px 6px 4px;min-height:52px}
+.dgroup.sub .dgroup-head{padding-left:22px;background:var(--sunken)}
+.dg-name{flex:1;min-width:0;display:flex;align-items:baseline;gap:8px;text-align:left;padding:8px 6px;font-weight:700;font-size:15.5px;color:var(--ink)}
+.dgroup.sub .dg-name{font-weight:600;font-size:15px;font-family:var(--serif)}
+.dg-name small{color:var(--muted);font-weight:500;font-size:12.5px;font-family:var(--sans)}
+.dg-name .caret{display:inline-block;width:14px;color:var(--muted);font-size:12px;transition:transform .15s}
+.dgroup.closed .caret{transform:rotate(-90deg)}
+.dgroup.closed .dgroup-list{display:none}
+.icon-btn.sm{width:36px;height:36px}
+.dgroup-list .dict-row{padding:10px 14px 10px 6px;border-bottom:0;border-top:1px solid var(--line);background:var(--surface);position:relative}
+.dgroup.sub .dgroup-list .dict-row{padding-left:22px}
+.dict-row .drag{flex:none;width:32px;height:40px;display:grid;place-items:center;color:var(--muted);font-size:20px;touch-action:none;cursor:grab;user-select:none}
+.dict-row.dragging{z-index:3;box-shadow:0 6px 18px rgba(0,0,0,.18);border-radius:10px}
+
+/* Frequency bars (1–4 by rank) in result rows and entry chips. */
+.fbars{display:inline-flex;align-items:flex-end;gap:1.5px;height:12px;margin-right:2px;vertical-align:middle}
+.fbars i{width:3px;border-radius:1px;background:var(--line)}
+.fbars i:nth-child(1){height:4px}.fbars i:nth-child(2){height:6.5px}.fbars i:nth-child(3){height:9px}.fbars i:nth-child(4){height:12px}
+.fbars.l1 i:nth-child(-n+1),.fbars.l2 i:nth-child(-n+2),.fbars.l3 i:nth-child(-n+3),.fbars.l4 i{background:var(--accent)}
+.fbars.l1 i:nth-child(-n+1){background:var(--muted)}
+.entry-info{padding:8px 16px 0}
+.fq-row{display:flex;flex-wrap:wrap;gap:6px}
+.fq{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 9px;border-radius:13px;background:var(--sunken);color:var(--ink2);font-size:12.5px;white-space:nowrap}
+.fq b{font-weight:600;color:var(--muted)}
+.fq.pitch{background:var(--accent-soft)}
+.saved-note{display:flex;align-items:center;gap:8px;width:100%;margin-top:8px;padding:8px 12px;border-radius:12px;background:#f6ecc9;color:#6b5210;font-size:13.5px;text-align:left}
+.saved-note b{font-family:var(--serif)}
+:root[data-theme="dark"] .saved-note,:root[data-theme="dark"] .dup-note{background:#3a3218;color:#f0d98f}
+.dup-note{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:12px;background:#f6ecc9;color:#6b5210;margin-bottom:6px}
+.dup-note small{display:block;font-size:13px;margin-top:2px}
+.icon-btn.elsewhere{color:var(--gold)}
+.icon-btn.elsewhere svg{stroke-dasharray:3 2}
+.fq.audio{background:var(--accent-soft);color:var(--accent)}
+.fq.audio svg{width:15px;height:15px}
+.fq.audio b{color:var(--accent)}

@@ -130,6 +130,34 @@ public class ZipSource implements AutoCloseable {
         finally{inflater.end();}
     }
 
+    /** Streams an entry without holding it in memory (Yomitan term banks are 75 MB of JSON each). */
+    public java.io.InputStream stream(Entry e) throws IOException {
+        ByteBuffer local=read(e.localOffset,30);
+        if(local.getInt(0)!=0x04034b50)throw new IOException("Bad local header: "+e.name);
+        final long start=e.localOffset+30+(local.getShort(26)&0xffff)+(local.getShort(28)&0xffff);
+        final long end=start+e.compressed;
+        java.io.InputStream raw=new java.io.InputStream(){
+            long pos=start;boolean pad=false;
+            @Override public int read() throws IOException {byte[] one=new byte[1];int n=read(one,0,1);return n<0?-1:one[0]&0xff;}
+            @Override public int read(byte[] b,int off,int len) throws IOException {
+                if(pos>=end){
+                    // A raw inflater may ask for one byte past the data; give it a dummy byte once.
+                    if(e.method==8&&!pad){pad=true;b[off]=0;return 1;}
+                    return -1;
+                }
+                ByteBuffer buf=ByteBuffer.wrap(b,off,(int)Math.min(len,end-pos));
+                int n=channel.read(buf,pos);
+                if(n<0)throw new IOException("Truncated entry "+e.name);
+                pos+=n;return n;
+            }
+        };
+        if(e.method==0)return new java.io.BufferedInputStream(raw,1<<16);
+        if(e.method!=8)throw new IOException("Unsupported compression "+e.method+" in "+e.name);
+        return new java.util.zip.InflaterInputStream(new java.io.BufferedInputStream(raw,1<<16),new Inflater(true),1<<16){
+            @Override public void close() throws IOException {super.close();inf.end();}
+        };
+    }
+
     public List<String> names(){return new ArrayList<>(entries.keySet());}
 
     @Override public void close() throws IOException {channel.close();}

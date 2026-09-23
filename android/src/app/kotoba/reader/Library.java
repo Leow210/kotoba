@@ -69,12 +69,26 @@ public class Library {
         db.execSQL("CREATE INDEX IF NOT EXISTS kanji_char ON kanji(char)");
         db.execSQL("CREATE TABLE IF NOT EXISTS resources(dict INTEGER NOT NULL,name TEXT NOT NULL,file INTEGER NOT NULL,off INTEGER NOT NULL,len INTEGER NOT NULL,PRIMARY KEY(dict,name)) WITHOUT ROWID");
         try{db.execSQL("ALTER TABLE dicts ADD COLUMN grp TEXT NOT NULL DEFAULT ''");}catch(Exception ignored){}
+        // Yomitan dictionaries: entries are stored here (deflated HTML) rather than read from the ZIP, which is JSON.
+        try{db.execSQL("ALTER TABLE dicts ADD COLUMN format TEXT NOT NULL DEFAULT 'mdx'");}catch(Exception ignored){}
+        db.execSQL("CREATE TABLE IF NOT EXISTS ytext(rec INTEGER PRIMARY KEY,reading TEXT NOT NULL DEFAULT '',tags TEXT NOT NULL DEFAULT '',body BLOB NOT NULL)");
+        db.execSQL("CREATE TABLE IF NOT EXISTS ydict(dict INTEGER PRIMARY KEY,zdict BLOB,styles INTEGER NOT NULL DEFAULT 0)");
+        // Frequency ranks, pitch accents and IPA from Yomitan term_meta banks.
+        db.execSQL("CREATE TABLE IF NOT EXISTS meta(dict INTEGER NOT NULL,norm TEXT NOT NULL,reading TEXT NOT NULL DEFAULT '',mode TEXT NOT NULL,value REAL,display TEXT NOT NULL DEFAULT '')");
+        db.execSQL("CREATE INDEX IF NOT EXISTS meta_norm ON meta(norm,dict)");
+        // Byte sizes of the dictionary's files ([mdx, mdd…]): a moved file is only relinked to an identical one.
+        try{db.execSQL("ALTER TABLE dicts ADD COLUMN sizes TEXT NOT NULL DEFAULT ''");}catch(Exception ignored){}
         // Saved cards refer to dictionaries by id; a dictionary re-imported under the same title keeps its id.
         db.execSQL("CREATE TABLE IF NOT EXISTS dict_ids(title TEXT PRIMARY KEY,id INTEGER NOT NULL)");
         db.execSQL("INSERT OR IGNORE INTO dict_ids(title,id) SELECT title,id FROM dicts WHERE status='ready'");
         try(Cursor c=db.rawQuery("SELECT id,title,kind FROM dicts WHERE grp=''",null)){
             while(c.moveToNext())db.execSQL("UPDATE dicts SET grp=? WHERE id=?",new Object[]{groupFor(c.getString(1),c.getString(2)),c.getLong(0)});
         }
+        try(Cursor c=db.rawQuery("SELECT id FROM dicts WHERE sizes='' AND status='ready'",null)){
+            ArrayList<Long> ids=new ArrayList<>();while(c.moveToNext())ids.add(c.getLong(0));
+            for(long id:ids)try{fileSizes(id);}catch(Exception ignored){}
+        }
+        db.execSQL("UPDATE dicts SET grp=? WHERE grp='Pronunciation'",new Object[]{PRONUNCIATION});
         // Interrupted imports are removed at startup so a half-built index is never searched.
         try(Cursor c=db.rawQuery("SELECT id FROM dicts WHERE status!='ready'",null)){
             ArrayList<Long> stale=new ArrayList<>();while(c.moveToNext())stale.add(c.getLong(0));
@@ -97,6 +111,7 @@ public class Library {
     }
 
     synchronized void closeFiles(long dict){
+        ZipSource z=zips.remove(dict);if(z!=null)try{z.close();}catch(IOException ignored){}
         for(java.util.Iterator<Map.Entry<String,MdictFile>> it=open.entrySet().iterator();it.hasNext();){
             Map.Entry<String,MdictFile> e=it.next();
             if(e.getKey().startsWith(dict+":")){try{e.getValue().close();}catch(IOException ignored){}it.remove();}
@@ -114,7 +129,7 @@ public class Library {
     /** Default search group from the dictionary's title; users can change it in Library. */
     static String groupFor(String title,String kind){
         if("kanji".equals(kind))return "Kanji";
-        if(title.matches(".*(アクセント|発音|Accent|accent|NHK|Pronunc).*"))return "Pronunciation";
+        if(title.matches(".*(アクセント|発音|Accent|accent|NHK|Pronunc).*"))return PRONUNCIATION;
         if(title.matches(".*(朝鮮|韓|Korean|한국).*"))return "Korean";
         if(title.matches(".*(中日|日中|中国|Chinese|汉).*"))return "Chinese";
         if(title.matches(".*(タイ|Thai|ไทย).*"))return "Thai";
@@ -307,6 +322,389 @@ public class Library {
         return id;
     }
 
+    // ---------- Yomitan ----------
+
+    final Map<Long,String> formats=new java.util.concurrent.ConcurrentHashMap<>();
+    final Map<Long,ZipSource> zips=new HashMap<>();
+    final Map<Long,byte[]> zdicts=new java.util.concurrent.ConcurrentHashMap<>();
+
+    public boolean isYomitan(long dict){
+        String f=formats.get(dict);
+        if(f==null){
+            try(Cursor c=db.rawQuery("SELECT format FROM dicts WHERE id=?",new String[]{Long.toString(dict)})){f=c.moveToFirst()?c.getString(0):"mdx";}
+            formats.put(dict,f);
+        }
+        return "yomitan".equals(f);
+    }
+
+    synchronized ZipSource zip(long dict) throws Exception {
+        ZipSource z=zips.get(dict);
+        if(z!=null)return z;
+        JSONObject d=dictRow(dict);
+        try{z=new ZipSource(opener.open(d.getString("mdx")));}
+        catch(IOException|SecurityException e){throw new Exception("Cannot open the dictionary file for "+d.getString("name")+". If you moved or deleted it, import it again from Library.",e);}
+        zips.put(dict,z);
+        return z;
+    }
+
+    /** Images and styles.css are read from the dictionary's ZIP in place. */
+    byte[] yomitanResource(long dict,String path) throws Exception {
+        String p=path.replace('\\','/');while(p.startsWith("/"))p=p.substring(1);
+        ZipSource z=zip(dict);
+        ZipSource.Entry e=z.find(p);
+        if(e==null||p.endsWith(".json"))return null;
+        synchronized(this){return z.bytes(e);}
+    }
+
+    byte[] zdict(long dict){
+        byte[] z=zdicts.get(dict);
+        if(z==null){
+            try(Cursor c=db.rawQuery("SELECT zdict FROM ydict WHERE dict=?",new String[]{Long.toString(dict)})){z=c.moveToFirst()&&!c.isNull(0)?c.getBlob(0):new byte[0];}
+            zdicts.put(dict,z);
+        }
+        return z;
+    }
+
+    String yomitanHtml(long rec,long dict,String key) throws Exception {
+        String reading="",tags="",body="";
+        try(Cursor c=db.rawQuery("SELECT reading,tags,body FROM ytext WHERE rec=?",new String[]{Long.toString(rec)})){
+            if(c.moveToFirst()){reading=c.getString(0);tags=c.getString(1);body=inflate(c.getBlob(2),zdict(dict));}
+        }
+        boolean styles=false;
+        try(Cursor c=db.rawQuery("SELECT styles FROM ydict WHERE dict=?",new String[]{Long.toString(dict)})){styles=c.moveToFirst()&&c.getInt(0)==1;}
+        return "<link rel=\"stylesheet\" href=\"/yomitan.css\">"+(styles?"<link rel=\"stylesheet\" href=\"styles.css\">":"")+Yomitan.entryHtml(key,reading,tags,body);
+    }
+
+    static byte[] deflate(String text,byte[] dictionary,java.util.zip.Deflater d){
+        d.reset();
+        if(dictionary.length>0)d.setDictionary(dictionary);
+        d.setInput(text.getBytes(StandardCharsets.UTF_8));d.finish();
+        java.io.ByteArrayOutputStream out=new java.io.ByteArrayOutputStream(Math.max(64,text.length()/3));
+        byte[] buf=new byte[8192];
+        while(!d.finished()){int n=d.deflate(buf);out.write(buf,0,n);}
+        return out.toByteArray();
+    }
+    static String inflate(byte[] data,byte[] dictionary) throws Exception {
+        java.util.zip.Inflater i=new java.util.zip.Inflater();
+        try{
+            i.setInput(data);
+            java.io.ByteArrayOutputStream out=new java.io.ByteArrayOutputStream(data.length*4);
+            byte[] buf=new byte[16384];
+            while(!i.finished()){
+                int n=i.inflate(buf);
+                if(n==0){
+                    if(i.needsDictionary())i.setDictionary(dictionary);
+                    else if(i.needsInput())break;
+                }
+                out.write(buf,0,n);
+            }
+            return new String(out.toByteArray(),StandardCharsets.UTF_8);
+        }finally{i.end();}
+    }
+
+    static final Pattern BANK=Pattern.compile("(?i)(?:.*/)?(term|kanji|term_meta|kanji_meta|tag)_bank_(\\d+)\\.json");
+
+    /** Title of a Yomitan ZIP (from index.json), or null when the ZIP isn't a Yomitan dictionary. */
+    public static String yomitanTitle(ZipSource z){
+        boolean banks=false;
+        for(String n:z.entries.keySet())if(BANK.matcher(n).matches()){banks=true;break;}
+        if(!banks||z.find("index.json")==null)return null;
+        try{return Yomitan.index(utf8(z.bytes("index.json"))).title;}catch(Exception e){return null;}
+    }
+
+    /** Default group for a Yomitan dictionary, from the collection's [JA-JA Kogo]-style file name tag and the title. */
+    static String yomitanGroup(String file,String title,String kind){
+        String f=file+" "+title;
+        String lang=f.matches("(?s).*(\\[KO|KO-|KRDICT|STDICT|OPENDICT|[Hh]anja|Korean|[\\uac00-\\ud7a3]).*")?"Korean"
+            :f.matches("(?s).*(\\[ZH|ZH-|CEDICT|Mandarin|汉|漢語|國語辭典|现代汉语).*")?"Chinese":"Japanese";
+        String sub="";
+        if(kind.equals("freq")||f.matches("(?is).*(\\bFreq|Frequency|CC100).*"))sub="Frequency";
+        else if(f.matches("(?is).*\\bPitch.*"))return PRONUNCIATION;
+        else if(lang.equals("Korean")&&f.matches("(?is).*hanja.*"))sub="Hanja 漢字";
+        else if(kind.equals("kanji")||f.matches("(?s).*\\[Kanji\\].*"))return lang.equals("Japanese")?"Kanji":lang+"/Hanzi";
+        else if(f.matches("(?is).*(Kogo|古語).*"))sub="古語";
+        else if(f.matches("(?is).*(Yoji|四字熟語).*"))sub="四字熟語";
+        else if(f.matches("(?is).*(Expressions|ことわざ|慣用句|故事).*"))sub="慣用句・ことわざ";
+        else if(f.matches("(?is).*(Thesaurus|類語|同訓異義|Antonyms|対義語).*"))sub="類語";
+        else if(f.matches("(?is).*(Grammar|文法).*"))sub="文法";
+        else if(f.matches("(?is).*(\\bNames|JMnedict|人名|市区町村|地名).*"))sub="人名・地名";
+        else if(f.matches("(?is).*(Dialect|方言).*"))sub="方言";
+        else if(f.matches("(?is).*(Origins|語源).*"))sub="語源";
+        else if(f.matches("(?is).*(Counters|数え方|助数詞).*"))sub="助数詞";
+        else if(f.matches("(?is).*(Onomatopoeia|擬音|擬態).*"))sub="擬音語";
+        else if(f.matches("(?is).*(Encyclopedia|Pictures|百科|図鑑).*"))sub="百科";
+        return sub.isEmpty()?lang:lang+"/"+sub;
+    }
+
+    /** Counts characters read, for import progress through a bank. */
+    static final class CountingReader extends java.io.FilterReader {
+        long count;
+        CountingReader(java.io.Reader in){super(in);}
+        @Override public int read(char[] b,int off,int len) throws IOException {int n=super.read(b,off,len);if(n>0)count+=n;return n;}
+    }
+
+    /**
+     * Imports a Yomitan ZIP. Term entries are rendered to HTML once and stored deflated (with a preset dictionary
+     * sampled from the dictionary itself, since entries are small and alike); rows sharing a headword and reading
+     * become one page. Images and styles.css stay in the ZIP. Frequency/pitch rows go to the meta table.
+     */
+    public long importYomitan(String name,String uri,boolean fulltext,Progress progress) throws Exception {
+        ZipSource zip=new ZipSource(opener.open(uri));
+        long id;boolean ok=false;
+        try{
+            Yomitan.Index index=Yomitan.index(utf8(zip.bytes("index.json")));
+            String title=index.title;
+            ArrayList<ZipSource.Entry> terms=new ArrayList<>(),kanjis=new ArrayList<>(),metas=new ArrayList<>(),tagBanks=new ArrayList<>();
+            java.util.Map<ZipSource.Entry,Integer> number=new HashMap<>();
+            long total=0;int media=0;
+            for(ZipSource.Entry e:zip.entries.values()){
+                Matcher m=BANK.matcher(e.name);
+                if(!m.matches()){if(!e.name.endsWith("/")&&!e.name.endsWith(".json"))media++;continue;}
+                number.put(e,Integer.parseInt(m.group(2)));
+                String type=m.group(1).toLowerCase(Locale.ROOT);
+                (type.equals("term")?terms:type.equals("kanji")?kanjis:type.equals("tag")?tagBanks:metas).add(e);
+                if(!type.equals("tag"))total+=e.size;
+            }
+            java.util.Comparator<ZipSource.Entry> byNumber=(a,b)->number.get(a)-number.get(b);
+            terms.sort(byNumber);kanjis.sort(byNumber);metas.sort(byNumber);tagBanks.sort(byNumber);
+            if(terms.isEmpty()&&kanjis.isEmpty()&&metas.isEmpty())throw new Exception("This ZIP has no Yomitan term, kanji or frequency banks.");
+            String kind=!terms.isEmpty()?"term":!kanjis.isEmpty()?"kanji":"freq";
+            ZipSource.Entry styles=zip.find("styles.css");
+
+            ContentValues v=new ContentValues();
+            // Collection titles carry a date or version ("絵でわかる慣用句 [2024-06-30]"); the shown name drops it.
+            String shown=title.replaceAll("\\s*[\\[(（][\\d\\-. v]+[\\])）]\\s*$","").trim();
+            v.put("name",shown.isEmpty()?title:shown);v.put("title",title);v.put("description",index.description);v.put("mdx",uri);v.put("mdd","[]");v.put("label",name);
+            v.put("kind",kind);v.put("grp",yomitanGroup(name,title,kind));v.put("format","yomitan");
+            v.put("position",Store.rows(db,"SELECT coalesce(max(position),0)+1 p FROM dicts").getJSONObject(0).getLong("p"));
+            v.put("fulltext",fulltext&&!kind.equals("freq")?1:0);v.put("status","importing");v.put("imported",System.currentTimeMillis()/1000);v.put("resources",media);
+            JSONArray previous=Store.rows(db,"SELECT id FROM dict_ids WHERE title=? AND id NOT IN (SELECT id FROM dicts)",title);
+            if(previous.length()>0)v.put("id",previous.getJSONObject(0).getLong("id"));
+            else v.put("id",Store.rows(db,"SELECT max(coalesce((SELECT max(id) FROM dicts),0),coalesce((SELECT max(id) FROM dict_ids),0))+1 n").getJSONObject(0).getLong("n"));
+            id=db.insertOrThrow("dicts",null,v);
+            formats.put(id,"yomitan");
+            db.execSQL("INSERT OR IGNORE INTO dict_ids(title,id) VALUES(?,?)",new Object[]{title,id});
+            final long dictId=id;
+            db.beginTransaction();
+            try{
+                Map<String,Yomitan.Tag> tags=new HashMap<>();
+                for(ZipSource.Entry e:tagBanks){
+                    try(java.io.Reader r=new java.io.InputStreamReader(zip.stream(e),StandardCharsets.UTF_8)){
+                        new Yomitan.Json(r).eachInArray(row->{Yomitan.Tag t=Yomitan.tag(row);tags.put(t.name,t);});
+                    }
+                }
+                SQLiteStatement insertRecord=db.compileStatement("INSERT INTO records(dict,off,len,key,norm) VALUES(?,0,?,?,?)");
+                SQLiteStatement insertKey=db.compileStatement("INSERT INTO keys(norm,dict,rec,key) VALUES(?,?,?,?)");
+                SQLiteStatement insertText=db.compileStatement("INSERT INTO ytext(rec,reading,tags,body) VALUES(?,?,?,?)");
+                SQLiteStatement insertMeta=db.compileStatement("INSERT INTO meta(dict,norm,reading,mode,value,display) VALUES(?,?,?,?,?,?)");
+                SQLiteStatement insertKanji=db.compileStatement("INSERT INTO kanji(dict,rec,char,strokes,radical,rstrokes,level,flags,variants,sortkey) VALUES(?,?,?,?,'',-1,'','','',?)");
+                final long[] firstKey={Long.MAX_VALUE};
+                final java.util.zip.Deflater deflater=new java.util.zip.Deflater(6);
+                // Entries wait here until enough of them are seen to build the preset dictionary.
+                final byte[][] zdict={null};
+                final ArrayList<String[]> waiting=new ArrayList<>();// {term, reading, termTags, body}
+                final int[] waitingSize={0};
+                final long[] done={0,0};// chars read in finished banks, entries
+                class Writer {
+                    String term,reading,termTags;StringBuilder body;
+                    void add(String t,String r,String tt,String sense) throws Exception {
+                        if(body!=null&&t.equals(term)&&r.equals(reading)){body.append(sense);if(!tt.isEmpty()&&!termTags.contains(tt))termTags+=tt;return;}
+                        flush();
+                        term=t;reading=r;termTags=tt;body=new StringBuilder(sense);
+                    }
+                    void flush() throws Exception {
+                        if(body==null)return;
+                        String[] e={term,reading,termTags,body.toString()};body=null;
+                        if(zdict[0]==null){
+                            waiting.add(e);waitingSize[0]+=e[3].length();
+                            if(waitingSize[0]<48000&&waiting.size()<400)return;
+                            zdict[0]=presetDictionary(waiting);
+                            db.execSQL("INSERT OR REPLACE INTO ydict(dict,zdict,styles) VALUES(?,?,?)",new Object[]{dictId,zdict[0],styles!=null?1:0});
+                            for(String[] w:waiting)write(w);
+                            waiting.clear();
+                            return;
+                        }
+                        write(e);
+                    }
+                    void finish() throws Exception {
+                        flush();
+                        if(zdict[0]==null){
+                            zdict[0]=waiting.isEmpty()?new byte[0]:presetDictionary(waiting);
+                            db.execSQL("INSERT OR REPLACE INTO ydict(dict,zdict,styles) VALUES(?,?,?)",new Object[]{dictId,zdict[0],styles!=null?1:0});
+                            for(String[] w:waiting)write(w);
+                            waiting.clear();
+                        }
+                    }
+                    long write(String[] e) throws Exception {
+                        String norm=HtmlText.normalize(e[0]);
+                        insertRecord.bindLong(1,dictId);insertRecord.bindLong(2,e[3].length());insertRecord.bindString(3,e[0]);insertRecord.bindString(4,norm);
+                        long rec=insertRecord.executeInsert();
+                        insertText.bindLong(1,rec);insertText.bindString(2,e[1]);insertText.bindString(3,e[2]);insertText.bindBlob(4,deflate(e[3],zdict[0],deflater));
+                        insertText.executeInsert();
+                        LinkedHashSet<String> keys=new LinkedHashSet<>();keys.add(e[0]);if(!e[1].isEmpty())keys.add(e[1]);
+                        LinkedHashSet<String> norms=new LinkedHashSet<>();
+                        for(String k:keys){
+                            String n=HtmlText.normalize(k);if(n.isEmpty()||!norms.add(n))continue;
+                            insertKey.bindString(1,n);insertKey.bindLong(2,dictId);insertKey.bindLong(3,rec);insertKey.bindString(4,k);
+                            long kid=insertKey.executeInsert();if(kid<firstKey[0])firstKey[0]=kid;
+                        }
+                        return rec;
+                    }
+                }
+                Writer writer=new Writer();
+                final long totalChars=Math.max(1,total);
+                for(ZipSource.Entry e:terms){
+                    try(CountingReader r=new CountingReader(new java.io.InputStreamReader(zip.stream(e),StandardCharsets.UTF_8))){
+                        new Yomitan.Json(r).eachInArray(row->{
+                            try{
+                                Yomitan.Term t=Yomitan.term(row);
+                                if(t.term.isEmpty())return;
+                                writer.add(t.term,t.reading,Yomitan.termTagsHtml(t.termTags,tags),Yomitan.senseHtml(t,tags));
+                                if(++done[1]%2000==0){
+                                    if(progress.cancelled())throw new RuntimeException(new InterruptedException("Import cancelled"));
+                                    progress.update("Indexing entries",done[0]+r.count,totalChars);
+                                }
+                            }catch(RuntimeException x){throw x;}catch(Exception x){throw new RuntimeException(x);}
+                        });
+                        done[0]+=r.count;
+                    }catch(RuntimeException x){throw x.getCause() instanceof Exception?(Exception)x.getCause():x;}
+                }
+                writer.finish();
+                for(ZipSource.Entry e:kanjis){
+                    try(CountingReader r=new CountingReader(new java.io.InputStreamReader(zip.stream(e),StandardCharsets.UTF_8))){
+                        new Yomitan.Json(r).eachInArray(row->{
+                            try{
+                                Yomitan.Kanji k=Yomitan.kanji(row);
+                                if(k.character.isEmpty())return;
+                                long rec=writer.write(new String[]{k.character,"","",Yomitan.kanjiHtml(k,tags)});
+                                if(kind.equals("kanji")){
+                                    int st=Yomitan.strokes(k);
+                                    insertKanji.bindLong(1,dictId);insertKanji.bindLong(2,rec);insertKanji.bindString(3,k.character);insertKanji.bindLong(4,st);
+                                    insertKanji.bindString(5,String.format(Locale.ROOT,"%03d%05d",st==0?999:st,k.character.codePointAt(0)%100000));
+                                    insertKanji.executeInsert();
+                                }
+                                if(++done[1]%2000==0)progress.update("Indexing kanji",done[0]+r.count,totalChars);
+                            }catch(Exception x){throw new RuntimeException(x);}
+                        });
+                        done[0]+=r.count;
+                    }catch(RuntimeException x){throw x.getCause() instanceof Exception?(Exception)x.getCause():x;}
+                }
+                for(ZipSource.Entry e:metas){
+                    try(CountingReader r=new CountingReader(new java.io.InputStreamReader(zip.stream(e),StandardCharsets.UTF_8))){
+                        new Yomitan.Json(r).eachInArray(row->{
+                            Yomitan.Meta m=Yomitan.meta(row);
+                            if(m.term.isEmpty()||m.display.isEmpty())return;
+                            insertMeta.bindLong(1,dictId);insertMeta.bindString(2,HtmlText.normalize(m.term));insertMeta.bindString(3,HtmlText.normalize(m.reading));insertMeta.bindString(4,m.mode);
+                            if(Double.isNaN(m.value))insertMeta.bindNull(5);else insertMeta.bindDouble(5,m.value);
+                            insertMeta.bindString(6,m.display);insertMeta.executeInsert();
+                            if(++done[1]%5000==0){
+                                if(progress.cancelled())throw new RuntimeException(new InterruptedException("Import cancelled"));
+                                progress.update("Indexing frequencies",done[0]+r.count,totalChars);
+                            }
+                        });
+                        done[0]+=r.count;
+                    }catch(RuntimeException x){throw x.getCause() instanceof Exception?(Exception)x.getCause():x;}
+                }
+                deflater.end();
+                if(zdict[0]==null)db.execSQL("INSERT OR REPLACE INTO ydict(dict,zdict,styles) VALUES(?,NULL,?)",new Object[]{id,styles!=null?1:0});
+                // Rows for the same word and reading that weren't next to each other in the banks: one page each.
+                progress.update("Merging entries",1,1);
+                JSONArray dup=Store.rows(db,"SELECT group_concat(r.id) ids FROM records r JOIN ytext y ON y.rec=r.id WHERE r.dict=? GROUP BY r.key,y.reading HAVING count(*)>1",Long.toString(id));
+                byte[] zd=zdict[0]==null?new byte[0]:zdict[0];
+                java.util.zip.Deflater d2=new java.util.zip.Deflater(6);
+                for(int i=0;i<dup.length();i++){
+                    if(i%200==0){
+                        if(progress.cancelled())throw new InterruptedException("Import cancelled");
+                        progress.update("Merging entries",i,dup.length());
+                    }
+                    String[] ids=dup.getJSONObject(i).getString("ids").split(",");
+                    java.util.Arrays.sort(ids,(a,b)->Long.compare(Long.parseLong(a),Long.parseLong(b)));
+                    StringBuilder body=new StringBuilder();String tagsHtml="";
+                    for(String rid:ids){
+                        try(Cursor c=db.rawQuery("SELECT tags,body FROM ytext WHERE rec=?",new String[]{rid})){
+                            if(c.moveToFirst()){body.append(inflate(c.getBlob(1),zd));if(!c.getString(0).isEmpty()&&!tagsHtml.contains(c.getString(0)))tagsHtml+=c.getString(0);}
+                        }
+                    }
+                    db.execSQL("UPDATE ytext SET body=?,tags=? WHERE rec=?",new Object[]{deflate(body.toString(),zd,d2),tagsHtml,ids[0]});
+                    db.execSQL("UPDATE records SET len=? WHERE id=?",new Object[]{body.length(),ids[0]});
+                    for(int k=1;k<ids.length;k++){
+                        // keys is indexed by (norm,dict), not rec: delete through the entry's own headword and reading.
+                        try(Cursor c=db.rawQuery("SELECT r.key,y.reading FROM records r JOIN ytext y ON y.rec=r.id WHERE r.id=?",new String[]{ids[k]})){
+                            if(c.moveToFirst())for(String w:new String[]{c.getString(0),c.getString(1)}){
+                                String n=HtmlText.normalize(w);
+                                if(!n.isEmpty())db.execSQL("DELETE FROM keys WHERE norm=? AND dict=? AND rec=?",new Object[]{n,id,ids[k]});
+                            }
+                        }
+                        db.execSQL("DELETE FROM ytext WHERE rec=?",new Object[]{ids[k]});
+                        db.execSQL("DELETE FROM records WHERE id=?",new Object[]{ids[k]});
+                    }
+                }
+                d2.end();
+                if(fulltext&&!kind.equals("freq")){
+                    String fts="body_"+id;
+                    db.execSQL("CREATE VIRTUAL TABLE "+fts+" USING fts4(content=\"\",defs,exs,tokenize=simple)");
+                    SQLiteStatement insertBody=db.compileStatement("INSERT INTO "+fts+"(docid,defs,exs) VALUES(?,?,?)");
+                    long n=Store.rows(db,"SELECT count(*) n FROM records WHERE dict=?",Long.toString(id)).getJSONObject(0).getLong("n"),k=0;
+                    try(Cursor c=db.rawQuery("SELECT y.rec,y.body FROM ytext y JOIN records r ON r.id=y.rec WHERE r.dict=?",new String[]{Long.toString(id)})){
+                        while(c.moveToNext()){
+                            HtmlText text=HtmlText.parse(inflate(c.getBlob(1),zd));
+                            insertBody.bindLong(1,c.getLong(0));
+                            insertBody.bindString(2,HtmlText.tokens(HtmlText.normalize(text.definitions.toString()),200000));
+                            insertBody.bindString(3,HtmlText.tokens(HtmlText.normalize(text.examples.toString()),200000));
+                            insertBody.executeInsert();
+                            if(++k%2000==0){
+                                if(progress.cancelled())throw new InterruptedException("Import cancelled");
+                                progress.update("Building definition search",k,n);
+                            }
+                        }
+                    }
+                    progress.update("Optimizing search index",1,1);
+                    db.execSQL("INSERT INTO "+fts+"("+fts+") VALUES('optimize')");
+                }
+                long from=firstKey[0]==Long.MAX_VALUE?0:firstKey[0];
+                JSONObject range=Store.rows(db,"SELECT min(id) a,max(id) b,count(*) n FROM keys WHERE id>=? AND dict=?",Long.toString(from),Long.toString(id)).getJSONObject(0);
+                JSONObject recs=Store.rows(db,"SELECT min(id) a,max(id) b,count(*) n FROM records WHERE dict=?",Long.toString(id)).getJSONObject(0);
+                long metaRows=Store.rows(db,"SELECT count(*) n FROM meta WHERE dict=?",Long.toString(id)).getJSONObject(0).getLong("n");
+                ContentValues fin=new ContentValues();
+                fin.put("status","ready");fin.put("entries",kind.equals("freq")?metaRows:recs.getLong("n"));fin.put("keys",kind.equals("freq")?metaRows:range.getLong("n"));
+                fin.put("key_min",range.optLong("a",0));fin.put("key_max",range.optLong("b",0));fin.put("rec_min",recs.optLong("a",0));fin.put("rec_max",recs.optLong("b",0));
+                db.update("dicts",fin,"id=?",new String[]{Long.toString(id)});
+                db.setTransactionSuccessful();
+                ok=true;
+            }finally{
+                db.endTransaction();
+                if(!ok){try{delete(id);}catch(Exception ignored){}}
+            }
+        }finally{zip.close();}
+        zdicts.remove(id);hasMeta=null;
+        return id;
+    }
+
+    /** Up to 32 KB of the dictionary's own entry HTML, most typical parts last (deflate matches recent bytes most cheaply). */
+    static byte[] presetDictionary(List<String[]> sample){
+        StringBuilder b=new StringBuilder();
+        for(String[] e:sample){b.append(e[3]);if(b.length()>40000)break;}
+        byte[] all=b.toString().getBytes(StandardCharsets.UTF_8);
+        return java.util.Arrays.copyOfRange(all,Math.max(0,all.length-32768),all.length);
+    }
+
+    /**
+     * Frequency ranks (and pitch/IPA notes) for a word from enabled Yomitan meta dictionaries, best rank per dictionary.
+     * With a reading, rows for other readings are left out (JPDB lists 人 ひと and 人 にん separately).
+     */
+    public JSONArray frequencies(String key,String reading) throws Exception {
+        String n=HtmlText.normalize(key),rn=HtmlText.normalize(reading==null?"":reading);
+        if(n.isEmpty()||!hasMeta())return new JSONArray();
+        JSONArray rows=Store.rows(db,"SELECT m.dict,d.name dictionary,m.mode,m.reading,min(m.value) value,m.display FROM meta m JOIN dicts d ON d.id=m.dict WHERE m.norm=? AND d.enabled=1 AND d.status='ready' AND (?='' OR m.reading='' OR m.reading=? OR m.reading=m.norm) GROUP BY m.dict,m.mode ORDER BY d.position",n,rn,rn);
+        return rows;
+    }
+    volatile Boolean hasMeta;
+    boolean hasMeta(){
+        Boolean h=hasMeta;
+        if(h==null){try(Cursor c=db.rawQuery("SELECT 1 FROM meta LIMIT 1",null)){h=c.moveToFirst();}hasMeta=h;}
+        return h;
+    }
+
     static int parseIntOr(String s,int fallback){try{return Integer.parseInt(s.trim());}catch(Exception e){return fallback;}}
 
     static final Pattern K_CHAR=Pattern.compile("data-name=\"(?:OyajiCharacter|親字-[^\"]*)\"[^>]*>(?:\\s*<[^>]+>)*\\s*([\\x{3400}-\\x{9FFF}\\x{F900}-\\x{FAFF}\\x{20000}-\\x{2FFFF}])");
@@ -360,7 +758,7 @@ public class Library {
     }
 
     public synchronized void delete(long id){
-        closeFiles(id);
+        closeFiles(id);formats.remove(id);zdicts.remove(id);hasMeta=null;
         db.beginTransaction();
         try{
             db.execSQL("DELETE FROM kanji WHERE dict=?",new Object[]{id});
@@ -368,6 +766,9 @@ public class Library {
             db.execSQL("DELETE FROM keys WHERE dict=? AND id BETWEEN (SELECT key_min FROM dicts WHERE id=?) AND (SELECT key_max FROM dicts WHERE id=?)",new Object[]{id,id,id});
             // Fallback for interrupted imports whose ranges were never recorded.
             try(Cursor c=db.rawQuery("SELECT 1 FROM keys WHERE dict=? LIMIT 1",new String[]{Long.toString(id)})){if(c.moveToFirst())db.execSQL("DELETE FROM keys WHERE dict=?",new Object[]{id});}
+            db.execSQL("DELETE FROM ytext WHERE rec IN (SELECT id FROM records WHERE dict=?)",new Object[]{id});
+            db.execSQL("DELETE FROM ydict WHERE dict=?",new Object[]{id});
+            db.execSQL("DELETE FROM meta WHERE dict=?",new Object[]{id});
             db.execSQL("DELETE FROM records WHERE dict=?",new Object[]{id});
             db.execSQL("DELETE FROM anchors WHERE dict=?",new Object[]{id});
             db.execSQL("DELETE FROM resources WHERE dict=?",new Object[]{id});
@@ -379,7 +780,7 @@ public class Library {
     // ---------- queries ----------
 
     public JSONArray dictionaries() throws Exception {
-        return Store.rows(db,"SELECT id,name,title,label,kind,grp,position,enabled,entries,keys,resources,fulltext,status,imported,mdx,mdd FROM dicts WHERE status='ready' ORDER BY position,id");
+        return Store.rows(db,"SELECT id,name,title,label,kind,grp,position,enabled,entries,keys,resources,fulltext,status,imported,mdx,mdd,format,description FROM dicts WHERE status='ready' ORDER BY position,id");
     }
 
     public void updateDictionary(JSONObject data) throws Exception {
@@ -388,8 +789,29 @@ public class Library {
         if(data.has("name")){String n=data.getString("name").trim();if(n.isEmpty()||n.length()>120)throw new Exception("Names need 1–120 characters.");v.put("name",n);}
         if(data.has("enabled"))v.put("enabled",data.getBoolean("enabled")?1:0);
         if(data.has("kind"))v.put("kind",data.getString("kind").equals("kanji")?"kanji":"term");
-        if(data.has("grp")){String g=data.getString("grp").trim();if(g.isEmpty()||g.length()>40)throw new Exception("Group names need 1–40 characters.");v.put("grp",g);}
+        if(data.has("grp")){String g=data.getString("grp").trim();if(g.isEmpty()||g.length()>60||g.chars().filter(c->c=='/').count()>1||g.startsWith("/")||g.endsWith("/"))throw new Exception("Group names need 1–60 characters, with at most one “/” (Japanese/古語).");v.put("grp",g);}
         if(v.size()>0)db.update("dicts",v,"id=?",new String[]{Long.toString(id)});
+    }
+
+    /** Sizes of a dictionary's files, recorded the first time they can be opened. Unknown sizes are -1. */
+    public JSONArray fileSizes(long id) throws Exception {
+        JSONObject d=dictRow(id);
+        if(!d.optString("sizes").isEmpty())return new JSONArray(d.getString("sizes"));
+        JSONArray uris=new JSONArray().put(d.getString("mdx"));
+        JSONArray mdd=new JSONArray(d.getString("mdd"));for(int k=0;k<mdd.length();k++)uris.put(mdd.getString(k));
+        JSONArray sizes=new JSONArray();boolean all=true;
+        for(int k=0;k<uris.length();k++){
+            try(FileChannel c=opener.open(uris.getString(k))){sizes.put(c.size());}catch(Exception e){sizes.put(-1);all=false;}
+        }
+        if(all)db.execSQL("UPDATE dicts SET sizes=? WHERE id=?",new Object[]{sizes.toString(),id});
+        return sizes;
+    }
+
+    /** New locations for a dictionary's files (same files, moved); the index is kept. */
+    public void setFiles(long id,String mdx,JSONArray mdd){
+        closeFiles(id);
+        ContentValues v=new ContentValues();v.put("mdx",mdx);v.put("mdd",mdd.toString());v.put("sizes","");
+        db.update("dicts",v,"id=?",new String[]{Long.toString(id)});
     }
 
     public void reorder(JSONArray ids){
@@ -401,7 +823,11 @@ public class Library {
     }
 
     String enabledClause(String column,String dict,ArrayList<String> args){
-        if(dict!=null&&dict.startsWith("g:")){args.add(dict.substring(2));return column+" IN (SELECT id FROM dicts WHERE enabled=1 AND status='ready' AND grp=?)";}
+        if(dict!=null&&dict.startsWith("g:")){
+            // "g:Japanese/*" is the group with all its types (Japanese, Japanese/古語…).
+            if(dict.endsWith("/*")){String p=dict.substring(2,dict.length()-2);args.add(p);args.add(p+"/%");return column+" IN (SELECT id FROM dicts WHERE enabled=1 AND status='ready' AND (grp=? OR grp LIKE ?))";}
+            args.add(dict.substring(2));return column+" IN (SELECT id FROM dicts WHERE enabled=1 AND status='ready' AND grp=?)";
+        }
         if(dict!=null&&!dict.isEmpty()){args.add(dict);return column+"=?";}
         return column+" IN (SELECT id FROM dicts WHERE enabled=1 AND status='ready')";
     }
@@ -424,7 +850,7 @@ public class Library {
             String where="k.norm>=? AND k.norm<?";args.add(term);args.add(term+"\uffff");
             where+=" AND "+enabledClause("k.dict",dict,args);
             args.add(Integer.toString(limit+1));args.add(Integer.toString(offset));
-            items=Store.rows(db,"SELECT group_concat(k.key,char(1)) keys,k.rec,k.dict,r.key page,d.name dictionary,d.kind,k.norm=? exact FROM keys k JOIN records r ON r.id=k.rec JOIN dicts d ON d.id=k.dict WHERE "+where+" GROUP BY k.norm,k.dict,k.rec ORDER BY k.norm,d.position,r.len DESC LIMIT ? OFFSET ?",args.toArray(new String[0]));
+            items=Store.rows(db,"SELECT group_concat(k.key,char(1)) keys,k.rec,k.dict,coalesce(nullif((SELECT y.reading FROM ytext y WHERE y.rec=k.rec),''),r.key) page,d.name dictionary,d.kind,k.norm=? exact FROM keys k JOIN records r ON r.id=k.rec JOIN dicts d ON d.id=k.dict WHERE "+where+" GROUP BY k.norm,k.dict,k.rec ORDER BY k.norm,d.position,r.len DESC LIMIT ? OFFSET ?",args.toArray(new String[0]));
             displayKeys(items,query);
         }else if(mode.equals("contains")){
             ArrayList<String> args=new ArrayList<>();
@@ -432,7 +858,7 @@ public class Library {
             String where="instr(k.norm,?)>0";args.add(term);
             where+=" AND "+enabledClause("k.dict",dict,args);
             args.add(Integer.toString(limit+1));args.add(Integer.toString(offset));
-            items=Store.rows(db,"SELECT group_concat(k.key,char(1)) keys,k.rec,k.dict,r.key page,d.name dictionary,d.kind,k.norm=? exact FROM keys k JOIN records r ON r.id=k.rec JOIN dicts d ON d.id=k.dict WHERE "+where+" GROUP BY k.norm,k.dict,k.rec ORDER BY exact DESC,length(k.norm),k.norm,d.position,r.len DESC LIMIT ? OFFSET ?",args.toArray(new String[0]));
+            items=Store.rows(db,"SELECT group_concat(k.key,char(1)) keys,k.rec,k.dict,coalesce(nullif((SELECT y.reading FROM ytext y WHERE y.rec=k.rec),''),r.key) page,d.name dictionary,d.kind,k.norm=? exact FROM keys k JOIN records r ON r.id=k.rec JOIN dicts d ON d.id=k.dict WHERE "+where+" GROUP BY k.norm,k.dict,k.rec ORDER BY exact DESC,length(k.norm),k.norm,d.position,r.len DESC LIMIT ? OFFSET ?",args.toArray(new String[0]));
             displayKeys(items,query);
         }else{
             String column=mode.equals("examples")?"exs":"defs";
@@ -440,6 +866,7 @@ public class Library {
             if(phrase.isEmpty())return new JSONObject().put("items",new JSONArray()).put("more",false);
             ArrayList<String> unions=new ArrayList<>();ArrayList<String> args=new ArrayList<>();
             JSONArray dicts=dict==null||dict.isEmpty()?Store.rows(db,"SELECT id FROM dicts WHERE enabled=1 AND status='ready' AND fulltext=1 ORDER BY position")
+                :dict.endsWith("/*")?Store.rows(db,"SELECT id FROM dicts WHERE enabled=1 AND status='ready' AND fulltext=1 AND (grp=? OR grp LIKE ?) ORDER BY position",dict.substring(2,dict.length()-2),dict.substring(2,dict.length()-2)+"/%")
                 :dict.startsWith("g:")?Store.rows(db,"SELECT id FROM dicts WHERE enabled=1 AND status='ready' AND fulltext=1 AND grp=? ORDER BY position",dict.substring(2))
                 :Store.rows(db,"SELECT id FROM dicts WHERE id=? AND fulltext=1",dict);
             for(int i=0;i<dicts.length();i++){
@@ -457,7 +884,26 @@ public class Library {
         }
         boolean more=items.length()>limit;
         if(more)items.remove(limit);
+        addRanks(items);
         return new JSONObject().put("items",items).put("more",more);
+    }
+
+    /** Each result's rank in the first enabled frequency dictionary that has the word, for the frequency bars in lists. */
+    void addRanks(JSONArray items) throws Exception {
+        if(!hasMeta())return;
+        HashMap<String,Double> seen=new HashMap<>();
+        for(int i=0;i<items.length();i++){
+            JSONObject row=items.getJSONObject(i);
+            String n=HtmlText.normalize(row.optString("key"));
+            Double v=seen.get(n);
+            if(v==null&&!seen.containsKey(n)){
+                try(Cursor c=db.rawQuery("SELECT min(m.value) FROM meta m JOIN dicts d ON d.id=m.dict WHERE m.norm=? AND m.mode='freq' AND m.value>0 AND d.enabled=1 GROUP BY m.dict ORDER BY d.position LIMIT 1",new String[]{n})){
+                    v=c.moveToFirst()&&!c.isNull(0)?c.getDouble(0):null;
+                }
+                seen.put(n,v);
+            }
+            if(v!=null)row.put("rank",v.longValue());
+        }
     }
 
     static final String MARKS="▽▼△▲";
@@ -514,7 +960,7 @@ public class Library {
 
     public JSONArray exact(String key,String excludeDict) throws Exception {
         String norm=HtmlText.normalize(key);
-        JSONArray rows=Store.rows(db,"SELECT group_concat(k.key,char(1)) keys,k.rec,k.dict,r.key page,d.name dictionary,d.kind,r.len size,(SELECT 1 FROM kanji j WHERE j.rec=k.rec AND j.char=?) head FROM keys k JOIN records r ON r.id=k.rec JOIN dicts d ON d.id=k.dict WHERE k.norm=? AND d.enabled=1 AND d.status='ready' GROUP BY k.dict,k.rec ORDER BY d.position,head IS NULL,r.len DESC LIMIT 60",key.trim(),norm);
+        JSONArray rows=Store.rows(db,"SELECT group_concat(k.key,char(1)) keys,k.rec,k.dict,coalesce(nullif((SELECT y.reading FROM ytext y WHERE y.rec=k.rec),''),r.key) page,d.name dictionary,d.kind,r.len size,(SELECT 1 FROM kanji j WHERE j.rec=k.rec AND j.char=?) head FROM keys k JOIN records r ON r.id=k.rec JOIN dicts d ON d.id=k.dict WHERE k.norm=? AND d.enabled=1 AND d.status='ready' GROUP BY k.dict,k.rec ORDER BY d.position,head IS NULL,r.len DESC LIMIT 60",key.trim(),norm);
         displayKeys(rows,key);
         return rows;
     }
@@ -652,9 +1098,10 @@ public class Library {
     }
 
     public String recordHtml(long rec) throws Exception {
-        JSONArray rows=Store.rows(db,"SELECT dict,off,len FROM records WHERE id=?",Long.toString(rec));
+        JSONArray rows=Store.rows(db,"SELECT dict,off,len,key FROM records WHERE id=?",Long.toString(rec));
         if(rows.length()==0)throw new Exception("This entry is no longer in your library.");
         JSONObject r=rows.getJSONObject(0);
+        if(isYomitan(r.getLong("dict")))return yomitanHtml(rec,r.getLong("dict"),r.getString("key"));
         MdictFile f=file(r.getLong("dict"),0);
         return f.text(f.record(r.getLong("off"),r.getInt("len"),cache));
     }
@@ -688,6 +1135,7 @@ public class Library {
     }
 
     public byte[] resource(long dict,String path) throws Exception {
+        if(isYomitan(dict))return yomitanResource(dict,path);
         String name=resourceName(path);
         JSONArray rows=Store.rows(db,"SELECT file,off,len FROM resources WHERE dict=? AND name=?",Long.toString(dict),name);
         if(rows.length()==0){
@@ -944,7 +1392,7 @@ public class Library {
         String group="zh".equals(lang)?"Chinese":"th".equals(lang)?"Thai":null;
         if(group!=null){
             java.util.Set<Long> ids=new java.util.HashSet<>();
-            JSONArray g=Store.rows(db,"SELECT id FROM dicts WHERE grp=? AND enabled=1",group);
+            JSONArray g=Store.rows(db,"SELECT id FROM dicts WHERE (grp=? OR grp LIKE ?) AND enabled=1 AND kind!='freq'",group,group+"/%");
             for(int i=0;i<g.length();i++)ids.add(g.getJSONObject(i).getLong("id"));
             int[] cps=clean.codePoints().limit(24).toArray();
             // Traditional text (Taiwan/Hong Kong games) also matches simplified headwords: 穿過 → 穿过.
@@ -1011,7 +1459,7 @@ public class Library {
                 try{
                     String html=recordHtml(r.getLong("rec"));
                     // Pages that name the word, or kana-only pronunciation pages (NHK ことば) with no other kanji spelling.
-                    boolean kanaOnly="Pronunciation".equals(dictGroup(r.getLong("dict")))&&html.indexOf('【')<0;
+                    boolean kanaOnly=isPronunciation(dictGroup(r.getLong("dict")))&&html.indexOf('【')<0;
                     if(bracketsMention(html,key)||kanaOnly)rows.put(r);
                 }catch(Exception ignored){}
             }
@@ -1024,10 +1472,10 @@ public class Library {
             String html;
             try{html=recordHtml(row.getLong("rec"));}catch(Exception e){continue;}
             // Pronunciation pages must be for this reading (not 〜橋 suffix pages read きょう).
-            if(reading!=null&&!reading.isEmpty()&&"Pronunciation".equals(dictGroup(row.getLong("dict")))&&!html.contains(reading)&&!html.contains(katakana(reading)))continue;
+            if(reading!=null&&!reading.isEmpty()&&isPronunciation(dictGroup(row.getLong("dict")))&&!html.contains(reading)&&!html.contains(katakana(reading)))continue;
             // Pronunciation pages hold several homographs (はし【端】【箸】【橋】); use only the section headed by this word.
             int from=0,to=html.length();boolean headed=false;int headScore=9;
-            if("Pronunciation".equals(dictGroup(row.getLong("dict")))){
+            if(isPronunciation(dictGroup(row.getLong("dict")))){
                 Matcher b=Pattern.compile("[【《]([^】》]*)[】》]").matcher(html);
                 ArrayList<int[]> heads=new ArrayList<>();int match=-1;
                 int bestScore=9;
@@ -1079,8 +1527,8 @@ public class Library {
         // Pronunciation dictionaries first, then the dictionary the word was saved from.
         ArrayList<JSONObject> list=new ArrayList<>();for(int i=0;i<out.length();i++)list.add(out.getJSONObject(i));
         list.sort((a,b)->{
-            int pa=a.optString("group").equals("Pronunciation")?Math.min(a.optInt("score",9),2):a.optLong("dict")==preferDict?3:4;
-            int pb=b.optString("group").equals("Pronunciation")?Math.min(b.optInt("score",9),2):b.optLong("dict")==preferDict?3:4;
+            int pa=isPronunciation(a.optString("group"))?Math.min(a.optInt("score",9),2):a.optLong("dict")==preferDict?3:4;
+            int pb=isPronunciation(b.optString("group"))?Math.min(b.optInt("score",9),2):b.optLong("dict")==preferDict?3:4;
             if(pa!=pb)return pa-pb;
             return Boolean.compare(b.optBoolean("pageMatch"),a.optBoolean("pageMatch"));
         });
@@ -1099,6 +1547,10 @@ public class Library {
         for(char c:s.toCharArray())b.append(c>='ぁ'&&c<='ゖ'?(char)(c+96):c);
         return b.toString();
     }
+
+    /** Pronunciation dictionaries (NHK) are a type of Japanese dictionary: "Japanese/発音" (formerly the top-level "Pronunciation"). */
+    static final String PRONUNCIATION="Japanese/発音";
+    static boolean isPronunciation(String grp){return grp!=null&&(grp.equals("Pronunciation")||grp.endsWith("/発音")||grp.endsWith("/Pronunciation"));}
 
     String dictGroup(long dict){
         try(Cursor c=db.rawQuery("SELECT grp FROM dicts WHERE id=?",new String[]{Long.toString(dict)})){return c.moveToFirst()?c.getString(0):"";}

@@ -81,8 +81,59 @@ public class CoreTests {
             check(b.language.equals(tx[2])&&b.spine.size()==2,"TXT "+tx[1]+" → "+b.encoding+" "+b.language+" "+b.spine.size()+" chapters");
         }
 
-        // MDX files and EPUB books given on the command line.
+        // Yomitan: JSON reader, rows, structured content, meta.
+        {
+            Object v=Yomitan.parse("[\"a\\n\\u00e9\",1.5,true,null,{\"k\":[]}]");
+            check(v instanceof List&&((List<?>)v).size()==5&&"a\né".equals(((List<?>)v).get(0))&&((List<?>)v).get(3)==Yomitan.NULL,"JSON values");
+            List<Object> rows=new ArrayList<>();
+            new Yomitan.Json(new java.io.StringReader(" [ [\"言葉\",\"ことば\",\"n\",\"\",5,[\"word\",\"speech\"],7,\"P\"] , [\"x\"] ] ")).eachInArray(rows::add);
+            check(rows.size()==2,"JSON streams top-level array");
+            Yomitan.Term yt=Yomitan.term(rows.get(0));
+            check(yt.term.equals("言葉")&&yt.reading.equals("ことば")&&yt.sequence==7&&yt.glossary.size()==2&&yt.termTags.equals("P"),"term row");
+            Map<String,Yomitan.Tag> tags=new HashMap<>();tags.put("n",new Yomitan.Tag("n","partOfSpeech",0,"noun"));
+            String sense=Yomitan.senseHtml(yt,tags);
+            check(sense.contains("<ol class=\"yt-gloss\"><li><span class=\"yt-text\">word</span></li>")&&sense.contains("data-category=\"partOfSpeech\" title=\"noun\""),"sense html: "+sense);
+            Yomitan.Term sc=Yomitan.term(Yomitan.parse("[\"語\",\"ご\",\"\",\"\",0,[{\"type\":\"structured-content\",\"content\":[{\"tag\":\"span\",\"data\":{\"name\":\"見出部\",\"fooBar\":\"1\"},\"style\":{\"fontWeight\":\"bold\",\"marginLeft\":0.5},\"content\":\"ご<語>\"},{\"tag\":\"a\",\"href\":\"?query=%E8%A8%80&wildcards=off\",\"content\":\"言\"},{\"tag\":\"img\",\"path\":\"img/a b.png\",\"width\":2,\"height\":1,\"sizeUnits\":\"em\"},{\"tag\":\"script\",\"content\":\"x\"}]}]]"));
+            String h=Yomitan.senseHtml(sc,null);
+            check(h.contains("<span data-sc-name=\"見出部\" data-name=\"見出部\" data-sc-foo-bar=\"1\" style=\"font-weight:bold;margin-left:0.5em;\">ご&lt;語&gt;</span>"),"structured span: "+h);
+            check(h.contains("href=\"entry://言\""),"yomitan query link → entry://");
+            check(h.contains("src=\"img/a%20b.png\"")&&h.contains("width:2em"),"image path and size");
+            check(!h.contains("script"),"unknown tags dropped, text kept: "+h);
+            check(Yomitan.printsOwnHeading("<span>め–つぎ【芽接ぎ】</span>","芽接ぎ","めつぎ"),"dictionary's own heading detected");
+            check(!Yomitan.printsOwnHeading("<span>2channel (online forum)</span>","２ちゃんねる","にちゃんねる"),"no own heading");
+            Yomitan.Meta fq=Yomitan.meta(Yomitan.parse("[\"人\",\"freq\",{\"reading\":\"ひと\",\"frequency\":{\"value\":120,\"displayValue\":\"120㋕\"}}]"));
+            check(fq.reading.equals("ひと")&&fq.value==120&&fq.display.equals("120㋕"),"freq with reading");
+            Yomitan.Meta f2=Yomitan.meta(Yomitan.parse("[\"の\",\"freq\",5]"));
+            check(f2.value==5&&f2.display.equals("5"),"plain freq number");
+            Yomitan.Meta p=Yomitan.meta(Yomitan.parse("[\"箸\",\"pitch\",{\"reading\":\"はし\",\"pitches\":[{\"position\":1}]}]"));
+            check(p.display.equals("1"),"pitch position");
+        }
+
+        // MDX files, EPUB books and Yomitan ZIPs given on the command line.
         for(String path:args){
+            if(path.endsWith(".zip")){
+                try(ZipSource z=new ZipSource(FileChannel.open(Paths.get(path)))){
+                    Yomitan.Index idx=Yomitan.index(new String(z.bytes("index.json"),"UTF-8"));
+                    int[] n={0,0};long started=System.currentTimeMillis();
+                    StringBuilder sample=new StringBuilder();
+                    for(ZipSource.Entry e:z.entries.values()){
+                        String name=e.name.replaceAll(".*/","");
+                        if(!name.matches("(term|kanji|term_meta)_bank_\\d+\\.json"))continue;
+                        try(java.io.Reader r=new java.io.InputStreamReader(z.stream(e),"UTF-8")){
+                            new Yomitan.Json(r).eachInArray(row->{
+                                n[0]++;
+                                if(name.startsWith("term_bank")){Yomitan.Term tr=Yomitan.term(row);String s=Yomitan.senseHtml(tr,null);n[1]+=s.length();if(sample.length()==0)sample.append(Yomitan.entryHtml(tr.term,tr.reading,"",s));}
+                                else if(name.startsWith("kanji"))Yomitan.kanjiHtml(Yomitan.kanji(row),null);
+                                else Yomitan.meta(row);
+                            });
+                        }
+                    }
+                    check(n[0]>0,"Yomitan rows in "+path);
+                    System.out.println(idx.title+": "+n[0]+" rows · "+(n[1]/1024/1024)+" MB html · "+(System.currentTimeMillis()-started)+" ms");
+                    if(System.getenv("YOMITAN_SAMPLES")!=null)java.nio.file.Files.writeString(Paths.get(System.getenv("YOMITAN_SAMPLES"),idx.title.replaceAll("[/\\s]","_")+".html"),sample.toString());
+                }
+                continue;
+            }
             if(path.endsWith(".epub")){
                 try(ZipSource z=new ZipSource(FileChannel.open(Paths.get(path)))){
                     BookParser.Book b=BookParser.epub(z);

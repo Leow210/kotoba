@@ -47,8 +47,13 @@ Tap a preview to play the video. Each one is silent and about 15–25 seconds lo
 ### Dictionaries
 - Import a folder of `.mdx` files and their `.mdd` media from the phone. The files stay where they are; Kotoba builds its index locally. My 13-dictionary Monokakido set takes about three minutes to import and uses roughly 350 MB for the index.
 - MDict versions 1 and 2 are supported, including zlib/LZO compression and encrypted key indexes. Images, audio, CSS and cross-references are read from the `.mdd` files.
-- Kotoba sorts dictionaries into useful groups—Japanese 国語, Kanji 漢字, Pronunciation 発音, Korean, Chinese, Thai and Russian—but those assignments can be changed.
-- Dictionaries can also be reordered, renamed, hidden or marked as kanji dictionaries.
+- **Yomitan dictionaries** (`.zip`, e.g. from [MarvNC's collection](https://github.com/MarvNC/yomitan-dictionaries)) import natively rather than through MDX. Entries keep the dictionary's own `styles.css`, structured content and images, which are read from the ZIP in place. Frequency dictionaries (JPDB, CC100) become frequency ranks, and pitch data becomes pitch notes.
+  - The Yomitan format has no appendix (付録) pages, so those dictionaries have no furoku.
+- Kotoba sorts dictionaries into groups, and a language's groups can have types: Japanese 国語, Kanji 漢字, and under Japanese 発音, 古語, 四字熟語, 慣用句・ことわざ, 類語, 文法, 人名・地名, 方言, 語源, 助数詞, 擬音語, 百科 and Frequency; then Korean (Hanja, Frequency), Chinese, Thai and Russian. Yomitan collection file tags such as `[JA-JA Kogo]` choose the default type.
+  - Search chips: All · Japanese 国語 · Kanji 漢字 · **More 日本語 ▾** (each type, or every Japanese dictionary) · Korean…
+- **Library › Dictionaries** shows the groups as collapsible sections. Each group has a switch that turns it off entirely (it is left out of search, lookups, tabs and frequency), a ⋯ menu to move, rename or switch it, and a ≡ handle on every dictionary for dragging it into place. That order decides which dictionary's entry comes first when several have the word (e.g. 大辞林, then 明鏡).
+- Dictionaries can also be renamed, moved to another group or type, or marked as kanji dictionaries.
+- If dictionary files are moved, importing from the new folder points the existing dictionaries at them again (same name and size), without re-importing. A dictionary that is already imported can't be imported a second time.
 
 ### Search
 - Headword search uses prefixes and ignores differences that usually get in the way, such as hiragana versus katakana, Russian stress marks and Daijirin's ▽▼ marks.
@@ -84,7 +89,8 @@ Tap a preview to play the video. Each one is silent and about 15–25 seconds lo
 - Every field is editable, with room for a note and an example sentence.
 - Cards live in folders that can be filtered, sorted and reviewed separately. Multi-select actions cover moving, copying and deleting.
 - Reviews use FSRS-5, with learning steps, interval previews, undo, daily new-card limits, target recall, a seven-day forecast and a streak.
-- Cards export to Anki (TSV with HTML and folder tags) or CSV. JSON backups merge with existing data and skip duplicates when restored.
+- Cards export to Anki (TSV with HTML and folder tags) or CSV, and Chinese cards export to **Pleco** (flashcard text file; each folder becomes a `//Kotoba/<folder>` category).
+- **Already a card:** an entry notes when the same word is already a card saved from another dictionary (e.g. 言葉 from 大辞林 while reading 明鏡), and so does the save sheet. The word and, when both have one, the reading must match, so homophones (橋/箸) and other readings (人気 にんき/ひとけ) aren't confused. JSON backups merge with existing data and skip duplicates when restored.
 
 ### Kanji, word lists, furoku
 - **Kanji grid:** every kanji in 漢辞海 and 漢検 as a grid you can filter by Kanken level, stroke count, radical and 常用/教育/人名. Old and variant forms (舊 → 旧) find their main entry.
@@ -99,13 +105,13 @@ Tap a preview to play the video. Each one is silent and about 15–25 seconds lo
 - **Translate:** sends a selection to the Google Translate app. Kotoba itself has no internet permission.
 
 ### Scanning text on other screens
-- **写 Scan text** (search screen): photograph a game, visual novel or any screen with the phone's camera app, or open or share a screenshot to Kotoba.
+- **写 Scan text** (search screen): photograph a game, visual novel or any screen with Kotoba's own camera (flashlight toggle; photos never go to the phone's gallery), or open or share a screenshot to Kotoba.
 - The text is read on the phone with the same OCR as comics. Tap a text box to look words up, fix the text, translate it, or save a card with the line as context.
 - **Select area** reads just the part you drag over, such as the dialogue box (about 0.2 s). A short first line, like a speaker's name, stays on its own line.
 - **Languages:** Japanese, Chinese (simplified and traditional), Korean, Thai and Russian.
   - Tapping a word in Chinese or Thai text looks in that language's dictionaries first.
   - Traditional characters also match simplified headwords (穿過 → 穿过, using OpenCC's character table).
-- Scans are kept in the app's `files/scans/` folder (the newest 40).
+- Scans are kept in the app's `files/scans/` folder (the newest 40, at most 4000 px).
 
 ### Reading
 - **Books:** EPUB and TXT in Japanese, Korean, Thai and Russian. The text encoding is detected automatically.
@@ -146,7 +152,8 @@ On first run: **Library → Import from a folder…** → choose your dictionary
 | `…/WordLists.java`, `MarkupFix.java`, `Fsrs.java` | Word lists; Monokakido markup/CSS fixes; scheduler |
 | `…/Extras.java`, `tools/export_extras.py` | Furoku titles/pages and dictionary selections exported from the Monokakido Mac app |
 | `…/Ocr.java` | On-device text detection and recognition for comic pages and scans |
-| `…/Scans.java`, `ScanProvider.java`, `assets/scan.js` | Camera/screenshot scanner: the photo file, EXIF rotation, cropping; the camera app writes through `ScanProvider` |
+| `…/Scans.java`, `assets/scan.js` | Scanner: in-app camera (`getUserMedia`/`ImageCapture`, saved through `scan.save`), shared screenshots, EXIF rotation, cropping |
+| `…/Yomitan.java`, `assets/yomitan.css` | Yomitan format: streaming JSON reader, term/kanji/meta rows, structured content → HTML; base style for Yomitan entries |
 | `…/MainActivity.java` | WebView host, local resource server, file pickers, selection menu |
 | `android/assets/` | The interface (HTML/CSS/JS) |
 | `docs/ROADMAP.md` | What's being built next and how |
@@ -179,7 +186,7 @@ This section holds the context needed to keep developing Kotoba in a new session
   - `assets/` is copied recursively, and `.onnx` files are stored uncompressed.
 - **Target:** `minSdk` 26, `targetSdk` 34, app ID `app.kotoba.reader`, version 0.3.0.
 - **Test phone:** OnePlus CPH2749 (Android 16), connected over adb. Install with `adb install -r android/build/kotoba.apk`, which keeps the data.
-- **Desktop tests:** `android/tests/run.sh [mdx…]` runs the pure-Java classes (MDict, text, FSRS, deinflection, ZIP, book parsing). 60 pass.
+- **Desktop tests:** `android/tests/run.sh [mdx|epub|zip…]` runs the pure-Java classes (MDict, text, FSRS, deinflection, ZIP, book parsing, Yomitan). 73 pass. Given Yomitan ZIPs, it parses and renders every row and prints timings (`YOMITAN_SAMPLES=dir` also writes a sample entry per dictionary).
 
 ### Architecture
 - **UI host:** one Activity (`MainActivity`) holds a WebView. The UI is plain HTML/JS in `android/assets/`, served from `https://appassets.androidplatform.net/`.
@@ -196,6 +203,8 @@ This section holds the context needed to keep developing Kotoba in a new session
   - `/book/<id>/<path>`;
   - `/comic/<chapter>/<page>`;
   - `/comic/cover/<series>`.
+- **Yomitan storage:** `dicts.format='yomitan'`, `mdx` = the ZIP. Term rows are rendered to HTML at import (`Yomitan.senseHtml`) and stored deflated in `ytext(rec, reading, tags, body)`, with a per-dictionary preset dictionary sampled from its own entries (`ydict.zdict`). Rows with the same headword and reading share one page. `Library.recordHtml` builds the page (`yomitan.css`, the ZIP's `styles.css`, heading). Our heading is hidden (`yt-head-dup`) when the dictionary prints its own. Frequency, pitch and IPA rows go to `meta(dict, norm, reading, mode, value, display)`. Rendering changes need a re-import.
+- **Groups:** `dicts.grp` is `Language` or `Language/Type` (`Japanese/古語`). Search accepts `g:Japanese` (that group only) or `g:Japanese/*` (with its types). Pronunciation dictionaries are `Japanese/発音`; check with `Library.isPronunciation`. Group order lives in localStorage `groupOrder`, and dragging saves the whole display order as `dicts.position`.
 - **Databases:**
   - The library DB (dictionary index) has the tables `dicts`, `records`, `keys`, `anchors`, `resources` and `kanji`, plus per-dictionary FTS4 tables `body_<id>`. `dict_ids` keeps IDs stable across re-imports.
   - The personal DB (`Store`) holds folders (`study` = included in review), items/cards, FSRS state, history and settings. Books, comics (`series`, `chapters`, `comic_marks`) and `ocr_cache` also live in it.
@@ -265,7 +274,8 @@ This section holds the context needed to keep developing Kotoba in a new session
   - `comic.scanLocal` (scans `files/comics/`).
 
 ### Data on the phone
-- **Dictionaries** were imported from `/sdcard/Download/Monokakido_Ciyue` (13 MDX files). Test copies sit in `…/files/test/<dict>/` and take about 1.8 GB; they can be deleted.
+- **Dictionaries** were imported from `/sdcard/Download/Monokakido_Ciyue` (13 MDX files) and read from there. The exception is 漢辞海, whose rebuilt MDX (see below) is in the app's `…/files/dictionaries/Kanjikai2/`, because the copy in Download is the older conversion.
+- **Yomitan dictionaries** are in `/sdcard/Download/Yomitan` (23 ZIPs, 977 MB). They were downloaded on the Mac into `../yomitan-dicts/` from MarvNC's Google Drive folders (main collection and Salwynn's), Kuuube's JPDB v2.1, Lyroxide's STDICT/KRDICT JA/CC100, jarjumarvin's hanja and Kanjipedia 同訓異義 (MediaFire).
   - 漢辞海 (Kanjikai) uses a rebuilt MDX from `/Volumes/T7/Monokakido Android Dictionaries/Kanjikai2/output-v4/`: 8,861 main kanji.
   - Monokakido's "12,500字" also counts about 3,600 旧字/異体字 variants that appear inside those entries, many as images without Unicode.
   - The converter is `../tools/build_generic_mdict.py`. It was patched so that `親字-*` tags other than `親字相当部` count as headwords.
@@ -293,6 +303,6 @@ This section holds the context needed to keep developing Kotoba in a new session
   - The OCR cache isn't included in backup/restore.
 - **Mihon covers:** new Mihon series only get their cover after the adb copy and a fresh backup import. The app can't read Mihon's cache itself.
 - **Other ideas:**
-  - a frequency-rank badge on entries;
+  - frequency in the reader/comic lookup popups (entries and search results have it);
   - desktop tests for the `MihonBackup` and `WordLists` parsers.
 - **`legacy-preview/`:** the old Mac preview (1.6 GB of data). It isn't used by the app.
