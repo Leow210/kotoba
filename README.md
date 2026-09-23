@@ -57,6 +57,13 @@ Tap a preview to play the video. Each one is silent and about 15–25 seconds lo
 
 ### Search
 - Headword search uses prefixes and ignores differences that usually get in the way, such as hiragana versus katakana, Russian stress marks and Daijirin's ▽▼ marks.
+- A word is found however the dictionary files it:
+  - by its reading with or without separator dots (大辞林 おちあ・う is found by おちあう and 落ち合う, since the spellings in a page's heading are indexed too);
+  - by alternative forms in 《》〈〉 (NHK お鉢《×御鉢》 is found by お鉢 and 御鉢);
+  - honorific 御 as the kana it's read as (大辞林 おはち【御鉢】 → お鉢, ごはん【御飯】 → ご飯);
+  - with some kanji written in kana (相まみえる finds 大辞林's 相▽見える, as long as it fits the reading あいまみえる).
+- **One row per word.** Results from different dictionaries join into one row with a tag per dictionary, even when one writes the reading おちあう and another 落ち合う. Yomitan dictionaries that list the same entry once per spelling (明鏡 落ち合う, 落合う, あからさま/明白) show it once.
+- **Homophones stay apart.** A kana search gives each written word its own row (けんのう → 権能, 献納, 賢能, 検納), with only that word's dictionaries as tabs. A dictionary page that holds several homophones (大辞林's けんのう) appears under each, and opens at the matching one.
 - There are separate modes for text contained in a headword, a definition or an example. Substring matching also makes the search usable for Thai text without spaces.
 - Conjugated words are traced back to their dictionary form, with a short grammar breakdown:
   - `食べさせられなかった` → **食べる** + させられる + ない + かった · causative-passive · negative · past
@@ -80,6 +87,8 @@ Tap a preview to play the video. Each one is silent and about 15–25 seconds lo
   - cross-references open the linked entry.
 - Any dictionary can be switched to vertical text (縦書き), and dictionaries designed that way open vertically by default.
 - Dictionaries with audio use the same 🔊 control throughout the app. Audio can optionally play as soon as an entry opens.
+- Entries without audio of their own (大辞林, 明鏡…) get a 🔊 button with the NHK pronunciation dictionary's clip for the same word and reading.
+- Entries show frequency bars and ranks from the frequency dictionaries in the entry's language (JPDB for Japanese, CC100 for Korean).
 - Selecting text brings up Look up, Search, Copy, Card and Share. Android's selection menu also gets Look up and Save card actions, including from other apps.
 
 ### Vocabulary & flashcards
@@ -127,7 +136,13 @@ Tap a preview to play the video. Each one is silent and about 15–25 seconds lo
   - Everything runs on the phone (PaddleOCR PP-OCRv5 mobile on ONNX Runtime), at about 0.2–0.6 s per page. Results are cached.
 
 ## Kotoba for Mac
-[`desktop/`](desktop/README.md) is a Mac companion app: the same dictionaries, search and cards (it runs this app's own Java classes), a video player (mpv) whose subtitles you hover to look words up, and sync of cards and reviews with the phone through a shared folder (Library › Sync).
+[`desktop/`](desktop/README.md) is a Mac companion app. It runs this app's own Java classes, so it has the same dictionaries, search and cards, plus:
+- a video player (mpv) whose subtitles (SRT files or embedded tracks) you hover to look words up;
+- the book reader and the comic reader, with the Mihon webtoons mirrored from the phone;
+- a Firefox (Tampermonkey) helper that looks up streaming captions in Kotoba instead of Yomitan.
+
+## Sync
+**Library › Sync** keeps cards, bookmarks, folders and reviews the same on the phone and the Mac, with no account or server. Each device writes `kotoba-<device>.json` to a folder that a sync tool (Syncthing) mirrors between them, and merges the other devices' files: the newest change wins and deletions carry over. Dictionaries are matched by title, so both devices need the same dictionaries. The phone syncs every minute while open and when you leave the app.
 
 ## Build
 
@@ -189,6 +204,8 @@ This section holds the context needed to keep developing Kotoba in a new session
   - `assets/` is copied recursively, and `.onnx` files are stored uncompressed.
 - **Target:** `minSdk` 26, `targetSdk` 34, app ID `app.kotoba.reader`, version 0.3.0.
 - **Test phone:** OnePlus CPH2749 (Android 16), connected over adb. Install with `adb install -r android/build/kotoba.apk`, which keeps the data.
+  - Over USB, choose **File transfer** in the phone's USB notification, or the Mac may not see it. Wireless debugging works too (`adb connect <ip>:<port>` from the Wireless debugging screen); with both connected, set `ANDROID_SERIAL`.
+  - If the app crashes at once with `ClassNotFoundException … Failed to extract 'classes.dex'`, an install was cut off. Install again.
 - **Desktop tests:** `android/tests/run.sh [mdx|epub|zip…]` runs the pure-Java classes (MDict, text, FSRS, deinflection, ZIP, book parsing, Yomitan). 73 pass. Given Yomitan ZIPs, it parses and renders every row and prints timings (`YOMITAN_SAMPLES=dir` also writes a sample entry per dictionary).
 
 ### Architecture
@@ -197,7 +214,7 @@ This section holds the context needed to keep developing Kotoba in a new session
   - Later scripts wrap earlier functions (e.g. `renderFolders`) instead of editing them.
 - **Bridge:**
   - JS calls `Kotoba.call(id, route, jsonBody)`, and Java answers through `window.__reply`. In JS this is wrapped as `api(route, body)`.
-  - Every route is a `case "…"` in `MainActivity.route()`.
+  - Platform-neutral routes (dictionaries, search, cards, books, comics, OCR, export) are `case "…"` entries in `Routes.java`, which the Mac app's `DesktopServer` also uses; `MainActivity.route()` adds the Android-only ones (pickers, SAF scans, relink, sync folder).
   - Java → JS events go through `window.__event`, handled in JS with `on(type, fn)`.
   - Direct JS interface methods: `Kotoba.pickFolder`, `pickBooks`, `pickComicFolder`, `pickComicFiles`, `pickComicCover`, `pickMihonBackup`, `pickWordList`, `copy`, `share`, `translate`, `exportFile`, `restoreBackup`, `openResource`, `setBars`.
 - **Resource URLs served by `shouldInterceptRequest`:**
@@ -207,6 +224,8 @@ This section holds the context needed to keep developing Kotoba in a new session
   - `/comic/<chapter>/<page>`;
   - `/comic/cover/<series>`.
 - **Yomitan storage:** `dicts.format='yomitan'`, `mdx` = the ZIP. Term rows are rendered to HTML at import (`Yomitan.senseHtml`) and stored deflated in `ytext(rec, reading, tags, body)`, with a per-dictionary preset dictionary sampled from its own entries (`ydict.zdict`). Rows with the same headword and reading share one page. `Library.recordHtml` builds the page (`yomitan.css`, the ZIP's `styles.css`, heading). Our heading is hidden (`yt-head-dup`) when the dictionary prints its own. Frequency, pitch and IPA rows go to `meta(dict, norm, reading, mode, value, display)`. Rendering changes need a re-import.
+- **Search keys:** `keys(norm, dict, rec, key)` maps normalized spellings to pages. Besides each page's own key, import adds the heading's spellings (`標準表記`/`表記`, `《》〈〉` forms), separator-free readings and honorific 御 forms (`Library.extraKeys`). When these rules change, bump `Library.KEYS_VERSION` and describe the change in the comment above it: `Routes.upgradeIndexesLater()` then upgrades existing dictionaries in the background on the next start ("Updating the search index"), with no re-import. Yomitan dictionaries also merge identical entries there (`mergeSameEntries`). Search is blocked while that pass runs, so keep it cheap for MDX dictionaries when only Yomitan rules change.
+- **Result grouping:** `groupResults` in `app.js` makes one row per word. For a kana query the server adds `words` (the page's spellings: its key, or each 【…】 heading on a page filed under its reading) so homophones get separate rows. `Library.mixedSpellings` handles queries with some kanji written in kana.
 - **Groups:** `dicts.grp` is `Language` or `Language/Type` (`Japanese/古語`). Search accepts `g:Japanese` (that group only) or `g:Japanese/*` (with its types). Pronunciation dictionaries are `Japanese/発音`; check with `Library.isPronunciation`. Group order lives in localStorage `groupOrder`, and dragging saves the whole display order as `dicts.position`.
 - **Databases:**
   - The library DB (dictionary index) has the tables `dicts`, `records`, `keys`, `anchors`, `resources` and `kanji`, plus per-dictionary FTS4 tables `body_<id>`. `dict_ids` keeps IDs stable across re-imports.
