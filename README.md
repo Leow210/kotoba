@@ -64,10 +64,13 @@ Tap a preview to play the video. Each one is silent and about 15–25 seconds lo
   - with some kanji written in kana (相まみえる finds 大辞林's 相▽見える, as long as it fits the reading あいまみえる).
 - **One row per word.** Results from different dictionaries join into one row with a tag per dictionary, even when one writes the reading おちあう and another 落ち合う. Yomitan dictionaries that list the same entry once per spelling (明鏡 落ち合う, 落合う, あからさま/明白) show it once.
 - **Homophones stay apart.** A kana search gives each written word its own row (けんのう → 権能, 献納, 賢能, 検納), with only that word's dictionaries as tabs. A dictionary page that holds several homophones (大辞林's けんのう) appears under each, and opens at the matching one.
+- **Ambiguous Korean forms keep both readings.** 걸었다고 can be 걷다 ("walk") or 걸다 ("bet"); the popups show the first with **or 걸다** to switch. Context decides where it can: 비운 right before another word (비운 자리) is 비우다's modifier form first, while 비운의 is the noun 비운 (否運) + 의.
+- **Lookups are fast** even on a whole speech bubble: a lookup stops at the longest start of the text that begins any headword, and verb stems and kana-for-kanji spellings are cached, so tapping a word takes a few milliseconds (at most ~0.1 s for Korean) on the phone.
 - There are separate modes for text contained in a headword, a definition or an example. Substring matching also makes the search usable for Thai text without spaces.
 - Conjugated words are traced back to their dictionary form, with a short grammar breakdown:
   - `食べさせられなかった` → **食べる** + させられる + ない + かった · causative-passive · negative · past
   - `추웠어요` → **춥다** + 았/었 + 어요 · past · polite, ㅂ-irregular
+  - `대줬잖아` → **대주다** · past + -잖아 (endings listed under their own dictionary form, -잖다, are found too)
   - `공부했어요` → **공부** + 하다 + 았/었 + 어요 · 하다 verb · past · polite
   - `занимаюсь` → **заниматься** · 1st person singular · reflexive
 
@@ -134,12 +137,16 @@ Tap a preview to play the video. Each one is silent and about 15–25 seconds lo
 - **Text in comics (OCR):** the 文 button outlines every speech bubble. Tap a bubble to see its text, then tap a word to look it up; conjugations are analysed (먹었어요 → 먹다 · past · polite). You can also fix recognition mistakes, copy, translate, save a card with the bubble as context, or open ☰ for all text on the page.
   - Korean uses a Korean model. Japanese uses the multilingual model, which also reads vertical columns right-to-left.
   - Everything runs on the phone (PaddleOCR PP-OCRv5 mobile on ONNX Runtime), at about 0.2–0.6 s per page. Results are cached.
+  - **PaddleOCR-VL (optional, much more accurate):** with the 1.4 GB PaddleOCR-VL 1.6 model on the phone, each speech bubble is read again by a vision-language OCR model on the GPU (LiteRT-LM). It reads manga perfectly in testing (vertical columns, furigana, small っ) and Korean dialogue far better than the mobile model. A page shows the first reading at once (boxes slightly faded) and the better text replaces it about 10–25 s later; the next two pages are read ahead. It pauses whenever you scroll, touch the page or have a sheet open, so scrolling and lookups stay smooth. Runaway answers, Korean sound effects of ≤3 letters and kana on a Korean page keep the first reading.
 
 ## Kotoba for Mac
 [`desktop/`](desktop/README.md) is a Mac companion app. It runs this app's own Java classes, so it has the same dictionaries, search and cards, plus:
 - a video player (mpv) whose subtitles (SRT/VTT/ASS files or embedded tracks) you hover with Shift to look words up. The popup is compact so it doesn't cover the scene, with ⤢ to show every dictionary; words inside a definition can be looked up the same way (a second popup opens beside it); and ＋ Card saves the word with the line as its example;
 - the book reader and the comic reader, with the Mihon webtoons mirrored from the phone;
-- a browser helper (Tampermonkey, Firefox or Chrome) that looks up YouTube and other streaming captions in Kotoba instead of Yomitan, with the same popup as the player.
+- a browser helper (Tampermonkey, Firefox or Chrome) that looks up YouTube and other streaming captions in Kotoba instead of Yomitan, with the same popup as the player;
+- **Korean comic text read by Apple Vision** (the macOS text recognizer) instead of the mobile model: in testing it read stylized webtoon lettering that every other recognizer got wrong (그래도 윤치영이가 전에 니가 팬 놈 깽값도 대줬잖아.);
+- **translation inside Kotoba** (Settings › Translation): a local Gemma 4 26B model (best with idioms and slang — 생각보다 손이 맵네 → "You've got a heavier hand than I thought" — and for comic bubbles it reads the rest of the page as context), Google Cloud Translation with your own API key (500,000 characters a month free; the Translation LLM with a project ID), Google's free web service, or Google Translate in the browser. TranslateGemma 12B and Hy-MT2 7B were tried and translated idioms word for word;
+- ⌘+ / ⌘− in the readers: book text size, and comic zoom from 25% (see more of a webtoon at once) to 400%.
 
 | Subtitle lookup | Expanded popup |
 |---|---|
@@ -160,12 +167,15 @@ Most shows don't come with subtitles in the language being spoken. My other proj
 Needs the Android SDK (build-tools 35, platform 35) and JDK 21. It doesn't use Gradle or network access.
 
 ```sh
+python3 tools/fetch_android_libs.py      # optional, once: LiteRT-LM for PaddleOCR-VL (android/libs/aar/, not in git)
 python3 android/build.py                 # → android/build/kotoba.apk
 adb install -r android/build/kotoba.apk
 android/tests/run.sh [some.mdx …]        # desktop tests: MDX reader, text extraction, FSRS, deinflection
 ```
 
 On first run: **Library → Import from a folder…** → choose your dictionary folder → Import.
+
+PaddleOCR-VL: download `PaddleOCR-VL-1.6.litertlm` from [litert-community/PaddleOCR-VL-1.6](https://huggingface.co/litert-community/PaddleOCR-VL-1.6) and `adb push` it to `/sdcard/Android/data/app.kotoba.reader/files/models/` (over USB it takes ~30 s; wireless ~15 min). Without it, or without LiteRT-LM in the build, PaddleOCR's mobile models read everything as before.
 
 ## Code layout
 
@@ -242,7 +252,8 @@ This section holds the context needed to keep developing Kotoba in a new session
   - The library DB (dictionary index) has the tables `dicts`, `records`, `keys`, `anchors`, `resources` and `kanji`, plus per-dictionary FTS4 tables `body_<id>`. `dict_ids` keeps IDs stable across re-imports.
   - The personal DB (`Store`) holds folders (`study` = included in review), items/cards, FSRS state, history and settings. Books, comics (`series`, `chapters`, `comic_marks`) and `ocr_cache` also live in it.
 - **Entry focus (`app.js` `findFocus`/`unitInfo`):** the `UNIT`/`HEAD`/`WORD`/`READING` name sets decide which part of a dictionary page is "the word". When a new dictionary focuses the wrong unit, add its tag or class names there. Kanjikai's `親字TD` / `親字-常用…` were added for exactly this.
-- **Deinflection:** lives in `Deinflect.java` (JA/KO/RU rules). The Korean analysis order is in `Library.koreanAnalyses`: whole word → rules → stem + dictionary-listed ending → noun + particles → compound → prefix. Keep results narrow: the real word first, at most three.
+- **Deinflection:** lives in `Deinflect.java` (JA/KO/RU rules). The Korean analysis order is in `Library.koreanAnalyses`: whole word → rules → stem + dictionary-listed ending → noun + particles → compound → prefix. Keep results narrow: the real word first, at most three. Noun-only particles (의, 을/를, 에…) never count as verb endings; a modifier form before another word puts the verb first (`Library.lookup`).
+- **Lookup speed:** `Library.keyReach` finds how many characters of the text begin some key (a LIMIT 1 range query per length); exact matches are only tried up to there, conjugations up to 10 characters past it, and kana-for-kanji spellings (`mixedSpellings`, only for the looked-up text, not internal checks) up to 8. Korean verb stems per initial consonant (`verbsByInitial`) and spelling candidates per leading kanji with their compiled patterns and readings (`mixedCandidates`) are cached in memory and cleared by `dictionariesChanged()`.
 - **OCR:** `Ocr.java` runs the PaddleOCR PP-OCRv5 mobile models on ONNX Runtime 1.30.0 (arm64 only; the jar and `.so` files are in `android/libs/onnxruntime/`).
   - Model files in `assets/ocr/`:
     - `det.onnx`: detection;
@@ -252,7 +263,10 @@ This section holds the context needed to keep developing Kotoba in a new session
     - `rec-ru.onnx` + `dict-ru.txt`: East Slavic (Russian, Ukrainian, Belarusian) and Latin.
   - They were downloaded from `huggingface.co/PaddlePaddle/{PP-OCRv5_mobile_det_onnx, korean_PP-OCRv5_mobile_rec_onnx, PP-OCRv5_mobile_rec_onnx, th_PP-OCRv5_mobile_rec_onnx, eslav_PP-OCRv5_mobile_rec_onnx}`.
   - Only one recognizer is loaded at a time, and ONNX Runtime's memory arena is off, so memory goes back after each page. The dictionaries are the `character_dict` lists in each model's `inference.yml`.
-  - Routes: `ocr.page {chapter, page, lang, refresh}` and `ocr.clear`.
+  - Routes: `ocr.page {chapter, page, lang, refresh}` and `ocr.clear`. They run on their own low-priority thread (`MainActivity.ocrPool`), so a page being read never holds up taps or other requests.
+  - **Other recognizers** plug into `Ocr`: a `LineReader` replaces detection and recognition (the Mac's Apple Vision helper, `desktop/mac/Sources/KotobaOCR`, for Korean; its boxes are grouped as they are, then padded), and a `BlockReader` reads each grouped bubble again (the phone's PaddleOCR-VL, `android/src-extra/…/VlOcr.java`, only compiled when `android/libs/aar/` has LiteRT-LM). Cached results carry `v` = which recognizer made them, so switching re-reads pages.
+  - **PaddleOCR-VL refinement:** `ocr.page` returns PaddleOCR's text at once with `refining:true`; `Ocr.refine` re-reads each bubble on a background thread (the requested page first, then the next two) and sends `ocr-refined`, and `comics.js` redraws that page's layer. Each bubble is padded onto a white square (the model resizes input to 560×560, which distorted tall or wide bubbles), one image per conversation, greedy, max 160 tokens. `Ocr.touch()` (from `Kotoba.interacting()`, sent on any touch/scroll and while a sheet or entry is open) makes it wait until the app has been still for 2.5 s: each bubble takes the GPU for ~2.5 s and would otherwise stall scrolling. The GPU needs `uses-native-library libOpenCL.so` in the manifest.
+  - The comic layer's boxes live inside the scrolling page, so they are only re-placed on zoom, resize or image load, never on scroll (re-measuring every page on each scroll event made scrolling stutter).
   - How a page is read, as tuned on real Mihon chapters:
     - Detection runs at a 1280-pixel long side. Webtoon strips taller than 3× their width go in tiles 2.5× the width tall.
     - Recognition pads each line to at least 320 pixels wide, as PaddleOCR does; without this, trailing characters are dropped.
@@ -289,6 +303,7 @@ This section holds the context needed to keep developing Kotoba in a new session
   - 朝鮮語辞典 uses its own menu plists (`Entries` of `{Title, PlistName}` / `{EntryID}`, or `EntriesFileName`) and `.entries` with a 4-byte header. 索引 becomes 4 lists; 品詞 and 専門用語 keep their categories as sections, with a jump bar in the app. Headlines are `／1／가격／價格`, so the hanja shows under the word.
   - Its appendix pages (発音解説, 用言活用表, 助数詞一覧…, ids 101092+) were dropped by the MDX conversion. The exporter copies them from the extracted page XML listed in `PAGES` (on the T7 drive; file name = id − 1).
   - Push with a folder swap so the app never reads a half-copied manifest: `adb push OUT /sdcard/Android/data/app.kotoba.reader/files/extras.new`, then `mv extras extras.old && mv extras.new extras`.
+- **Dictionary fonts:** fonts in `extras/<name>/files/fonts/*.ttf|otf|woff2` become `@font-face` rules (family = file name) on that dictionary's entry pages and cards (`Extras.fontFaces`). 朝鮮語辞典 writes 315 hanja (Korean forms such as 鄕 稱, rare hanja; 14,488 headings) as private-use characters in `<Gaiji>` drawn by `CHOUSENGO_Symbol.ttf` from the Monokakido app's `Contents/CHOUSENGO-KJ/fonts/`; copy it to `extras/korean-krj/files/fonts/` (and `korean-jkr`) on both devices, or those characters show as unknown boxes.
 - The app matches `extras/<name>/` to a dictionary by its `.mdx` file name. `/d/<dict>/files/…` URLs are served from that folder. A broken manifest only drops that dictionary's extras.
 - Imported word lists sort あいう by `wordlist_items.sortkey`: the reading, or else the page reading of the word's first Japanese dictionary entry (`Library.readingOf`).
 
@@ -330,7 +345,7 @@ This section holds the context needed to keep developing Kotoba in a new session
 ### Known issues / ideas
 - **Korean glosses:** KRJ keeps every homograph on one page, so the gloss for 먹다 shows the first definition on that page.
 - **OCR:**
-  - Remaining errors are mostly stylized fonts, sound effects and similar-looking kanji (令/命). Korean often drops spaces (handled in the bubble sheet by tapping any syllable).
+  - With the mobile models, remaining errors are mostly stylized fonts, sound effects and similar-looking kanji (令/命), and Korean often drops spaces (handled in the bubble sheet by tapping any syllable). PaddleOCR-VL (phone) and Apple Vision (Mac) fix most of this; Google ML Kit was tried on the phone and was no better on comic lettering.
   - A bubble split across two webtoon images is read as two halves.
   - Tuning for real scans may be needed: box/line thresholds in `Ocr.java` and bubble grouping in `group()`.
   - The OCR cache isn't included in backup/restore.
