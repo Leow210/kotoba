@@ -254,6 +254,11 @@
         const ref=await api('reference',{dict:it.dict,ref:href});if(ref.rec)openEntry({rec:ref.rec,dict:it.dict,key:ref.key||'',anchor:ref.anchor||''});},
       source:()=>({dict:it.dict,dictName:it.dictionary,key,page:it.page})});
     if(!wired)return frame;
+    // The frame grows to fit, so it never scrolls itself: a scrollbar appearing inside it reflowed the text, the
+    // frame resized, the scrollbar went away… and the entry jittered. Wide tables scroll sideways on their own.
+    const fix=wired.doc.createElement('style');
+    fix.textContent='html,body{overflow:hidden!important}table{display:block;max-width:100%;overflow-x:auto}';
+    wired.doc.head.appendChild(fix);
     if(opts.focus!==false){const f=findFocus(wired.doc,key,'');if(!kanjiHead(it.dict,key))applyFocus(wired.doc,f.focus,f.units);}
     // Double-click a word in a thesaurus entry: brainstorm from that word.
     if(opts.onWord)wired.doc.addEventListener('dblclick',()=>{const w=wired.doc.getSelection().toString().trim();if(w&&w.length<=20)setTimeout(()=>opts.onWord(w),10);});
@@ -294,8 +299,9 @@
     out.innerHTML='<p class="wr-hint">Looking…</p>';
     const groups=thesaurusGroups();
     if(!groups.length){out.innerHTML='<p class="wr-hint">No thesaurus dictionary found. Put one (e.g. 類語例解辞典) in a “類語” group in the Library.</p>';return;}
-    // A conjugated word (考えた) is looked up as its dictionary form.
-    const base=await api('lookup',{text:word,lang:''}).then(r=>r.items.length&&r.matched===word?r.key:word).catch(()=>word);
+    // A conjugated word (考えた) is looked up as its dictionary form; a word the thesaurus has as it is stays as it is.
+    const own=await Promise.all(groups.map(g=>api('search',{q:word,mode:'headword',dict:'g:'+g,offset:0}).then(r=>(r.items||[]).some(i=>i.exact)).catch(()=>false)));
+    const base=own.some(Boolean)?word:await api('lookup',{text:word,lang:''}).then(r=>r.items.length&&r.matched===word?r.key:word).catch(()=>word);
     const heads=[],seen=new Set();
     for(const g of groups){
       const r=await api('search',{q:base,mode:'headword',dict:'g:'+g,offset:0}).catch(()=>({items:[]}));

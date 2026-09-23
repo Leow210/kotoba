@@ -1268,6 +1268,9 @@ public class Library {
         for(Object[] cand:mixedCandidates(lead)){
             String k=(String)cand[0];
             if(k.codePointCount(0,k.length())>q.length||k.equals(norm)||!((Pattern)cand[3]).matcher(norm).matches())continue;
+            // A spelling ending in a kanji where the query ends in kana is a different word whose okurigana the
+            // dictionary leaves out (日国's 見侮 for 見侮る, 見方): 見る and 見た mustn't find it.
+            if(han(k.codePointBefore(k.length()))&&kana(q[q.length-1]))continue;
             // The kana the query adds must be how the page reads: 相まみえる fits あいまみえる.
             boolean fits=false;
             for(String n:(String[])cand[4])if(reading.matcher(n).matches()){fits=true;break;}
