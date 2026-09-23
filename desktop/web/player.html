@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kotoba Player</title>
+<link rel="stylesheet" href="/player.css">
+</head>
+<body>
+<div id="stage">
+  <div id="hit" aria-hidden="true"></div>
+  <div id="subs">
+    <div id="sub-main" class="line" lang=""></div>
+    <div id="sub-second" class="line second"></div>
+  </div>
+  <div id="pop" hidden></div>
+  <aside id="transcript" hidden>
+    <div class="t-head"><b>Transcript</b><button data-a="transcript" title="Close (T)">×</button></div>
+    <div class="t-list" id="t-list"></div>
+  </aside>
+  <div id="osd" hidden></div>
+  <div id="bar">
+    <input type="range" id="seek" min="0" max="1000" value="0" step="1" aria-label="Position">
+    <div class="row">
+      <button data-a="prev" title="Previous line (A)">⏮</button>
+      <button data-a="toggle" id="play" title="Play / pause (Space)">▶</button>
+      <button data-a="next" title="Next line (D)">⏭</button>
+      <button data-a="replay" title="Replay line (S)">↺</button>
+      <span id="time">0:00 / 0:00</span>
+      <span class="grow"></span>
+      <button data-a="autopause" id="autopause" title="Pause after each line (P)">⏸︎ each line</button>
+      <button data-a="subs" id="subs-btn" title="Subtitles">字幕 ▾</button>
+      <button data-a="audio" id="audio-btn" title="Audio track" hidden>🔈 ▾</button>
+      <button data-a="speed" id="speed" title="Speed ([ and ])">1×</button>
+      <input type="range" id="volume" min="0" max="100" value="100" aria-label="Volume" title="Volume (↑ ↓)">
+      <button data-a="transcript" title="Transcript (T)">☰</button>
+      <button data-a="fullscreen" title="Full screen (F)">⛶</button>
+    </div>
+  </div>
+  <div id="menu" hidden></div>
+</div>
+<script src="/player.js"></script>
+</body>
+</html>

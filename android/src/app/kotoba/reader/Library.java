@@ -44,7 +44,9 @@ public class Library {
         if(t2s==null){
             t2s=new HashMap<>();
             try(java.io.InputStream in=assets.open("t2s.txt")){
-                int[] cp=new String(MainActivity.read(in,1<<20),StandardCharsets.UTF_8).codePoints().toArray();
+                java.io.ByteArrayOutputStream bytes=new java.io.ByteArrayOutputStream();byte[] buf=new byte[65536];int n;
+                while((n=in.read(buf))>0)bytes.write(buf,0,n);
+                int[] cp=new String(bytes.toByteArray(),StandardCharsets.UTF_8).codePoints().toArray();
                 for(int i=0;i+1<cp.length;i+=2)t2s.put(cp[i],cp[i+1]);
             }catch(Exception ignored){}
         }
@@ -419,7 +421,7 @@ public class Library {
     static String yomitanGroup(String file,String title,String kind){
         String f=file+" "+title;
         String lang=f.matches("(?s).*(\\[KO|KO-|KRDICT|STDICT|OPENDICT|[Hh]anja|Korean|[\\uac00-\\ud7a3]).*")?"Korean"
-            :f.matches("(?s).*(\\[ZH|ZH-|CEDICT|Mandarin|汉|漢語|國語辭典|现代汉语).*")?"Chinese":"Japanese";
+            :f.matches("(?s).*(\\[ZH|ZH-|CEDICT|Mandarin|Cantonese|CantoDict|粵|汉|漢語|國語辭典|现代汉语).*")?"Chinese":"Japanese";
         String sub="";
         if(kind.equals("freq")||f.matches("(?is).*(\\bFreq|Frequency|CC100).*"))sub="Frequency";
         else if(f.matches("(?is).*\\bPitch.*"))return PRONUNCIATION;
@@ -1064,6 +1066,13 @@ public class Library {
             if(text.length()>160)text=text.substring(0,160)+"…";
         }catch(Exception ignored){}
         return new JSONObject().put("word",word).put("text",text).put("rec",r.getLong("rec")).put("dict",r.getLong("dict")).put("dictionary",r.getString("dictionary")).put("page",r.optString("page"));
+    }
+
+    /** A record's definition text, shortened (for hover popups and quick cards). */
+    public String glossText(long rec,int max) throws Exception {
+        HtmlText t=HtmlText.parse(MarkupFix.html(recordHtml(rec)));
+        String text=t.definitions.toString().replaceAll("\\s+"," ").trim();
+        return text.length()>max?text.substring(0,max)+"…":text;
     }
 
     /** The reading a word is filed under: the page key of its first Japanese word-dictionary entry (日本 → にほん), else null. */

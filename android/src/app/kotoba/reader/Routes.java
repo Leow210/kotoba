@@ -90,6 +90,14 @@ public class Routes {
                 for(int i=0;i<words.length()&&i<200;i++)out.put(library.gloss(words.getString(i)));
                 return out;
             }
+            case "gloss.rec":{
+                JSONArray recs=d.getJSONArray("recs"),out=new JSONArray();
+                for(int i=0;i<recs.length()&&i<12;i++){
+                    long rec=recs.getLong(i);
+                    try{out.put(new JSONObject().put("rec",rec).put("text",library.glossText(rec,d.optInt("max",400))));}catch(Exception e){out.put(new JSONObject().put("rec",rec).put("text",""));}
+                }
+                return out;
+            }
             case "rank":{JSONObject r=wordlists.rank(d.getString("word"));return r==null?JSONObject.NULL:r;}
             case "appendix":return extras.appendix(d.getLong("dict"));
             case "appendix.counts":return extras.counts();

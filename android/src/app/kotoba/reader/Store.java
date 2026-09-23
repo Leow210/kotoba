@@ -21,6 +21,8 @@ public class Store {
         db=SQLiteDatabase.openOrCreateDatabase(new File(context.getFilesDir(),"personal-v2.sqlite3"),null);
         db.enableWriteAheadLogging();
         db.execSQL("PRAGMA foreign_keys=ON");
+        // Created first: the upgrade steps below read and write settings (a fresh install has no tables yet).
+        db.execSQL("CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY,value TEXT NOT NULL)");
         db.execSQL("CREATE TABLE IF NOT EXISTS folders(id INTEGER PRIMARY KEY,name TEXT NOT NULL UNIQUE,position INTEGER NOT NULL DEFAULT 0,created INTEGER NOT NULL DEFAULT 0)");
         db.execSQL("INSERT OR IGNORE INTO folders(id,name,position,created) VALUES(1,'Inbox',0,strftime('%s','now'))");
         db.execSQL("CREATE TABLE IF NOT EXISTS items(id INTEGER PRIMARY KEY,folder_id INTEGER NOT NULL REFERENCES folders(id),kind TEXT NOT NULL DEFAULT 'entry',dict INTEGER NOT NULL DEFAULT 0,dict_name TEXT NOT NULL DEFAULT '',page TEXT NOT NULL DEFAULT '',anchor TEXT NOT NULL DEFAULT '',headword TEXT NOT NULL,reading TEXT NOT NULL DEFAULT '',back TEXT NOT NULL DEFAULT '',back_html TEXT NOT NULL DEFAULT '',note TEXT NOT NULL DEFAULT '',context TEXT NOT NULL DEFAULT '',created INTEGER NOT NULL,updated INTEGER NOT NULL,review INTEGER NOT NULL DEFAULT 0,state INTEGER NOT NULL DEFAULT 0,step INTEGER NOT NULL DEFAULT 0,stability REAL NOT NULL DEFAULT 0,difficulty REAL NOT NULL DEFAULT 0,due INTEGER NOT NULL DEFAULT 0,last_review INTEGER NOT NULL DEFAULT 0,reps INTEGER NOT NULL DEFAULT 0,lapses INTEGER NOT NULL DEFAULT 0,introduced INTEGER NOT NULL DEFAULT 0)");
@@ -31,7 +33,6 @@ public class Store {
         db.execSQL("CREATE INDEX IF NOT EXISTS items_folder ON items(folder_id,updated)");
         db.execSQL("CREATE INDEX IF NOT EXISTS items_due ON items(review,state,due)");
         db.execSQL("CREATE TABLE IF NOT EXISTS reviews(id INTEGER PRIMARY KEY,item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,rating INTEGER NOT NULL,reviewed INTEGER NOT NULL,before TEXT NOT NULL,after_due INTEGER NOT NULL)");
-        db.execSQL("CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY,value TEXT NOT NULL)");
         db.execSQL("CREATE TABLE IF NOT EXISTS history(norm TEXT PRIMARY KEY,query TEXT NOT NULL,used INTEGER NOT NULL)");
     }
 

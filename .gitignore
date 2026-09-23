@@ -7,3 +7,7 @@ __pycache__/
 
 # The old Mac preview and its 1.6 GB of dictionary data (not used by the app)
 legacy-preview/
+
+# Desktop build output
+desktop/build/
+desktop/mac/.build/

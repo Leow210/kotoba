@@ -1,0 +1,16 @@
+/* Desktop: the tab bar becomes a sidebar and content keeps a readable width. */
+html.desktop{--side:88px}
+html.desktop .tabbar{top:0;bottom:0;right:auto;width:var(--side);height:auto;flex-direction:column;justify-content:flex-start;gap:4px;padding:18px 0 0;border-top:0;border-right:1px solid var(--line)}
+html.desktop .tabbar button{flex:none;height:68px}
+html.desktop .screen{left:var(--side);bottom:0}
+html.desktop #pages{left:var(--side)}
+html.desktop #selbar{left:calc(var(--side) + 16px);bottom:16px;right:auto;max-width:640px}
+html.desktop #toast{left:calc(50% + var(--side)/2);bottom:24px}
+html.desktop .screen>.scroll>*,html.desktop .search-head,html.desktop #library-home,html.desktop .page>.entry-scroll>*{max-width:880px;margin-left:auto;margin-right:auto}
+html.desktop .search-head{width:100%;box-sizing:border-box}
+html.desktop body{font-size:15px}
+html.desktop ::-webkit-scrollbar{width:10px;height:10px}
+html.desktop ::-webkit-scrollbar-thumb{background:rgba(0,0,0,.18);border-radius:5px;border:2px solid transparent;background-clip:padding-box}
+html.desktop .video-row .progress{height:3px;background:var(--line);border-radius:2px;margin-top:8px;overflow:hidden}
+html.desktop .video-row .progress i{display:block;height:100%;background:var(--accent)}
+html.desktop .video-row .vpath{display:block;color:var(--muted);font-size:11.5px;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
