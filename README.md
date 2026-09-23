@@ -105,6 +105,11 @@ Tap a preview to play the video. Each one is silent and about 15–25 seconds lo
   - Books: **Sentence** in the selection bar, or in a word's pop-up (the whole sentence around it).
   - Comics: **Save** in a speech bubble's sheet, or **Sentence** in a word's pop-up; the card gets a crop of the bubble.
   - Mac video player: **＋ Sentence** (or C) saves the subtitle line with a still of the scene; the second subtitle line (e.g. English) goes on the back, and the show, episode and time in the note. No audio is kept, so cards stay small (~15 KB with the still). Images sync with the card.
+- **Known words** (can be switched off in Library › Reading): track your vocabulary size and estimate how much of a text you'd understand. Nothing is highlighted while you read.
+  - A word counts as known if you tapped **✓** on it (entries, word pop-ups, the Mac player and browser-helper popups), or if its card is learned (a review interval of 3+ weeks). Marks sync between devices.
+  - Vocabulary shows the count per language; tap it to see or unmark the words.
+  - **% known** for a book chapter (Contents sheet), a comic episode (the page-text sheet; pages not yet OCR'd are read first) or a video episode (**✓ %** in the Mac player's transcript).
+  - Each one lists the most frequent new words to look up or tick before you start. Words are counted by dictionary form (conjugations are folded; Korean uses its own analysis). It is an estimate: names and OCR slips count as unknown.
 - Cards export to Anki (TSV with HTML and folder tags) or CSV, and Chinese cards export to **Pleco** (flashcard text file; each folder becomes a `//Kotoba/<folder>` category).
 - **Already a card:** an entry notes when the same word is already a card saved from another dictionary (e.g. 言葉 from 大辞林 while reading 明鏡), and so does the save sheet. The word and, when both have one, the reading must match, so homophones (橋/箸) and other readings (人気 にんき/ひとけ) aren't confused. JSON backups merge with existing data and skip duplicates when restored.
 

@@ -337,7 +337,7 @@ public class DesktopServer {
     /** The helper's fixed address (the main server's port changes every launch). 127.0.0.1 only. */
     static final int HELPER_PORT=47823;
     /** Requests the helper may make: looking words up and saving cards, nothing else. */
-    static final java.util.Set<String> HELPER_ROUTES=java.util.Set.of("lookup","gloss.rec","freq","item.similar","item.save","folders","dicts");
+    static final java.util.Set<String> HELPER_ROUTES=java.util.Set.of("lookup","gloss.rec","freq","item.similar","item.save","folders","dicts","known.get","known.set");
 
     String helperKey(){
         String k=routes.store.setting("helper_key","");

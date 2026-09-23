@@ -114,6 +114,23 @@ public class Routes {
             case "comic.unmark":comics.deleteMark(d.getLong("id"));return null;
             case "ocr.page":return ocr.page(comics,d.getLong("chapter"),d.getInt("page"),d.optString("lang","ko"),d.optBoolean("refresh",false),host);
             case "ocr.clear":ocr.clear(d.getLong("chapter"));return null;
+            // All text of a comic chapter (pages not read yet are read now), for the known-words estimate.
+            case "comic.text":{
+                long ch=d.getLong("chapter");String lang=d.optString("lang","ko");
+                int n=comics.pages(ch).size();StringBuilder t=new StringBuilder();
+                for(int i=0;i<n;i++){t.append(ocr.pageText(comics,ch,i,lang));host.event("progress",new JSONObject().put("what","comic.text").put("done",i+1).put("total",n));}
+                return new JSONObject().put("text",t.toString()).put("pages",n);
+            }
+            // ---------- known words ----------
+            case "known.get":{String w=d.getString("word");return knownInfo(w,Library.langOfWord(w,d.optString("lang",library.langOfDict(d.optLong("dict",0)))));}
+            case "known.set":{
+                String w=d.getString("word"),lang=Library.langOfWord(w,d.optString("lang",library.langOfDict(d.optLong("dict",0))));
+                store.setKnown(w,lang,d.optBoolean("known",true));
+                return knownInfo(w,lang);
+            }
+            case "known.list":return store.knownList(d.getString("lang"),d.optString("q",""),d.optInt("offset",0));
+            case "known.stats":return knownStats();
+            case "known.estimate":return estimate(d.getString("text"),d.getString("lang"));
             // By path (the Mac, and files in the phone's own folder).
             case "comic.scanPath":return comics.scanFiles(new File(d.getString("path")));
             case "comic.addPaths":{
@@ -194,6 +211,58 @@ public class Routes {
             }
             default:return null;
         }
+    }
+
+    // ---------- known words ----------
+    /** Headwords of learned cards in this language (normalized). */
+    java.util.Set<String> learned(String lang) throws Exception {
+        java.util.Set<String> out=new java.util.HashSet<>();
+        JSONArray cards=store.learnedCards();
+        for(int i=0;i<cards.length();i++){
+            JSONObject c=cards.getJSONObject(i);
+            String w=c.getString("headword");
+            if(Library.langOfWord(w,library.langOfDict(c.optLong("dict",0))).equals(lang))out.add(HtmlText.normalize(w));
+        }
+        return out;
+    }
+    /** Every word counted as known: marked known, or a learned card not marked unknown. */
+    java.util.Set<String> knownSet(String lang) throws Exception {
+        java.util.Set<String> out=learned(lang);
+        out.removeAll(store.markedUnknown(lang));
+        out.addAll(store.markedKnown(lang));
+        return out;
+    }
+    JSONObject knownInfo(String word,String lang) throws Exception {
+        int m=store.marked(word,lang);
+        String how=m==1?"marked":m==0?"":learned(lang).contains(HtmlText.normalize(word))?"card":"";
+        return new JSONObject().put("word",word).put("lang",lang).put("known",!how.isEmpty()).put("how",how);
+    }
+    JSONObject knownStats() throws Exception {
+        JSONObject out=new JSONObject();
+        for(String lang:new String[]{"ja","ko","zh","th","ru"}){
+            java.util.Set<String> learned=learned(lang),marked=store.markedKnown(lang),all=knownSet(lang);
+            if(all.isEmpty()&&learned.isEmpty())continue;
+            out.put(lang,new JSONObject().put("total",all.size()).put("marked",marked.size()).put("cards",learned.size()));
+        }
+        return out;
+    }
+    /**
+     * How much of a text you'd know: the share of its words (counting repeats) that are known, and the unknown ones by
+     * how often they occur, for a quick look before reading.
+     */
+    JSONObject estimate(String text,String lang) throws Exception {
+        java.util.LinkedHashMap<String,Object[]> words=library.textWords(text,lang);
+        java.util.Set<String> known=knownSet(lang);
+        int total=0,knownTokens=0;java.util.List<JSONObject> unknown=new ArrayList<>();
+        for(java.util.Map.Entry<String,Object[]> e:words.entrySet()){
+            int n=(Integer)e.getValue()[0];total+=n;
+            if(known.contains(HtmlText.normalize(e.getKey())))knownTokens+=n;
+            else unknown.add(new JSONObject().put("word",e.getKey()).put("form",e.getValue()[1]).put("count",n));
+        }
+        unknown.sort((a,b)->Integer.compare(b.optInt("count"),a.optInt("count")));
+        JSONArray top=new JSONArray();for(int i=0;i<Math.min(150,unknown.size());i++)top.put(unknown.get(i));
+        return new JSONObject().put("lang",lang).put("tokens",total).put("known",knownTokens).put("unique",words.size()).put("unknownUnique",unknown.size())
+            .put("pct",total==0?0:Math.round(knownTokens*1000.0/total)/10.0).put("unknown",top);
     }
 
     // ---------- dictionary pages and resources ----------

@@ -127,6 +127,22 @@ public final class Ocr {
         return c;
     }
 
+    /** A page's recognized text, from the cache or read now with the fast model (no background re-reading). */
+    public String pageText(Comics comics,long chapter,int index,String lang) throws Exception {
+        JSONObject c=cached(chapter,index,lang);
+        if(c==null){
+            Object[] res=comics.page(chapter,index);
+            if(res==null)return "";
+            c=recognize((byte[])res[0],lang).put("v",VERSION);
+            respace(c,lang);
+            db.execSQL("INSERT OR REPLACE INTO ocr_cache(chapter,page,lang,data) VALUES(?,?,?,?)",new Object[]{chapter,index,lang,c.toString()});
+        }
+        StringBuilder t=new StringBuilder();
+        JSONArray blocks=c.optJSONArray("blocks");
+        if(blocks!=null)for(int i=0;i<blocks.length();i++)t.append(blocks.getJSONObject(i).optString("text","")).append('\n');
+        return t.toString();
+    }
+
     JSONObject cached(long chapter,int index,String lang) throws Exception {
         JSONArray r=Store.rows(db,"SELECT data FROM ocr_cache WHERE chapter=? AND page=? AND lang=?",Long.toString(chapter),Integer.toString(index),lang);
         return r.length()>0?new JSONObject(r.getJSONObject(0).getString("data")):null;

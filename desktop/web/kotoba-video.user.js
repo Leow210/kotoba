@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kotoba Video Text
 // @namespace    app.kotoba.desktop
-// @version      0.4.0
+// @version      0.5.0
 // @description  Look up YouTube and GagaOOLala subtitles in Kotoba for Mac: hold Shift over a word. Works in Firefox and Chrome (Tampermonkey).
 // @match        https://www.youtube.com/watch*
 // @match        https://www.gagaoolala.com/*/videos/*
@@ -82,6 +82,9 @@
     .kotoba-pop .k-saved { margin-left: auto; color: #a8841e; font-size: 12px; font-weight: 600; }
     .kotoba-pop .k-size { align-self: center; margin-left: auto; border: 0; background: #ece7dc; color: #3d433f; border-radius: 7px; width: 26px; height: 26px; font-size: 17px; line-height: 26px; padding: 0; cursor: pointer; }
     .kotoba-pop .k-saved:not(:empty) + .k-size { margin-left: 6px; }
+    .kotoba-pop .k-known { align-self: center; margin-left: 6px; border: 0; background: #ece7dc; color: #9a9d96; border-radius: 7px; width: 26px; height: 26px; font-size: 15px; font-weight: 700; line-height: 26px; padding: 0; cursor: pointer; }
+    .kotoba-pop .k-known.on { background: #2f6b55; color: #fff; }
+    .kotoba-pop .k-known + .k-size { margin-left: 6px; }
     .kotoba-pop .k-close { align-self: center; margin-left: 4px; border: 0; background: transparent; color: #72766f; border-radius: 7px; width: 26px; height: 26px; font-size: 21px; line-height: 24px; padding: 0; cursor: pointer; }
     .kotoba-pop .k-close:hover { background: #ece7dc; color: #1d211f; }
     .kotoba-pop .k-alt { margin-left: 8px; border: 1px solid #cfe0d6; background: #fff; color: #2f6b55; border-radius: 10px; padding: 0 8px; font: 600 11.5px/1.7 -apple-system,BlinkMacSystemFont,sans-serif; cursor: pointer; }
@@ -260,7 +263,7 @@
     const byDict = []; for (const it of res.items) if (!byDict.some(x => x.dict === it.dict) && it.kind !== 'kanji') byDict.push(it);
     const items = byDict.slice(0, 5);
     const written = res.written && res.written !== res.key ? res.written : res.key;
-    P.el.innerHTML = H(`<div class="k-head"><b class="k-word">${esc(written)}</b>${written !== res.key ? `<span class="k-key">${esc(res.key)}</span>` : ''}<span class="k-freq"></span><span class="k-saved"></span><button class="k-size" data-k="size" title="Bigger / smaller popup">${big() ? '⤡' : '⤢'}</button><button class="k-close" data-k="close" title="Close (Esc)">×</button></div>
+    P.el.innerHTML = H(`<div class="k-head"><b class="k-word">${esc(written)}</b>${written !== res.key ? `<span class="k-key">${esc(res.key)}</span>` : ''}<span class="k-freq"></span><span class="k-saved"></span><button class="k-known" data-k="known" title="Mark as known">✓</button><button class="k-size" data-k="size" title="Bigger / smaller popup">${big() ? '⤡' : '⤢'}</button><button class="k-close" data-k="close" title="Close (Esc)">×</button></div>
       ${res.explain || alts(res).length ? `<div class="k-explain">${esc(res.explain || '')}${alts(res).map((f, j) => `<button class="k-alt" data-k="alt" data-j="${j}" title="${esc(f.explain || '')}">or ${esc(f.base)}</button>`).join('')}</div>` : ''}
       <div class="k-tabs">${items.map((it, n) => `<button class="k-tab${n ? '' : ' on'}" data-k="tab" data-n="${n}">${esc(shortName(it.dictionary))}</button>`).join('')}</div>
       <div class="k-entry"></div>
@@ -268,6 +271,8 @@
     P.el.classList.toggle('k-big', big());
     P.items = items;
     P.el.hidden = false; place(P);
+    const kb = P.el.querySelector('.k-known');
+    kotoba('known.get', { word: res.key, dict: items[0] ? items[0].dict : 0, lang: P.lang || '' }).then(k => paintKnown(kb, k)).catch(() => { kb.hidden = true; });
     showEntry(P, 0);
     Promise.all([kotoba('freq', { key: res.key, reading: '' }), groups || (groups = kotoba('dicts').then(ds => Object.fromEntries(ds.map(d => [d.id, (d.grp || 'Japanese').split('/')[0]]))))]).then(([f, g]) => {
       if (P.res !== res) return;
@@ -405,6 +410,7 @@
     el.addEventListener('click', e => onPopClick(P, e));
   }
   wire(main);
+  function paintKnown(b, k) { b.classList.toggle('on', !!k.known); b.title = k.how === 'card' ? 'Known (a learned card)' : k.known ? 'Marked known — click to unmark' : 'Mark as known'; }
   async function onPopClick(P, e) {
     pinned = true;
     const b = e.target.closest('[data-k]'); if (!b || !P.res) return;
@@ -413,6 +419,10 @@
       // × closes this popup and the ones opened from it; the first one also resumes the video.
       if (P.level) { closeFrom(P.level); const f = stack[P.level - 1].el.querySelector('.k-entry iframe'); try { f.contentWindow.CSS.highlights.delete('kotoba'); } catch (err) {} }
       else hidePop();
+      return;
+    }
+    if (b.dataset.k === 'known') {
+      kotoba('known.set', { word: res.key, dict: it ? it.dict : 0, lang: P.lang || '', known: !b.classList.contains('on') }).then(k => paintKnown(b, k)).catch(err => showMessage(err.message, text));
       return;
     }
     if (b.dataset.k === 'tab') { closeFrom(P.level + 1); showEntry(P, +b.dataset.n); return; }

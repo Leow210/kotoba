@@ -24,6 +24,8 @@ public class Store {
         db.execSQL("PRAGMA foreign_keys=ON");
         // Created first: the upgrade steps below read and write settings (a fresh install has no tables yet).
         db.execSQL("CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY,value TEXT NOT NULL)");
+        // Words marked as known (known=0 keeps an unmarking, so it syncs too).
+        db.execSQL("CREATE TABLE IF NOT EXISTS known(lang TEXT NOT NULL,norm TEXT NOT NULL,word TEXT NOT NULL,known INTEGER NOT NULL DEFAULT 1,changed INTEGER NOT NULL,PRIMARY KEY(lang,norm))");
         db.execSQL("CREATE TABLE IF NOT EXISTS folders(id INTEGER PRIMARY KEY,name TEXT NOT NULL UNIQUE,position INTEGER NOT NULL DEFAULT 0,created INTEGER NOT NULL DEFAULT 0)");
         db.execSQL("INSERT OR IGNORE INTO folders(id,name,position,created) VALUES(1,'Inbox',0,strftime('%s','now'))");
         db.execSQL("CREATE TABLE IF NOT EXISTS items(id INTEGER PRIMARY KEY,folder_id INTEGER NOT NULL REFERENCES folders(id),kind TEXT NOT NULL DEFAULT 'entry',dict INTEGER NOT NULL DEFAULT 0,dict_name TEXT NOT NULL DEFAULT '',page TEXT NOT NULL DEFAULT '',anchor TEXT NOT NULL DEFAULT '',headword TEXT NOT NULL,reading TEXT NOT NULL DEFAULT '',back TEXT NOT NULL DEFAULT '',back_html TEXT NOT NULL DEFAULT '',note TEXT NOT NULL DEFAULT '',context TEXT NOT NULL DEFAULT '',created INTEGER NOT NULL,updated INTEGER NOT NULL,review INTEGER NOT NULL DEFAULT 0,state INTEGER NOT NULL DEFAULT 0,step INTEGER NOT NULL DEFAULT 0,stability REAL NOT NULL DEFAULT 0,difficulty REAL NOT NULL DEFAULT 0,due INTEGER NOT NULL DEFAULT 0,last_review INTEGER NOT NULL DEFAULT 0,reps INTEGER NOT NULL DEFAULT 0,lapses INTEGER NOT NULL DEFAULT 0,introduced INTEGER NOT NULL DEFAULT 0)");
@@ -169,6 +171,37 @@ public class Store {
      * Cards for the same word saved from any dictionary: same headword, and the same reading whenever both have one,
      * so homophones (橋/箸 はし) and other readings (人気 にんき/ひとけ) don't count. Kana/width/separators are ignored.
      */
+    // ---------- known words ----------
+    public void setKnown(String word,String lang,boolean known){
+        String norm=HtmlText.normalize(word);if(norm.isEmpty())return;
+        db.execSQL("INSERT OR REPLACE INTO known(lang,norm,word,known,changed) VALUES(?,?,?,?,?)",new Object[]{lang,norm,word.trim(),known?1:0,System.currentTimeMillis()});
+    }
+    /** Whether the word was marked known (1), unmarked (0), or never touched (-1). */
+    public int marked(String word,String lang){
+        try{
+            JSONArray r=rows(db,"SELECT known FROM known WHERE lang=? AND norm=?",lang,HtmlText.normalize(word));
+            return r.length()==0?-1:r.getJSONObject(0).getInt("known");
+        }catch(Exception e){return -1;}
+    }
+    public java.util.Set<String> markedKnown(String lang){
+        java.util.Set<String> out=new java.util.HashSet<>();
+        try(android.database.Cursor c=db.rawQuery("SELECT norm FROM known WHERE lang=? AND known=1",new String[]{lang})){while(c.moveToNext())out.add(c.getString(0));}
+        return out;
+    }
+    public java.util.Set<String> markedUnknown(String lang){
+        java.util.Set<String> out=new java.util.HashSet<>();
+        try(android.database.Cursor c=db.rawQuery("SELECT norm FROM known WHERE lang=? AND known=0",new String[]{lang})){while(c.moveToNext())out.add(c.getString(0));}
+        return out;
+    }
+    /** Cards learned well enough to count as known: reviewed with a stability of 21+ days (sentence cards aside). */
+    public JSONArray learnedCards()throws Exception{
+        return rows(db,"SELECT headword,reading,dict FROM items WHERE kind!='sentence' AND reps>0 AND stability>=21");
+    }
+    public JSONArray knownList(String lang,String query,int offset)throws Exception{
+        String q=HtmlText.normalize(query==null?"":query);
+        return rows(db,"SELECT word,norm,changed FROM known WHERE lang=? AND known=1 AND norm LIKE ? ORDER BY changed DESC LIMIT 200 OFFSET ?",lang,"%"+q+"%",Integer.toString(offset));
+    }
+
     public JSONArray similar(String headword,String reading)throws Exception{
         String h=HtmlText.normalize(headword),r=readingKey(reading);
         JSONArray out=new JSONArray();

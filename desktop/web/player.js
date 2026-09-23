@@ -189,7 +189,8 @@ function onHover(e){
   if(!KotobaHover.matches(e)){cancelHover();return;}
   const span=e.target.closest('.ch');if(!span)return;
   const lineEl=span.closest('[data-cue]');if(!lineEl)return;
-  const cue=st.cues[+lineEl.dataset.cue];if(!cue)return;
+  // Words in the known-words list hover like subtitle lines (data-cue="k3").
+  const cue=lineEl.dataset.cue[0]==='k'?knownCues[+lineEl.dataset.cue.slice(1)]:st.cues[+lineEl.dataset.cue];if(!cue)return;
   const at=lineEl.dataset.cue+':'+span.dataset.i;
   if(at===hoverAt)return;
   hoverAt=at;
@@ -244,12 +245,14 @@ async function showPop(res,cue,r1,r2,P=pop){
     const items=byDict.slice(0,4);
     // The word as the subtitle writes it (門口), with the dictionary's form when that differs (门口, 食べる).
     const shown=res.written&&res.written!==res.key?res.written:res.key;
-    P.el.innerHTML=`<div class="p-head"><b class="p-word">${esc(shown)}</b>${shown!==res.key?`<span class="p-key">${esc(res.key)}</span>`:''}<span class="p-freq"></span><span class="p-saved"></span><button class="p-size" data-p="size" title="Bigger / smaller popup"></button><button class="p-close" data-p="close" title="Close (Esc)">×</button></div>
+    P.el.innerHTML=`<div class="p-head"><b class="p-word">${esc(shown)}</b>${shown!==res.key?`<span class="p-key">${esc(res.key)}</span>`:''}<span class="p-freq"></span><span class="p-saved"></span>${knownOn()?'<button class="p-known" data-p="known" title="Mark as known">✓</button>':''}<button class="p-size" data-p="size" title="Bigger / smaller popup"></button><button class="p-close" data-p="close" title="Close (Esc)">×</button></div>
       ${res.explain||alts(res).length?`<div class="p-explain">${esc(res.explain||'')}${alts(res).map((f,j)=>`<button class="p-alt" data-p="alt" data-j="${j}" title="${esc(f.explain||'')}">or ${esc(f.base)}</button>`).join('')}</div>`:''}
       <div class="p-tabs">${items.map((it,n)=>`<button class="p-tab${n?'':' on'}" data-p="tab" data-n="${n}">${esc(shortName(it.dictionary))}</button>`).join('')}</div>
       <div class="p-entry"></div>
       <div class="p-actions"><button data-p="card">＋ Card</button><button data-p="main">Open in Kotoba</button><button data-p="copy">Copy</button></div>`;
     P.items=items;
+    const kb=P.el.querySelector('.p-known');
+    if(kb)api('known.get',{word:res.key,dict:items[0]?items[0].dict:0,lang:P.level?P.lang:st.lang}).then(k=>paintKnown(kb,k)).catch(()=>{});
     // The entry as the dictionary lays it out (same page as the main window), not flattened text.
     showEntry(P,0);
     Promise.all([api('freq',{key:res.key,reading:''}),dictGroups()]).then(([f,groups])=>{
@@ -404,6 +407,11 @@ async function onPopClick(P,e){
     for(const Q of stack){Q.el.classList.toggle('big',big);fitFrame(Q);}
     return;
   }
+  if(b.dataset.p==='known'){
+    try{const k=await api('known.set',{word:res.key,dict:it?it.dict:0,lang:P.level?P.lang:st.lang,known:!b.classList.contains('on')});paintKnown(b,k);osd(k.known?'Known: '+res.key:'Not known: '+res.key);}
+    catch(err){osd(err.message);}
+    return;
+  }
   if(b.dataset.p==='copy'){navigator.clipboard.writeText(res.key).catch(()=>{});osd('Copied');}
   if(b.dataset.p==='main')send({cmd:'lookupInMain',word:res.key});
   if(b.dataset.p==='tab'){closeFrom(P.level+1);showEntry(P,+b.dataset.n);return;}
@@ -419,7 +427,7 @@ async function onPopClick(P,e){
     }catch(err){osd(err.message);}
   }
 }
-for(const id of ['sub-main','t-list']){
+for(const id of ['sub-main','t-list','t-known']){
   $(id).addEventListener('mousemove',onHover);
   $(id).addEventListener('mouseleave',leaveSubs);
 }
@@ -534,7 +542,40 @@ async function saveSentence(){
     osd('Saved sentence'+(image?' with a still':''));
   }catch(e){osd(e.message);}
 }
-$('transcript').addEventListener('click',(e)=>{if(e.target.closest('[data-a="transcript"]'))toggleTranscript();});
+$('transcript').addEventListener('click',(e)=>{
+  if(e.target.closest('[data-a="transcript"]'))toggleTranscript();
+  if(e.target.closest('[data-a="known"]'))episodeKnown();
+});
+// ---------- known words ----------
+// The main window's "Track known words" setting (same origin, so the same saved settings).
+function knownOn(){try{return JSON.parse(localStorage.getItem('settings')||'{}').known_words!==false;}catch(e){return true;}}
+function paintKnown(b,k){b.classList.toggle('on',!!k.known);b.title=k.how==='card'?'Known (a learned card)':k.known?'Marked known — click to unmark':'Mark as known';}
+/** How much of this episode's subtitles you'd know, and its most frequent new words, in the transcript panel. */
+let knownCues=[];
+async function episodeKnown(){
+  const box=$('t-known');
+  if(!box.hidden){box.hidden=true;$('t-list').hidden=false;return;}
+  if(!st.cues.length){osd('No subtitles');return;}
+  box.hidden=false;$('t-list').hidden=true;box.innerHTML='<p class="k-note">Counting words…</p>';
+  let r;
+  try{r=await api('known.estimate',{text:st.cues.map(c=>c.text).join('\n'),lang:st.lang||'ja'});}
+  catch(e){box.innerHTML=`<p class="k-note">${esc(e.message)}</p>`;return;}
+  knownCues=r.unknown.map(u=>({text:u.word,start:st.t,end:st.t}));
+  const render=()=>{
+    box.innerHTML=`<div class="k-top"><b>${r.pct}%</b><span>of this episode’s words are known<small>${r.known.toLocaleString()} of ${r.tokens.toLocaleString()} · ${r.unknownUnique.toLocaleString()} new words</small></span></div>
+      <div class="k-bar"><i style="width:${Math.min(100,r.pct)}%"></i></div>
+      <p class="k-note">Most frequent new words. Hover one to look it up; ✓ if you know it.</p>
+      ${r.unknown.map((u,i)=>`<div class="k-row${u.done?' done':''}"><span class="t-text k-word" data-cue="k${i}">${chars(u.word,'ch')}</span><small>×${u.count}</small><button class="p-known${u.done?' on':''}" data-k="${i}">✓</button></div>`).join('')}
+      <p class="k-note">An estimate: words are counted by dictionary form; names count as unknown.</p>`;
+  };
+  box.onclick=async(e)=>{
+    const b=e.target.closest('[data-k]');if(!b)return;
+    const u=r.unknown[+b.dataset.k];u.done=!u.done;
+    try{await api('known.set',{word:u.word,lang:st.lang||'ja',known:u.done});}catch(err){osd(err.message);return;}
+    r.known+=u.done?u.count:-u.count;r.unknownUnique+=u.done?-1:1;r.pct=r.tokens?Math.round(r.known*1000/r.tokens)/10:0;render();
+  };
+  render();
+}
 function toggleTranscript(){$('transcript').hidden=!$('transcript').hidden;document.body.classList.toggle('with-transcript',!$('transcript').hidden);markTranscript(st.shown);}
 
 // Clicking the picture plays/pauses; double-click is full screen.

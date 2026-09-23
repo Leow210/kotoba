@@ -644,8 +644,14 @@ img,svg{max-height:calc(100vh - ${2*m}px)!important}`;
   el.querySelector('[data-a="search"]').onclick=handle(()=>dictionarySearchSheet('',book.title));
   async function contentsSheet(which){
     const [marks,hls]=await Promise.all([api('bookmarks',{book:id}),api('highlights',{book:id})]);
-    const s=openSheet(`<div style="padding:0 16px 8px"><div class="seg"><button data-t="toc">Contents</button><button data-t="marks">Bookmarks · ${marks.length}</button><button data-t="hls">Highlights · ${hls.length}</button></div></div><div class="sheet-body" style="padding:0" data-f="list"></div>`,{title:book.title,tall:true});
+    const s=openSheet(`${knownOn()?`<div style="padding:0 16px 10px"><button class="btn wide" data-a="known-est" style="width:100%">${icon('check')} Words in this chapter · % known</button></div>`:''}<div style="padding:0 16px 8px"><div class="seg"><button data-t="toc">Contents</button><button data-t="marks">Bookmarks · ${marks.length}</button><button data-t="hls">Highlights · ${hls.length}</button></div></div><div class="sheet-body" style="padding:0" data-f="list"></div>`,{title:book.title,tall:true});
     const list=s.sheet.querySelector('[data-f="list"]');
+    const est=s.sheet.querySelector('[data-a="known-est"]');
+    if(est)est.onclick=handle(()=>{
+      const text=(frame.contentDocument&&frame.contentDocument.body&&frame.contentDocument.body.innerText)||'';
+      closeSheet(s);
+      return knownEstimateSheet(f('chname').textContent.trim()||book.title,textLang(text,book.lang),async()=>text);
+    });
     const render=(t)=>{
       s.sheet.querySelectorAll('[data-t]').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
       if(t==='toc'){

@@ -544,3 +544,17 @@ svg.i.sm{width:16px;height:16px}
 .front.sentence .sentence-text{font-size:22px;line-height:1.65;text-align:center;font-family:var(--serif,serif)}
 .sv-image{margin-bottom:10px}
 .sv-image img{display:block;max-width:100%;max-height:200px;border-radius:10px;margin-bottom:6px;object-fit:contain}
+/* known words */
+.icon-btn.known-on{color:var(--accent)}
+.icon-btn.known-on svg{stroke-width:3}
+.known-sheet{padding:0 0 10px}
+.ke-top{display:flex;align-items:center;gap:14px;padding:6px 18px 10px}
+.ke-top b{display:block;font-size:15px}.ke-top small{color:var(--muted);font-size:13px}
+.ke-pct{font:600 40px/1 var(--serif);color:var(--accent);white-space:nowrap}.ke-pct small{font-size:20px;color:var(--accent)}
+.ke-bar{height:6px;border-radius:3px;background:var(--line);margin:0 18px 8px;overflow:hidden}.ke-bar i{display:block;height:100%;background:var(--accent)}
+.ke-row{display:flex;align-items:center;gap:6px;padding:0 8px 0 18px;border-bottom:1px solid var(--line)}
+.ke-row.done .ke-word{opacity:.45}
+.ke-word{flex:1;min-width:0;text-align:left;padding:9px 0;display:flex;align-items:baseline;gap:8px;background:none}
+.ke-word b{font:500 19px var(--serif)}.ke-word small{color:var(--muted);font-size:13px}
+.ke-n{color:var(--muted);font-size:13px}
+.ke-ok{color:var(--muted)}

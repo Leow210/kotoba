@@ -81,7 +81,7 @@ function fmtDue(ts){
 }
 
 // ---------- settings ----------
-const settings={zoom:1.25,vertical:false,theme:'light',new_per_day:'20',retention:'0.9',fulltext:true,front_reading:false,autoplay_entry:false,autoplay_review:'answer',audio_front:false};
+const settings={zoom:1.25,vertical:false,theme:'light',new_per_day:'20',retention:'0.9',fulltext:true,front_reading:false,autoplay_entry:false,autoplay_review:'answer',audio_front:false,known_words:true};
 function loadLocalSettings(){try{Object.assign(settings,JSON.parse(localStorage.getItem('settings')||'{}'));}catch(e){}}
 function saveLocalSettings(){try{localStorage.setItem('settings',JSON.stringify(settings));}catch(e){}}
 const THEME_BARS={light:['#f7f4ee',true],sepia:['#f1e8d6',true],dark:['#141614',false]};
@@ -794,6 +794,7 @@ function entryPage(){
   el.innerHTML=`<div class="bar">
       <button class="icon-btn" data-act="back" aria-label="Back">${icon('back')}</button>
       <div class="title"><b data-f="title"></b><small data-f="dict"></small></div>
+      <button class="icon-btn" data-act="known" aria-label="Known word" hidden>${icon('check')}</button>
       <button class="icon-btn" data-act="bookmark" aria-label="Save to a folder">${icon('star')}</button>
       <button class="icon-btn" data-act="more" aria-label="More">${icon('more')}</button>
     </div>
@@ -951,11 +952,14 @@ async function openEntry(target,existing){
     const b=box.querySelector('[data-open]');if(b)b.onclick=handle(()=>openItem(+b.dataset.open));
     updateBookmark();
   }
+  let knownFor=null;
   function updateBookmark(){
     const info=current&&current.info;
     const saved=(state.saved||[]).filter(s=>!info||cleanKey(s.headword)===cleanKey(info.word)||cleanKey(s.headword)===cleanKey(state.key));
     el.querySelector('[data-act="bookmark"]').classList.toggle('on',saved.length>0);
     el.querySelector('[data-act="bookmark"]').classList.toggle('elsewhere',!saved.length&&!!(state.similar||[]).length);
+    const kw=(info&&info.word)||state.key;
+    if(kw!==knownFor){knownFor=kw;wireKnownButton(el.querySelector('[data-act="known"]'),cleanKey(kw),state.dict);}
     if(current&&current.info)renderInfo();
   }
   async function onLink(href){
@@ -1253,6 +1257,72 @@ async function saveSentence({text,image='',note='',back=''}){
   if(!text||!text.trim()){toast('No sentence here');return;}
   await openSaveSheet({review:true,kind:'sentence',headword:text.trim().slice(0,1000),image:image||'',note,back});
 }
+// ---------- known words ----------
+// Words you mark known plus cards you've learned (3+ week intervals). Nothing is highlighted in texts: this only
+// counts your vocabulary and estimates how much of a chapter or episode you'd know.
+const LANG_LABEL={ja:'Japanese',ko:'Korean',zh:'Chinese',th:'Thai',ru:'Russian'};
+const knownOn=()=>settings.known_words!==false;
+/** A text's language: the book's own tag when it's one we know, else by its script. */
+function textLang(text,hint){
+  const h=String(hint||'').toLowerCase().slice(0,2);if(LANG_LABEL[h])return h;
+  const t=String(text).slice(0,4000);
+  const n=(re)=>(t.match(re)||[]).length;
+  const ko=n(/[\uac00-\ud7a3]/g),kana=n(/[\u3040-\u30ff]/g),han=n(/[\u4e00-\u9fff]/g),th=n(/[\u0e00-\u0e7f]/g),ru=n(/[\u0400-\u04ff]/g);
+  const best=Math.max(ko,kana,han,th,ru);
+  return !best?'ja':best===ko?'ko':best===th?'th':best===ru?'ru':kana>han*0.1?'ja':'zh';
+}
+/** A ✓ button for a word: shows whether it's known, and toggles "marked known". */
+async function wireKnownButton(btn,word,dict,lang){
+  btn.hidden=!knownOn()||!word;if(btn.hidden)return;
+  const paint=(k)=>{btn.classList.toggle('known-on',!!k.known);btn.title=k.how==='card'?'Known (a learned card)':k.known?'Marked known':'Mark as known';btn.dataset.known=k.known?'1':'';};
+  btn.onclick=handle(async()=>{
+    const k=await api('known.set',{word,dict,lang:lang||'',known:!btn.dataset.known});
+    paint(k);toast(k.known?`${word} is known`:`${word} is no longer known`,1200);
+  });
+  try{paint(await api('known.get',{word,dict,lang:lang||''}));}catch(e){}
+}
+/** "% known" for a text: getText() returns the text (a chapter, an episode's subtitles). */
+async function knownEstimateSheet(title,lang,getText){
+  const s=openSheet(`<div class="sheet-body known-sheet"><p class="hint" id="ke-status">Reading the text…</p></div>`,{title,tall:true});
+  const body=s.sheet.querySelector('.known-sheet');
+  let text;
+  try{text=await getText((msg)=>{const st=body.querySelector('#ke-status');if(st)st.textContent=msg;});}
+  catch(e){body.innerHTML=`<p class="hint">${esc(e.message||String(e))}</p>`;return;}
+  if(!text||!text.trim()){body.innerHTML='<p class="hint">No text here yet.</p>';return;}
+  const r=await api('known.estimate',{text,lang});
+  const render=()=>{
+    body.innerHTML=`<div class="ke-top"><div class="ke-pct">${r.pct}<small>%</small></div><div><b>of the words here are known</b><small>${r.known.toLocaleString()} of ${r.tokens.toLocaleString()} words · ${r.unique.toLocaleString()} different, ${r.unknownUnique.toLocaleString()} new to you</small></div></div>
+      <div class="ke-bar"><i style="width:${Math.min(100,r.pct)}%"></i></div>
+      ${r.unknown.length?`<div class="section-label">Most frequent new words</div><p class="hint" style="margin:0 18px 6px">Tap a word to look it up, ✓ if you already know it.</p>`:''}
+      <div class="ke-list">${r.unknown.map((u,i)=>`<div class="ke-row ${u.done?'done':''}"><button class="ke-word" data-w="${i}"><b>${esc(u.word)}</b>${u.form&&u.form!==u.word?`<small>${esc(u.form)}</small>`:''}</button><span class="ke-n">×${u.count}</span><button class="icon-btn ke-ok ${u.done?'known-on':''}" data-k="${i}" aria-label="Known">${icon('check')}</button></div>`).join('')}</div>
+      <p class="hint" style="padding:10px 18px 20px">An estimate: words are counted by their dictionary form, and names or OCR slips count as unknown.</p>`;
+    body.querySelectorAll('[data-w]').forEach(b=>b.onclick=handle(()=>lookupSheet(r.unknown[+b.dataset.w].word,null,{lang})));
+    body.querySelectorAll('[data-k]').forEach(b=>b.onclick=handle(async()=>{
+      const u=r.unknown[+b.dataset.k];u.done=!u.done;
+      await api('known.set',{word:u.word,lang,known:u.done});
+      r.known+=u.done?u.count:-u.count;r.unknownUnique+=u.done?-1:1;r.pct=r.tokens?Math.round(r.known*1000/r.tokens)/10:0;
+      render();
+    }));
+  };
+  render();
+}
+/** Your known words for one language, newest first, to look up or unmark. */
+async function knownListSheet(lang){
+  const s=openSheet(`<div class="searchline"><div class="field">${icon('search')}<input id="kl-q" type="search" placeholder="Filter" autocomplete="off"></div></div><div class="sheet-body known-sheet" id="kl-list"></div>`,{title:'Known '+(LANG_LABEL[lang]||lang)+' words',tall:true});
+  const box=s.sheet.querySelector('#kl-list'),q=s.sheet.querySelector('#kl-q');
+  const load=handle(async()=>{
+    const rows=await api('known.list',{lang,q:q.value.trim()});
+    box.innerHTML=rows.length?rows.map((r,i)=>`<div class="ke-row"><button class="ke-word" data-w="${i}"><b>${esc(r.word)}</b></button><button class="icon-btn ke-ok known-on" data-k="${i}" aria-label="Unmark">${icon('check')}</button></div>`).join('')+
+      `<p class="hint" style="padding:10px 18px 20px">Only words you marked are listed; learned cards count as known too.</p>`:`<p class="hint" style="padding:0 18px">${q.value.trim()?'No match.':'No words marked known yet. Tap ✓ on an entry or in a chapter’s word list.'}</p>`;
+    box.querySelectorAll('[data-w]').forEach(b=>b.onclick=handle(()=>lookupSheet(rows[+b.dataset.w].word,null,{lang})));
+    box.querySelectorAll('[data-k]').forEach(b=>b.onclick=handle(async()=>{
+      const r=rows[+b.dataset.k],on=!b.classList.contains('known-on');
+      await api('known.set',{word:r.word,lang,known:on});b.classList.toggle('known-on',on);b.closest('.ke-row').classList.toggle('done',!on);
+    }));
+  });
+  q.addEventListener('input',debounce(load,250));
+  load();
+}
 /** "Book title · chapter" for cards saved while reading. */
 function readerSourceNote(){
   const ch=document.querySelector('.reader-page [data-f="chapter"]');
@@ -1333,6 +1403,11 @@ async function lookupSheet(text,sel,extra={}){
     const f=findFocus(wired.doc,r.key,'');focusUnit=f.focus;if(!kanjiHead(it.dict,r.key))applyFocus(wired.doc,f.focus,f.units);
     frame.style.height=Math.min(window.innerHeight*0.55,Math.max(160,wired.doc.body.getBoundingClientRect().bottom+10))+'px';
   };
+  if(knownOn()){
+    const kb=document.createElement('button');kb.className='icon-btn';kb.setAttribute('aria-label','Known word');kb.innerHTML=icon('check');
+    s.sheet.querySelector('.sheet-head [data-close]').before(kb);
+    wireKnownButton(kb,r.key,items[0].dict,extra.lang||'');
+  }
   s.sheet.querySelector('#lk-open').onclick=()=>{closeSheet(s);const it=items[index];openEntry({...it,key:r.key,alternatives:items});};
   // The sentence the word was found in (a book line, a comic bubble) can be kept as a sentence card too.
   const context=sel&&sel.context&&sel.context.trim();
@@ -1479,13 +1554,17 @@ async function openSaveSheet(o){
 async function renderFolders(){
   const folders=await api('folders');
   const total=folders.reduce((a,f)=>a+f.count,0);
+  const stats=knownOn()?await api('known.stats').catch(()=>({})):{};
+  const langs=Object.keys(stats);
+  const knownRow=langs.length?`<div class="section-label">Known words</div>`+langs.map(l=>`<button class="folder-row" data-known="${l}"><span class="fi">${icon('check')}</span><span class="fb"><b>${esc(LANG_LABEL[l]||l)} · ${stats[l].total.toLocaleString()}</b><small>${stats[l].marked.toLocaleString()} marked known · ${stats[l].cards.toLocaleString()} learned cards</small></span></button>`).join(''):knownOn()?`<div class="section-label">Known words</div><p class="hint" style="padding:0 18px 8px">None yet. Tap ✓ on an entry to mark a word known; cards you’ve learned (3+ week intervals) count too.</p>`:'';
   $('folders-sub').textContent=total?`${total} saved ${total===1?'word':'words'} · ${folders.length} ${folders.length===1?'folder':'folders'}`:'Folders of words you’ve kept';
   $('folder-list').innerHTML=`<button class="folder-row" data-f="0"><span class="fi">${icon('bookmark')}</span><span class="fb"><b>All saved words</b><small>${total} items</small></span></button>`+
     folders.map(f=>`<div class="folder-row"><button class="fi" data-f="${f.id}">${icon('folder')}</button><button class="fb" data-f="${f.id}" style="text-align:left"><b>${esc(f.name)}</b><small>${f.count} ${f.count===1?'word':'words'}${f.fresh?` · ${f.fresh} new`:''}${f.due?` · ${f.due} due`:''}</small></button><label class="toggle" title="Study this folder"><input type="checkbox" data-study="${f.id}" ${f.study?'checked':''}><span></span></label></div>`).join('')+
-    `<p class="hint" style="padding:0 18px">Switch on the folders you want to study — they become your review decks.</p>`+
+        knownRow+`<p class="hint" style="padding:0 18px">Switch on the folders you want to study — they become your review decks.</p>`+
     `<div style="padding:16px"><button class="btn wide" id="new-folder" style="width:100%">${icon('plus')} New folder</button></div>
      <div style="padding:0 16px 24px;display:flex;gap:10px"><button class="btn small wide" id="new-word">${icon('edit')} Add your own word</button></div>`;
   $('folder-list').querySelectorAll('[data-f]').forEach(b=>b.onclick=handle(()=>openFolder(+b.dataset.f,folders)));
+  $('folder-list').querySelectorAll('[data-known]').forEach(b=>b.onclick=()=>knownListSheet(b.dataset.known));
   $('folder-list').querySelectorAll('[data-study]').forEach(c=>c.onchange=handle(async()=>{await api('folder.study',{id:+c.dataset.study,study:c.checked});toast(c.checked?'Studying this folder':'Folder paused in review',1400);refreshBadge();}));
   $('new-folder').onclick=handle(async()=>{const name=await prompt2('New folder','','e.g. JLPT N1, Thai verbs');if(!name)return;await api('folder.save',{name});renderFolders();});
   $('new-word').onclick=handle(()=>openSaveSheet({review:true,kind:'custom',headword:'',back:'',onSaved:renderFolders}));
@@ -1810,6 +1889,7 @@ async function renderLibrary(){
       <div class="switch-row"><div><b>Entry text size</b><small>Also adjustable from any entry’s ⋯ menu</small></div><div class="stepper"><button data-z="-0.1">−</button><span id="zv">${Math.round(settings.zoom*100)}%</span><button data-z="0.1">+</button></div></div>
       <div class="switch-row"><div><b>Vertical text (縦書き)</b><small>Show entries in vertical writing</small></div><label class="toggle"><input type="checkbox" id="set-vertical" ${settings.vertical?'checked':''}><span></span></label></div>
       <div class="switch-row"><div><b>Theme</b></div><div class="chips">${['light','sepia','dark'].map(t=>`<button class="chip small ${settings.theme===t?'on':''}" data-theme-set="${t}">${t[0].toUpperCase()+t.slice(1)}</button>`).join('')}</div></div>
+      <div class="switch-row"><div><b>Track known words</b><small>A ✓ on entries, your vocabulary size, and how much of a chapter or episode you’d know. Nothing is highlighted while you read.</small></div><label class="toggle"><input type="checkbox" id="set-known" ${knownOn()?'checked':''}><span></span></label></div>
       <div class="switch-row"><div><b>Show reading on card front</b><small>Otherwise the reading appears with the answer</small></div><label class="toggle"><input type="checkbox" id="set-front" ${settings.front_reading?'checked':''}><span></span></label></div>
     </div>
     <div class="section-label">Audio</div>
@@ -1836,6 +1916,7 @@ async function renderLibrary(){
   $('library-home').querySelectorAll('[data-z]').forEach(b=>b.onclick=()=>{settings.zoom=Math.max(0.7,Math.min(2.6,+(settings.zoom+ +b.dataset.z).toFixed(2)));saveLocalSettings();$('zv').textContent=Math.round(settings.zoom*100)+'%';});
   $('set-vertical').onchange=e=>{settings.vertical=e.target.checked;saveLocalSettings();};
   $('set-front').onchange=e=>{settings.front_reading=e.target.checked;saveLocalSettings();};
+  $('set-known').onchange=e=>{settings.known_words=e.target.checked;saveLocalSettings();};
   $('set-ap-entry').onchange=e=>{settings.autoplay_entry=e.target.checked;saveLocalSettings();};
   $('set-audio-front').onchange=e=>{settings.audio_front=e.target.checked;saveLocalSettings();};
   $('library-home').querySelectorAll('[data-apr]').forEach(b=>b.onclick=()=>{settings.autoplay_review=b.dataset.apr;saveLocalSettings();$('library-home').querySelectorAll('[data-apr]').forEach(x=>x.classList.toggle('on',x===b));});

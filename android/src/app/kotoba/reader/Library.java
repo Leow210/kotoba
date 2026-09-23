@@ -1839,6 +1839,74 @@ public class Library {
      */
     public JSONObject lookup(String text) throws Exception {return lookup(text,"");}
 
+    // ---------- words in a text (for the known-words estimate) ----------
+    /** ja, ko, zh, th, ru from a dictionary's group (Japanese/古語 → ja), or "". */
+    public String langOfDict(long dict){
+        try{
+            JSONArray r=Store.rows(db,"SELECT grp FROM dicts WHERE id=?",Long.toString(dict));
+            String g=r.length()==0?"":r.getJSONObject(0).optString("grp","");
+            return langOfGroup(g);
+        }catch(Exception e){return "";}
+    }
+    static String langOfGroup(String g){
+        g=g.split("/")[0];
+        return g.equals("Japanese")||g.equals("Kanji")?"ja":g.equals("Korean")?"ko":g.equals("Chinese")?"zh":g.equals("Thai")?"th":g.equals("Russian")?"ru":"";
+    }
+    /** The language a word is written in when its script says so (Hangul, kana, Thai, Cyrillic), else the fallback. */
+    public static String langOfWord(String w,String fallback){
+        for(int c:w.codePoints().toArray()){
+            if(c>=0xAC00&&c<=0xD7A3)return "ko";
+            if(c>=0x3040&&c<=0x30FF)return "ja";
+            if(c>=0x0E00&&c<=0x0E7F)return "th";
+            if(c>=0x0400&&c<=0x04FF)return "ru";
+        }
+        return fallback==null||fallback.isEmpty()?"ja":fallback;
+    }
+    final java.util.Map<String,String> baseCache=java.util.Collections.synchronizedMap(new java.util.LinkedHashMap<String,String>(512,0.75f,true){
+        protected boolean removeEldestEntry(java.util.Map.Entry<String,String> e){return size()>20000;}
+    });
+    /**
+     * The dictionary words in a text with how often each occurs, as {base: count} in first-seen order (plus the first
+     * written form of each). Korean goes word by word (먹었어요 → 먹다); Japanese and Chinese by the longest headword at
+     * each position, with conjugations traced back (食べさせられた → 食べる). Punctuation, numbers and Latin are skipped.
+     */
+    public java.util.LinkedHashMap<String,Object[]> textWords(String text,String lang) throws Exception {
+        java.util.LinkedHashMap<String,Object[]> out=new java.util.LinkedHashMap<>();
+        if(text==null)return out;
+        if("ko".equals(lang)){
+            Matcher m=Pattern.compile("[\\uac00-\\ud7a3]+").matcher(text);
+            while(m.find()){
+                String w=m.group();
+                String base=baseCache.get("ko:"+w);
+                if(base==null){
+                    JSONObject r=lookup(w,"");
+                    base=r.getJSONArray("items").length()>0?r.optString("key",""):"";
+                    baseCache.put("ko:"+w,base);
+                }
+                if(!base.isEmpty())count(out,base,w);
+            }
+            return out;
+        }
+        int[] cps=text.codePoints().toArray();
+        for(int i=0;i<cps.length;){
+            int c=cps[i];
+            boolean cjk=han(c)||kana(c)||c>=0x30A0&&c<=0x30FF||c>=0x0E00&&c<=0x0E7F||c>=0x0400&&c<=0x04FF;
+            if(!cjk){i++;continue;}
+            int end=Math.min(cps.length,i+16);
+            String window=new String(cps,i,end-i);
+            JSONObject r=lookup(window,"zh".equals(lang)?"zh":"");
+            String matched=r.optString("matched","");
+            if(r.getJSONArray("items").length()==0||matched.isEmpty()){i++;continue;}
+            count(out,r.optString("key",matched),matched);
+            i+=Math.max(1,matched.codePointCount(0,matched.length()));
+        }
+        return out;
+    }
+    static void count(java.util.Map<String,Object[]> out,String base,String form){
+        Object[] e=out.get(base);
+        if(e==null)out.put(base,new Object[]{1,form});else e[0]=(Integer)e[0]+1;
+    }
+
     /**
      * How many characters from the start of the text begin some headword (警戒してたのに… → 4, 警戒して). Longer prefixes
      * can't be headwords, so a lookup of a whole speech bubble doesn't try all 24 lengths in full (~0.5 s on the phone).

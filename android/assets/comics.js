@@ -376,13 +376,24 @@ async function openComic(series,chapterId,startPage=0){
     let r=ocrData.get(k);if(!r){toast('Reading text…',1000);r=await api('ocr.page',{chapter:state.chapter,page:state.page,lang:series.lang==='ja'?'ja':'ko'});ocrData.set(k,r);}
     if(!r.blocks.length){toast('No text found on this page');return;}
     const s=openSheet(`<div class="sheet-body ocr-list">${r.blocks.map((b,n)=>`<button class="toc-row" data-n="${n}">${esc(b.text)}</button>`).join('')}</div>
-      <div class="sheet-foot"><button class="btn wide" id="op-copy">${icon('copy')} Copy all</button><button class="btn wide" id="op-tr">${icon('share')} Translate all</button></div>`,{title:`Page ${state.page+1} text`});
+      <div class="sheet-foot"><button class="btn wide" id="op-copy">${icon('copy')} Copy all</button><button class="btn wide" id="op-tr">${icon('share')} Translate all</button></div>${knownOn()?`<div class="sheet-foot" style="padding-top:0"><button class="btn wide" id="op-known">${icon('check')} Words in this episode · % known</button></div>`:''}`,{title:`Page ${state.page+1} text`});
     const all=r.blocks.map(b=>b.text).join('\n');
     s.sheet.querySelectorAll('[data-n]').forEach(b=>b.onclick=()=>{closeSheet(s);bubbleSheet(r.blocks[+b.dataset.n].text,r);});
     s.sheet.querySelector('#op-copy').onclick=()=>{Kotoba.copy(all);toast('Copied');};
     s.sheet.querySelector('#op-tr').onclick=()=>Kotoba.translate(all);
+    const kn=s.sheet.querySelector('#op-known');
+    if(kn)kn.onclick=()=>{closeSheet(s);episodeKnown();};
   });
 
+  /** "% known" for the whole episode: pages not read by OCR yet are read now (without the slower second pass). */
+  function episodeKnown(){
+    const ch=el.querySelector('[data-f="chname"]'),chapter=state.chapter,lang=series.lang==='ja'?'ja':'ko';
+    return knownEstimateSheet((ch&&ch.textContent.trim())||series.title,lang,async(status)=>{
+      let live=true;
+      on('progress',p=>{if(live&&p.what==='comic.text')status(`Reading page ${p.done} of ${p.total}…`);});
+      try{return (await api('comic.text',{chapter,lang})).text;}finally{live=false;}
+    });
+  }
   // The page's other bubbles go along as context for translation (Hy-MT2 on the Mac uses them: 손이 맵네 is "hits hard").
   function bubbleSheet(text,page,image){
     const ch=el.querySelector('[data-f="chname"]');
