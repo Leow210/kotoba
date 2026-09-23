@@ -108,7 +108,7 @@ public class MainActivity extends Activity {
             @Override public void event(String type,Object data){MainActivity.this.event(type,data);}
             @Override public void keepAwake(boolean on){runOnUiThread(()->{if(on)getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);});}
         });
-        routes.books=books;
+        routes.books=books;routes.comics=comics;routes.ocr=ocr;
         web=new KotobaWebView(this);
         setContentView(web);
         web.setBackgroundColor(Color.rgb(247,244,238));
@@ -331,21 +331,6 @@ public class MainActivity extends Activity {
                 for(android.content.UriPermission p:getContentResolver().getPersistedUriPermissions())out.put(p.getUri().toString());
                 return out;
             }
-            case "comics":return comics.list();
-            case "comic.series":return comics.series(d.getLong("id"));
-            case "comic.settings":comics.saveSettings(d.getLong("id"),d.getJSONObject("settings"));return null;
-            case "comic.rename":comics.rename(d.getLong("id"),d.getString("title"));return null;
-            case "comic.delete":comics.delete(d.getLong("id"));return null;
-            case "ocr.page":return ocr.page(comics,d.getLong("chapter"),d.getInt("page"),d.optString("lang","ko"),d.optBoolean("refresh",false));
-            case "ocr.clear":ocr.clear(d.getLong("chapter"));return null;
-            case "comic.coverFromPage":comics.coverFromPage(d.getLong("chapter"),d.getInt("page"));return null;
-            case "comic.resetCover":comics.setCover(d.getLong("id"),null);return null;
-            case "comic.pages":return new JSONObject().put("count",comics.pages(d.getLong("chapter")).size());
-            case "comic.progress":comics.progress(d.getLong("chapter"),d.getInt("page"),d.optBoolean("read",false));return null;
-            case "comic.read":comics.markRead(d.getJSONArray("ids"),d.getBoolean("read"));return null;
-            case "comic.marks":return comics.marks(d.getLong("series"));
-            case "comic.mark":return comics.addMark(d.getLong("chapter"),d.getInt("page"),d.optString("label",""));
-            case "comic.unmark":comics.deleteMark(d.getLong("id"));return null;
             case "comic.scanLocal":{
                 java.io.File root=new java.io.File(getExternalFilesDir(null),"comics");root.mkdirs();
                 return comics.scanFiles(root).put("path",root.getPath());

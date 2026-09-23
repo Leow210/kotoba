@@ -19,9 +19,7 @@
       const b=document.getElementById('go-import');if(b)b.onclick=()=>{showTab('library');pickFolder();};
     };
   }
-  // Books keep the Reader tab (comics stay on the phone); videos get a tab of their own.
-  const kind=document.getElementById('shelf-kind');if(kind)kind.remove();
-  if(typeof shelfKind!=='undefined')shelfKind='books';
+  // The Reader tab keeps books and comics (the comics come from the phone's Mihon folder); videos get a tab of their own.
   const readerBtn=document.querySelector('.tabbar [data-tab="reader"]');
   const videoBtn=document.createElement('button');videoBtn.dataset.tab='video';
   videoBtn.innerHTML=`<svg class="i" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M10 9.5v5l4.5-2.5z"/></svg>Video`;

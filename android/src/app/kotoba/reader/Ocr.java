@@ -239,7 +239,7 @@ public final class Ocr {
             recs.clear();dicts.clear();
             recs.put(model,env.createSession(asset("rec-"+model+".onnx").getPath(),opts));
             String[] dict;
-            try(InputStream in=context.getAssets().open("ocr/dict-"+model+".txt")){dict=new String(MainActivity.read(in,8*1024*1024),StandardCharsets.UTF_8).split("\n",-1);}
+            try(InputStream in=context.getAssets().open("ocr/dict-"+model+".txt")){dict=new String(Comics.readAll(in,8*1024*1024),StandardCharsets.UTF_8).split("\n",-1);}
             String[] c=new String[dict.length+2];c[0]="";System.arraycopy(dict,0,c,1,dict.length);c[c.length-1]=" ";
             dicts.put(model,c);
         }

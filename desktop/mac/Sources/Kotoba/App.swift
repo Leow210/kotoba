@@ -113,8 +113,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     /// Starts the Java core and loads the interface once it prints its port and session token.
     func startCore() {
         let jars = bundled
-            ? ["core/kotoba-core.jar", "core/json-20250517.jar", "core/sqlite-jdbc-3.50.3.0.jar", "core/slf4j-api-2.0.17.jar"]
-            : ["desktop/build/kotoba-core.jar", "desktop/libs/json-20250517.jar", "desktop/libs/sqlite-jdbc-3.50.3.0.jar", "desktop/libs/slf4j-api-2.0.17.jar"]
+            ? ["core/kotoba-core.jar", "core/json-20250517.jar", "core/sqlite-jdbc-3.50.3.0.jar", "core/slf4j-api-2.0.17.jar", "core/onnxruntime-1.30.0.jar"]
+            : ["desktop/build/kotoba-core.jar", "desktop/libs/json-20250517.jar", "desktop/libs/sqlite-jdbc-3.50.3.0.jar", "desktop/libs/slf4j-api-2.0.17.jar", "desktop/libs/onnxruntime-1.30.0.jar"]
         let p = Process()
         p.executableURL = URL(fileURLWithPath: javaPath())
         p.arguments = ["-Xmx3g", "-Dapple.awt.UIElement=true", "-cp", jars.map { resources.appendingPathComponent($0).path }.joined(separator: ":"),

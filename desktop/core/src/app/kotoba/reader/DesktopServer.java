@@ -53,6 +53,8 @@ public class DesktopServer {
         });
         sync=new Sync(store);
         routes.books=new Books(context,store.db);
+        routes.ocr=new Ocr(context,store.db);
+        routes.comics=new Comics(context,store.db,uri->FileChannel.open(Path.of(uri.startsWith("file://")?uri.substring(7):uri),StandardOpenOption.READ));
         byte[] t=new byte[18];new SecureRandom().nextBytes(t);
         StringBuilder b=new StringBuilder();for(byte x:t)b.append(String.format("%02x",x));
         token=b.toString();
@@ -79,6 +81,9 @@ public class DesktopServer {
             }
             case "library.relink":return new JSONObject().put("fixed",0).put("missing",0);
             case "library.folders":return new JSONArray();
+            case "mihon.status":return mihonStatus();
+            case "mihon.setFolder":routes.store.setSetting("mihon_folder",d.getString("path"));return mihonRefresh(true);
+            case "mihon.refresh":return mihonRefresh(true);
             case "sync.status":return syncStatus();
             case "sync.setFolder":routes.store.setSetting("sync_folder",d.getString("path"));return syncNow();
             case "sync.now":return syncNow();
@@ -105,6 +110,55 @@ public class DesktopServer {
             }
             default:return routes.route(route,d);
         }
+    }
+
+    // ---------- Mihon ----------
+
+    /** The Mihon folder mirrored from the phone (Syncthing → T7): downloads/<source>/<series>/<chapter>.cbz and autobackup/. */
+    File mihonFolder(){
+        String p=routes.store.setting("mihon_folder","/Volumes/T7/Mihon");
+        return new File(p);
+    }
+
+    JSONObject mihonStatus() throws Exception {
+        File root=mihonFolder();
+        return new JSONObject().put("folder",root.getPath()).put("available",new File(root,"downloads").isDirectory())
+            .put("backup",routes.store.setting("mihon_backup","")).put("scanned",Long.parseLong(routes.store.setting("mihon_scanned","0")));
+    }
+
+    /**
+     * Picks up new series and chapters, then the newest Mihon backup if it hasn't been read yet (titles, categories,
+     * read chapters). Quietly does nothing while the drive isn't plugged in.
+     */
+    synchronized JSONObject mihonRefresh(boolean force) throws Exception {
+        File root=mihonFolder(),downloads=new File(root,"downloads");
+        if(!downloads.isDirectory())return mihonStatus().put("changed",false);
+        long newest=newestChange(downloads,0);
+        boolean changed=false;
+        if(force||newest>Long.parseLong(routes.store.setting("mihon_scanned","0"))){
+            JSONObject r=routes.comics.scanFiles(downloads);
+            routes.store.setSetting("mihon_scanned",Long.toString(Math.max(newest,System.currentTimeMillis())));
+            changed=r.optInt("chapters")>0;
+        }
+        File[] backups=new File(root,"autobackup").listFiles((dir,n)->n.endsWith(".tachibk"));
+        if(backups!=null&&backups.length>0){
+            java.util.Arrays.sort(backups,(a,b)->Long.compare(b.lastModified(),a.lastModified()));
+            File b=backups[0];
+            String key=b.getName()+"|"+b.lastModified();
+            if(force||!key.equals(routes.store.setting("mihon_backup",""))){
+                routes.comics.importBackup(MihonBackup.parse(Files.readAllBytes(b.toPath())));
+                routes.store.setSetting("mihon_backup",key);changed=true;
+            }
+        }
+        if(changed)event("comics-added",new JSONObject().put("series",routes.comics.list().length()).put("chapters",0).put("quiet",true));
+        return mihonStatus().put("changed",changed);
+    }
+
+    /** Latest modification under the downloads folder (series and chapter level only; cheap). */
+    static long newestChange(File dir,int depth){
+        long m=dir.lastModified();
+        if(depth<2){File[] kids=dir.listFiles(File::isDirectory);if(kids!=null)for(File k:kids)m=Math.max(m,newestChange(k,depth+1));}
+        return m;
     }
 
     // ---------- sync ----------
@@ -267,6 +321,12 @@ public class DesktopServer {
                 send(x,200,(String)f[0],(byte[])f[1],f[2]!=null?ENTRY_CSP:null);
                 return;
             }
+            if(path.startsWith("/comic/")){
+                Object[] f=routes.comicFile(path.substring(7));
+                if(f==null){send(x,404,"text/plain",new byte[0],null);return;}
+                send(x,200,(String)f[1],(byte[])f[0],null);
+                return;
+            }
             if(path.startsWith("/book/")){
                 Object[] f=routes.bookFile(path.substring(6));
                 if(f==null){send(x,404,"text/plain",new byte[0],null);return;}
@@ -331,7 +391,10 @@ public class DesktopServer {
         http.start();
         // Sync every 30 seconds while the app is open (only reads/writes when something changed).
         java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r->{Thread th=new Thread(r,"sync");th.setDaemon(true);return th;})
-            .scheduleWithFixedDelay(()->{try{s.syncNow();}catch(Exception e){System.err.println("sync: "+e.getMessage());}},5,30,java.util.concurrent.TimeUnit.SECONDS);
+            .scheduleWithFixedDelay(()->{
+                try{s.syncNow();}catch(Exception e){System.err.println("sync: "+e.getMessage());}
+                try{s.mihonRefresh(false);}catch(Exception e){System.err.println("mihon: "+e.getMessage());}
+            },5,30,java.util.concurrent.TimeUnit.SECONDS);
         System.out.println("KOTOBA PORT "+http.getAddress().getPort()+" TOKEN "+s.token);
         System.out.flush();
         // The Mac app holds our stdin open; when it quits or crashes, stdin closes and the core goes with it.

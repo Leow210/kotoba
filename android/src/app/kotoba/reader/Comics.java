@@ -62,6 +62,13 @@ public class Comics {
     }
 
     static long now(){return System.currentTimeMillis()/1000;}
+    static byte[] readAll(java.io.InputStream in,int limit) throws java.io.IOException {
+        try(java.io.InputStream stream=in){
+            java.io.ByteArrayOutputStream out=new java.io.ByteArrayOutputStream();byte[] b=new byte[65536];int n,total=0;
+            while((n=stream.read(b))!=-1){total+=n;if(total>limit)throw new java.io.IOException("File is too large");out.write(b,0,n);}
+            return out.toByteArray();
+        }
+    }
     static final Pattern IMAGE=Pattern.compile("(?i).*\\.(jpe?g|png|webp|gif|avif|bmp)$");
     static final Pattern ARCHIVE=Pattern.compile("(?i).*\\.(cbz|zip)$");
 
@@ -284,7 +291,7 @@ public class Comics {
         else if(c.getString("kind").equals("dir"))bytes=java.nio.file.Files.readAllBytes(new File(ref).toPath());
         else{
             Uri doc=DocumentsContract.buildDocumentUriUsingTree(Uri.parse(c.getString("tree")),ref);
-            bytes=MainActivity.read(context.getContentResolver().openInputStream(doc),128*1024*1024);
+            bytes=readAll(context.getContentResolver().openInputStream(doc),128*1024*1024);
         }
         return new Object[]{bytes,Library.mime(ref)};
     }
@@ -337,7 +344,7 @@ public class Comics {
             }else if(!doc.isEmpty()){
                 for(Doc d:children(Uri.parse(tree),doc))
                     if(d.name.matches("(?i)cover\\.(jpe?g|png|webp)"))
-                        return MainActivity.read(context.getContentResolver().openInputStream(DocumentsContract.buildDocumentUriUsingTree(Uri.parse(tree),d.id)),32*1024*1024);
+                        return readAll(context.getContentResolver().openInputStream(DocumentsContract.buildDocumentUriUsingTree(Uri.parse(tree),d.id)),32*1024*1024);
             }
         }catch(Exception ignored){}
         JSONArray first=Store.rows(db,"SELECT id FROM chapters WHERE series_id=? ORDER BY sort,name LIMIT 1",Long.toString(series));

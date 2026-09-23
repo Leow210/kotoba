@@ -10,8 +10,8 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources/core" "$APP/Contents/Resources/assets" "$APP/Contents/Resources/web"
 cp "$HERE/mac/.build/release/Kotoba" "$APP/Contents/MacOS/Kotoba"
 cp "$HERE/build/kotoba-core.jar" "$HERE"/libs/*.jar "$APP/Contents/Resources/core/"
-# The phone's interface, minus the OCR models (the desktop reads subtitles, not images).
-( cd "$HERE/../android/assets" && find . -type f ! -path './ocr/*' | while IFS= read -r f; do mkdir -p "$APP/Contents/Resources/assets/$(dirname "$f")"; cp "$f" "$APP/Contents/Resources/assets/$f"; done )
+# The phone's interface, with the OCR models for the comic reader's text layer.
+( cd "$HERE/../android/assets" && find . -type f | while IFS= read -r f; do mkdir -p "$APP/Contents/Resources/assets/$(dirname "$f")"; cp "$f" "$APP/Contents/Resources/assets/$f"; done )
 cp "$HERE"/web/* "$APP/Contents/Resources/web/"
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>

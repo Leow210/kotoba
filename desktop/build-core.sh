@@ -5,9 +5,12 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 SRC="$HERE/../android/src/app/kotoba/reader"
 OUT="$HERE/build/core-classes"
 JAVA_HOME="${JAVA_HOME:-/Library/Java/JavaVirtualMachines/jdk-21.jdk/Contents/Home}"
-CP="$HERE/libs/json-20250517.jar:$HERE/libs/sqlite-jdbc-3.50.3.0.jar:$HERE/libs/slf4j-api-2.0.17.jar"
+CP="$HERE/libs/json-20250517.jar:$HERE/libs/sqlite-jdbc-3.50.3.0.jar:$HERE/libs/slf4j-api-2.0.17.jar:$HERE/libs/onnxruntime-1.30.0.jar"
+# onnxruntime for the Mac (comic OCR) is 55 MB, so it's fetched rather than kept in git.
+ORT="$HERE/libs/onnxruntime-1.30.0.jar"
+[ -f "$ORT" ] || curl -sSL -o "$ORT" https://repo1.maven.org/maven2/com/microsoft/onnxruntime/onnxruntime/1.30.0/onnxruntime-1.30.0.jar
 rm -rf "$OUT" && mkdir -p "$OUT"
-SHARED="Library Store WordLists Extras Routes Yomitan HtmlText MarkupFix Deinflect Fsrs MdictFile ZipSource Lzo Ripemd128 BookParser Sync Books"
+SHARED="Library Store WordLists Extras Routes Yomitan HtmlText MarkupFix Deinflect Fsrs MdictFile ZipSource Lzo Ripemd128 BookParser Sync Books Comics MihonBackup Ocr"
 # Paths contain spaces ("New Chinese typing"), so sources go through a quoted argument file.
 ARGS="$HERE/build/core-sources.txt"
 : > "$ARGS"

@@ -11,3 +11,4 @@ legacy-preview/
 # Desktop build output
 desktop/build/
 desktop/mac/.build/
+desktop/libs/onnxruntime-*.jar

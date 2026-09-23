@@ -27,6 +27,8 @@ public class Routes {
     public final WordLists wordlists;
     public final Extras extras;
     public Books books;// set by the platform (both apps have the book reader)
+    public Comics comics;// and the comic reader
+    public Ocr ocr;// with its text layer
     final Host host;
     final ExecutorService importer=Executors.newSingleThreadExecutor();
     public final AtomicBoolean cancelImport=new AtomicBoolean(false);
@@ -97,6 +99,34 @@ public class Routes {
             case "bookmarks":return books.bookmarks(d.getLong("book"));
             case "bookmark.save":return books.saveBookmark(d);
             case "bookmark.delete":books.deleteBookmark(d.getLong("id"));return null;
+            case "comics":return comics.list();
+            case "comic.series":return comics.series(d.getLong("id"));
+            case "comic.settings":comics.saveSettings(d.getLong("id"),d.getJSONObject("settings"));return null;
+            case "comic.rename":comics.rename(d.getLong("id"),d.getString("title"));return null;
+            case "comic.delete":comics.delete(d.getLong("id"));return null;
+            case "comic.coverFromPage":comics.coverFromPage(d.getLong("chapter"),d.getInt("page"));return null;
+            case "comic.resetCover":comics.setCover(d.getLong("id"),null);return null;
+            case "comic.pages":return new JSONObject().put("count",comics.pages(d.getLong("chapter")).size());
+            case "comic.progress":comics.progress(d.getLong("chapter"),d.getInt("page"),d.optBoolean("read",false));return null;
+            case "comic.read":comics.markRead(d.getJSONArray("ids"),d.getBoolean("read"));return null;
+            case "comic.marks":return comics.marks(d.getLong("series"));
+            case "comic.mark":return comics.addMark(d.getLong("chapter"),d.getInt("page"),d.optString("label",""));
+            case "comic.unmark":comics.deleteMark(d.getLong("id"));return null;
+            case "ocr.page":return ocr.page(comics,d.getLong("chapter"),d.getInt("page"),d.optString("lang","ko"),d.optBoolean("refresh",false));
+            case "ocr.clear":ocr.clear(d.getLong("chapter"));return null;
+            // By path (the Mac, and files in the phone's own folder).
+            case "comic.scanPath":return comics.scanFiles(new File(d.getString("path")));
+            case "comic.addPaths":{
+                JSONArray paths=d.getJSONArray("paths");
+                java.util.List<android.net.Uri> uris=new ArrayList<>();java.util.List<String> names=new ArrayList<>();
+                for(int i=0;i<paths.length();i++){File f=new File(paths.getString(i));uris.add(android.net.Uri.parse(f.getPath()));names.add(f.getName());}
+                return comics.addArchives(uris,names);
+            }
+            case "comic.importBackupPath":{
+                File f=new File(d.getString("path"));
+                return comics.importBackup(MihonBackup.parse(java.nio.file.Files.readAllBytes(f.toPath())));
+            }
+            case "comic.setCoverPath":comics.setCover(d.getLong("id"),java.nio.file.Files.readAllBytes(new File(d.getString("path")).toPath()));return null;
             case "wordlists":return wordlists.lists();
             case "wordlist.items":if("abc".equals(d.optString("sort")))wordlists.fillSortKeys(d.getLong("id"),library::readingOf);
                 return wordlists.items(d.getLong("id"),d.optInt("offset",0),d.optInt("limit",200),d.optString("q",""),d.optString("sort",""));
@@ -203,6 +233,14 @@ public class Routes {
             return new Object[]{mime,h.getBytes(StandardCharsets.UTF_8),"entry"};
         }
         return new Object[]{mime,bytes,null};
+    }
+
+    /** /comic/<chapter>/<page> or /comic/cover/<series>: {bytes, mime} or null. */
+    public Object[] comicFile(String rest) throws Exception {
+        String[] p=rest.split("/");
+        if(p.length!=2)return null;
+        if(p[0].equals("cover")){byte[] b=comics.cover(Long.parseLong(p[1]));return b==null?null:new Object[]{b,"image/jpeg"};}
+        return comics.page(Long.parseLong(p[0]),Integer.parseInt(p[1]));
     }
 
     /** /book/<id>/<path>: a chapter or image from inside a book, or its cover. {bytes, mime} or null. */

@@ -26,7 +26,11 @@
     openResource(dict,name){mac({type:'open',url:location.origin+'/d/'+dict+'/'+encodeURI(name)});},
     setBars(){},exitApp(){},
     pickBooks(){mac({type:'pickFile',purpose:'books',extensions:['epub','txt'],multiple:true});},
-    pickComicFolder:phoneOnly,pickComicFiles:phoneOnly,pickComicCover:phoneOnly,pickMihonBackup:phoneOnly,scanPick:phoneOnly,
+    pickComicFolder(){mac({type:'pickFile',purpose:'comicFolder',folder:true});},
+    pickComicFiles(){mac({type:'pickFile',purpose:'comicFiles',extensions:['cbz','zip'],multiple:true});},
+    pickComicCover(series){window.__coverSeries=series;mac({type:'pickFile',purpose:'comicCover',extensions:['jpg','jpeg','png','webp']});},
+    pickMihonBackup(){mac({type:'pickFile',purpose:'mihonBackup',extensions:['tachibk','proto','gz']});},
+    scanPick:phoneOnly,
     pickSyncFolder(){mac({type:'pickFile',purpose:'sync',folder:true});},
     pickWordList(){mac({type:'pickFile',purpose:'wordlist',extensions:['txt','csv','tsv']});},
   };
@@ -40,6 +44,11 @@
         window.__event(JSON.stringify({type:'books-imported',data:{added:rs.filter(r=>!r.error).map(r=>r.data),errors:rs.filter(r=>r.error).map(r=>r.error)}}));
       });
     }
+    const done=(route,body,event)=>post(route,JSON.stringify(body)).then(t=>{const r=JSON.parse(t);if(r.error)say(r.error);else if(event)window.__event(JSON.stringify({type:event,data:r.data}));});
+    if(purpose==='comicFolder')done('comic.scanPath',{path},'comics-added');
+    if(purpose==='comicFiles')done('comic.addPaths',{paths:Array.isArray(path)?path:[path]},'comics-added');
+    if(purpose==='comicCover')done('comic.setCoverPath',{id:window.__coverSeries,path},'comic-cover');
+    if(purpose==='mihonBackup')done('comic.importBackupPath',{path},'mihon-imported');
     if(purpose==='sync')post('sync.setFolder',JSON.stringify({path})).then(t=>{const r=JSON.parse(t);if(r.error)say(r.error);else{say('Sync folder set');window.__event(JSON.stringify({type:'sync-status',data:r.data}));}});
     if(purpose==='wordlist')post('wordlist.importPath',JSON.stringify({path})).then(t=>{const r=JSON.parse(t);if(r.error)say(r.error);else window.__event(JSON.stringify({type:'wordlist-imported',data:r.data}));});
   };

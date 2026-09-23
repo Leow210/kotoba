@@ -10,4 +10,8 @@ public class Context {
     public File getDatabasePath(String name){File d=new File(data,"databases");d.mkdirs();return new File(d,name);}
     public File getFilesDir(){File d=new File(data,"files");d.mkdirs();return d;}
     public AssetManager getAssets(){return assets;}
+    /** The phone's app-specific external folder; on the Mac the same data folder. */
+    public File getExternalFilesDir(String type){return data;}
+    final ContentResolver resolver=new ContentResolver();
+    public ContentResolver getContentResolver(){return resolver;}
 }
