@@ -35,6 +35,9 @@ public class Library {
     final MdictFile.BlockCache cache=new MdictFile.BlockCache(24);
     static final Pattern ID=Pattern.compile("\\sid=[\"']([^\"']+)[\"']");
     static final Pattern ENTRY_LINK=Pattern.compile("href=[\"']entry://([^\"'#]+)");
+    static final Pattern THE2_TITLE=Pattern.compile("<div class=\"the2-title\"[^>]*>\\s*<nid>(.*?)</nid>(.*?)</div>",Pattern.CASE_INSENSITIVE|Pattern.DOTALL);
+    static final Pattern THE2_WORD=Pattern.compile("<a[^>]*class=\"the2-word-link\"[^>]*>(.*?)</a>",Pattern.CASE_INSENSITIVE|Pattern.DOTALL);
+    static final Pattern THE2_ANCESTOR=Pattern.compile("<a[^>]*class=\"the2-ancestor\"[^>]*>(.*?)</a>",Pattern.CASE_INSENSITIVE|Pattern.DOTALL);
 
     final android.content.res.AssetManager assets;
     Map<Integer,Integer> t2s;
@@ -136,6 +139,7 @@ public class Library {
     /** Default search group from the dictionary's title; users can change it in Library. */
     static String groupFor(String title,String kind){
         if("kanji".equals(kind))return "Kanji";
+        if(title.matches(".*(シソーラス|類語).*"))return "Japanese/類語";
         if(title.matches(".*(アクセント|発音|Accent|accent|NHK|Pronunc).*"))return PRONUNCIATION;
         if(title.matches(".*(朝鮮|韓|Korean|한국).*"))return "Korean";
         if(title.matches(".*(中日|日中|中国|Chinese|汉).*"))return "Chinese";
@@ -1089,7 +1093,75 @@ public class Library {
         return column+" IN (SELECT id FROM dicts WHERE enabled=1 AND status='ready')";
     }
 
-    public JSONObject search(String query,String mode,String dict,int offset) throws Exception {
+    static String the2Plain(String html){
+        return HtmlText.entities(html.replaceAll("(?is)<rt\\b[^>]*>.*?</rt>","").replaceAll("(?s)<[^>]+>","")
+            .replace('\u00a0',' ').replaceAll("\\s+"," ").trim());
+    }
+
+    /** The paper thesaurus's alphabetical index: a word leads to numbered meaning groups. */
+    public JSONObject the2Index(String query) throws Exception {
+        String term=HtmlText.normalize(query);
+        JSONArray out=new JSONArray();
+        if(term.isEmpty())return new JSONObject().put("items",out);
+        JSONArray hits=Store.rows(db,"SELECT DISTINCT k.rec,k.dict,d.name dictionary FROM keys k JOIN dicts d ON d.id=k.dict WHERE k.norm=? AND d.enabled=1 AND d.status='ready' AND d.title LIKE '%日本語シソーラス%' LIMIT 120",term);
+        ArrayList<JSONObject> groups=new ArrayList<>();
+        for(int i=0;i<hits.length();i++){
+            JSONObject hit=hits.getJSONObject(i);
+            String html=recordHtml(hit.getLong("rec"));
+            Matcher title=THE2_TITLE.matcher(html);
+            if(!title.find())continue;
+            String number=the2Plain(title.group(1)),name=the2Plain(title.group(2));
+            if(number.isEmpty()||name.isEmpty())continue;
+            JSONArray path=new JSONArray();
+            Matcher ancestor=THE2_ANCESTOR.matcher(html.substring(0,title.start()));
+            while(ancestor.find())path.put(the2Plain(ancestor.group(1)));
+            JSONArray sample=new JSONArray();
+            LinkedHashSet<String> words=new LinkedHashSet<>();
+            Matcher word=THE2_WORD.matcher(html);
+            while(word.find()&&words.size()<10){
+                String w=the2Plain(word.group(1));
+                if(!w.isEmpty()&&w.length()<=24)words.add(w);
+            }
+            for(String w:words)sample.put(w);
+            groups.add(new JSONObject().put("dict",hit.getLong("dict")).put("rec",hit.getLong("rec"))
+                .put("dictionary",hit.getString("dictionary")).put("number",number).put("title",name)
+                .put("path",path).put("sample",sample));
+        }
+        groups.sort((a,b)->a.optString("number").compareTo(b.optString("number")));
+        for(JSONObject group:groups)out.put(group);
+        return new JSONObject().put("items",out);
+    }
+
+    /**
+     * The words in a シソーラス group that are the searched word: its own spelling, or (for a reading like きれい) the
+     * written words filed only under pages that the reading also leads to (綺麗・奇麗, not 美しい or a word unique to
+     * this page). Lets the group open on the word you came from.
+     */
+    public JSONArray the2Matches(long rec,String query) throws Exception {
+        String term=HtmlText.normalize(query);
+        JSONArray out=new JSONArray();
+        if(term.isEmpty())return out;
+        java.util.HashSet<Long> termRecs=new java.util.HashSet<>();
+        long dict;
+        try(Cursor c=db.rawQuery("SELECT dict FROM records WHERE id=?",new String[]{Long.toString(rec)})){if(!c.moveToFirst())return out;dict=c.getLong(0);}
+        try(Cursor c=db.rawQuery("SELECT rec FROM keys WHERE dict=? AND norm=?",new String[]{Long.toString(dict),term})){while(c.moveToNext())termRecs.add(c.getLong(0));}
+        LinkedHashSet<String> words=new LinkedHashSet<>();
+        Matcher word=THE2_WORD.matcher(recordHtml(rec));
+        while(word.find()){String w=the2Plain(word.group(1));if(!w.isEmpty()&&w.length()<=24)words.add(w);}
+        for(String w:words){
+            String n=HtmlText.normalize(w);
+            if(n.equals(term)){out.put(w);continue;}
+            java.util.HashSet<Long> recs=new java.util.HashSet<>();
+            try(Cursor c=db.rawQuery("SELECT rec FROM keys WHERE dict=? AND norm=? LIMIT 200",new String[]{Long.toString(dict),n})){while(c.moveToNext())recs.add(c.getLong(0));}
+            // Most of the reading's groups, not just two it happens to share (婉美, 嬋娟 are only in 美しい and 美貌).
+            if(recs.size()>=Math.max(2,(termRecs.size()+1)/2)&&termRecs.containsAll(recs))out.put(w);
+        }
+        return out;
+    }
+
+    static final String THESAURUS_FILTER=" AND d.grp NOT LIKE 'Japanese/類語%' AND d.title NOT LIKE '%日本語シソーラス%'";
+
+    public JSONObject search(String query,String mode,String dict,int offset,boolean hideThesaurus) throws Exception {
         String term=HtmlText.normalize(query);
         JSONArray items;
         int limit=50;
@@ -1106,9 +1178,18 @@ public class Library {
             args.add(term);
             String where="k.norm>=? AND k.norm<?";args.add(term);args.add(term+"\uffff");
             where+=" AND "+enabledClause("k.dict",dict,args);
+            if(hideThesaurus)where+=THESAURUS_FILTER;
             args.add(Integer.toString(limit+1));args.add(Integer.toString(offset));
             items=Store.rows(db,"SELECT group_concat(k.key,char(1)) keys,k.rec,k.dict,coalesce(nullif((SELECT y.reading FROM ytext y WHERE y.rec=k.rec),''),r.key) page,d.name dictionary,d.kind,k.norm=? exact FROM keys k JOIN records r ON r.id=k.rec JOIN dicts d ON d.id=k.dict WHERE "+where+" GROUP BY k.norm,k.dict,k.rec ORDER BY k.norm,d.position,r.len DESC LIMIT ? OFFSET ?",args.toArray(new String[0]));
             if(offset==0&&(dict==null||dict.isEmpty()))items=withMixedExact(items,term);
+            if(hideThesaurus){
+                JSONArray ordinary=new JSONArray();
+                for(int i=0;i<items.length();i++){
+                    JSONObject item=items.getJSONObject(i);
+                    if(!isThesaurusDict(item.getLong("dict")))ordinary.put(item);
+                }
+                items=ordinary;
+            }
             displayKeys(items,query);
             addSpellings(items,term);
         }else if(mode.equals("contains")){
@@ -1116,6 +1197,7 @@ public class Library {
             args.add(term);
             String where="instr(k.norm,?)>0";args.add(term);
             where+=" AND "+enabledClause("k.dict",dict,args);
+            if(hideThesaurus)where+=THESAURUS_FILTER;
             args.add(Integer.toString(limit+1));args.add(Integer.toString(offset));
             items=Store.rows(db,"SELECT group_concat(k.key,char(1)) keys,k.rec,k.dict,coalesce(nullif((SELECT y.reading FROM ytext y WHERE y.rec=k.rec),''),r.key) page,d.name dictionary,d.kind,k.norm=? exact FROM keys k JOIN records r ON r.id=k.rec JOIN dicts d ON d.id=k.dict WHERE "+where+" GROUP BY k.norm,k.dict,k.rec ORDER BY exact DESC,length(k.norm),k.norm,d.position,r.len DESC LIMIT ? OFFSET ?",args.toArray(new String[0]));
             displayKeys(items,query);
@@ -1124,10 +1206,11 @@ public class Library {
             String phrase=HtmlText.tokens(term,64).replace("\"","");
             if(phrase.isEmpty())return new JSONObject().put("items",new JSONArray()).put("more",false);
             ArrayList<String> unions=new ArrayList<>();ArrayList<String> args=new ArrayList<>();
-            JSONArray dicts=dict==null||dict.isEmpty()?Store.rows(db,"SELECT id FROM dicts WHERE enabled=1 AND status='ready' AND fulltext=1 ORDER BY position")
-                :dict.endsWith("/*")?Store.rows(db,"SELECT id FROM dicts WHERE enabled=1 AND status='ready' AND fulltext=1 AND (grp=? OR grp LIKE ?) ORDER BY position",dict.substring(2,dict.length()-2),dict.substring(2,dict.length()-2)+"/%")
-                :dict.startsWith("g:")?Store.rows(db,"SELECT id FROM dicts WHERE enabled=1 AND status='ready' AND fulltext=1 AND grp=? ORDER BY position",dict.substring(2))
-                :Store.rows(db,"SELECT id FROM dicts WHERE id=? AND fulltext=1",dict);
+            String fulltextFilter=hideThesaurus?THESAURUS_FILTER:"";
+            JSONArray dicts=dict==null||dict.isEmpty()?Store.rows(db,"SELECT d.id FROM dicts d WHERE d.enabled=1 AND d.status='ready' AND d.fulltext=1"+fulltextFilter+" ORDER BY d.position")
+                :dict.endsWith("/*")?Store.rows(db,"SELECT d.id FROM dicts d WHERE d.enabled=1 AND d.status='ready' AND d.fulltext=1 AND (d.grp=? OR d.grp LIKE ?)"+fulltextFilter+" ORDER BY d.position",dict.substring(2,dict.length()-2),dict.substring(2,dict.length()-2)+"/%")
+                :dict.startsWith("g:")?Store.rows(db,"SELECT d.id FROM dicts d WHERE d.enabled=1 AND d.status='ready' AND d.fulltext=1 AND d.grp=?"+fulltextFilter+" ORDER BY d.position",dict.substring(2))
+                :Store.rows(db,"SELECT d.id FROM dicts d WHERE d.id=? AND d.fulltext=1"+fulltextFilter,dict);
             for(int i=0;i<dicts.length();i++){
                 long d=dicts.getJSONObject(i).getLong("id");
                 unions.add("SELECT docid rec FROM body_"+d+" WHERE "+column+" MATCH ?");
@@ -1152,6 +1235,10 @@ public class Library {
         return new JSONObject().put("items",items).put("more",more);
     }
 
+    boolean isThesaurusDict(long id) throws Exception {
+        return Store.rows(db,"SELECT 1 FROM dicts d WHERE d.id=?"+THESAURUS_FILTER.replace(" AND d.grp NOT LIKE 'Japanese/類語%' AND d.title NOT LIKE '%日本語シソーラス%'"," AND (d.grp LIKE 'Japanese/類語%' OR d.title LIKE '%日本語シソーラス%')")+" LIMIT 1",Long.toString(id)).length()>0;
+    }
+
     /** Each result's rank in the first enabled frequency list of the result's language (JPDB for Japanese, CC100 for Korean…). */
     void addRanks(JSONArray items) throws Exception {
         if(!hasMeta())return;
@@ -1163,6 +1250,30 @@ public class Library {
             String lang=langs.computeIfAbsent(dict,x->{String g=dictGroup(x);int s2=g.indexOf('/');return s2<0?g:g.substring(0,s2);});
             if(lang.isEmpty()||lang.equals("Kanji"))lang="Japanese";
             String n=HtmlText.normalize(row.optString("key"));
+            // A kana search splits rows by written word (けんのう → 権能, 献納): each word has its own rank, read
+            // the same way; the kana's own rank (how often けんのう is written in kana) is only for kana-only words.
+            JSONArray words=row.optJSONArray("words");
+            if(words!=null&&words.length()>0){
+                JSONObject ranks=new JSONObject();
+                for(int w=0;w<words.length();w++){
+                    String word=words.getString(w),wn=HtmlText.normalize(word);
+                    String wk=lang+"|"+wn+"|"+n;
+                    if(!seen.containsKey(wk)){
+                        Double v=null;
+                        try(Cursor c=db.rawQuery("SELECT m.value,m.reading FROM meta m JOIN dicts d ON d.id=m.dict WHERE m.norm=? AND m.mode='freq' AND m.value>0 AND d.enabled=1 AND (d.grp=? OR d.grp LIKE ?) ORDER BY d.position,m.value",new String[]{wn,lang,lang+"/%"})){
+                            while(c.moveToNext()){
+                                String r=HtmlText.normalize(c.getString(1));
+                                if(r.isEmpty()||r.equals(n)){v=c.getDouble(0);break;}
+                            }
+                        }
+                        seen.put(wk,v);
+                    }
+                    Double v=seen.get(wk);
+                    if(v!=null)ranks.put(word,v.longValue());
+                }
+                if(ranks.length()>0)row.put("ranks",ranks);
+                continue;
+            }
             String k=lang+"|"+n;
             if(!seen.containsKey(k)){
                 Double v=null;
@@ -1599,6 +1710,29 @@ public class Library {
     static final String[] KO_PARTICLES={"에서부터","에게서","한테서","으로부터","로부터","이라고","이라는","이라도","이었다","이었어요","입니다","이에요","이지만","에서도","에게도","한테도","까지도","부터도","으로도","에서는","에게는","으로는","이든지","이랑","이나","이야","이며","이고","인데","였다","였어요","예요","라고","라는","라도","로도","로는","에도","에는","과는","와는","하고","처럼","보다","만큼","까지","부터","조차","마저","밖에","든지","에서","에게","한테","께서","으로","이다","이든","로","와","과","도","만","들","의","은","는","이","가","을","를","에","께","랑","나","야","며","고","요","든"};
 
     boolean koKey(String word) throws Exception {return isHeadword(word);}
+    /**
+     * Moves an analysis ahead of the ones before it only when its word is at least four times more common, so close
+     * calls keep their rule order (걸었다고: 걷다, or 걸다) while 가나다 + -면서 or the rare 아다 give way to 가다, 알다.
+     */
+    void preferCommon(ArrayList<JSONObject> out,int from,int to){
+        if(to-from<2)return;
+        HashMap<String,Double> ranks=new HashMap<>();
+        for(int i=from;i<to;i++)ranks.put(out.get(i).optString("base"),koRank(out.get(i).optString("base")));
+        for(int i=from+1;i<to;i++){
+            for(int j=i;j>from;j--){
+                double a=ranks.get(out.get(j).optString("base")),b=ranks.get(out.get(j-1).optString("base"));
+                if(a<Double.MAX_VALUE&&(b==Double.MAX_VALUE||a*4<b)){JSONObject t=out.get(j);out.set(j,out.get(j-1));out.set(j-1,t);}
+                else break;
+            }
+        }
+    }
+    /** A Korean word's best rank in the Korean frequency lists (CC100…); unknown words sort last. */
+    double koRank(String word){
+        try(Cursor c=db.rawQuery("SELECT min(m.value) FROM meta m JOIN dicts d ON d.id=m.dict WHERE m.norm=? AND m.mode='freq' AND m.value>0 AND d.enabled=1 AND d.grp LIKE 'Korean%'",new String[]{HtmlText.normalize(word)})){
+            if(c.moveToFirst()&&!c.isNull(0))return c.getDouble(0);
+        }catch(Exception e){}
+        return Double.MAX_VALUE;
+    }
     JSONArray koEntries(String word) throws Exception {return wordEntries(exact(word,null,false));}
 
     /**
@@ -1613,12 +1747,16 @@ public class Library {
         JSONArray whole=koEntries(word);
         if(whole.length()>0)add.accept(new JSONObject().put("base",word).put("explain","").put("chain",word).put("items",whole),word);
         // 2. Rule-based conjugation (irregular verbs, auxiliaries).
+        int rulesFrom=out.size();
         for(Deinflect.Candidate c:Deinflect.korean(word,w->{try{return koKey(w);}catch(Exception e){return false;}},this::koreanStems)){
             if(c.steps.size()==1&&c.steps.get(0).label.startsWith("noun + particle"))continue;// handled below with the dictionary
             JSONArray rows=koEntries(c.base);if(rows.length()==0)continue;
             add.accept(new JSONObject().put("base",c.base).put("explain",c.explain()).put("chain",c.chain()).put("items",rows),c.base);
         }
+        // 아세요 is 알다 (ㄹ drops) far more often than the rare 아다.
+        preferCommon(out,rulesFrom,out.size());
         // 3. Stem + an ending the dictionary lists (간다며 = 가다 + -ㄴ다며; 먹는다며 = 먹다 + -는다며).
+        int endingsFrom=out.size();
         for(int k=word.length()-1;k>=1&&out.size()<6;k--){
             String left=word.substring(0,k),ending=word.substring(k);
             char last=left.charAt(left.length()-1);
@@ -1640,6 +1778,10 @@ public class Library {
                 // Some endings are listed in their own dictionary form: -잖아(요) and -잖니 under -잖다 (먹었잖아).
                 String endingKey="-"+sp[1];
                 if(!koKey(endingKey)&&sp[1].matches("잖(아|아요|니|냐|어|습니까|아서)"))endingKey="-잖다";
+                // Polite 요 on an ending the dictionary lists without it: -더라고요 → -더라고, -거든요, -면서요.
+                if(!koKey(endingKey)&&sp[1].length()>1&&sp[1].endsWith("요")&&koKey("-"+sp[1].substring(0,sp[1].length()-1)))endingKey="-"+sp[1].substring(0,sp[1].length()-1);
+                // Colloquial -나 for the question-quoting -냐 (가나면서 = 가냐면서, 먹나고).
+                if(!koKey(endingKey)&&sp[1].length()>1&&sp[1].charAt(0)=='나'&&koKey("-냐"+sp[1].substring(1)))endingKey="-냐"+sp[1].substring(1);
                 if(!koKey(endingKey))continue;
                 String verb=sp[0]+"다";
                 JSONArray rows=koEntries(verb);
@@ -1655,6 +1797,8 @@ public class Library {
                 }
             }
         }
+        // Where different splits compete (가나면서: 가나다 + -면서 or 가다 + -나면서), the more common word leads.
+        preferCommon(out,endingsFrom,out.size());
         // 4. Noun + one or two particles (학교에도, 친구들에게).
         for(String p1:KO_PARTICLES){
             if(word.length()<=p1.length()||!word.endsWith(p1))continue;

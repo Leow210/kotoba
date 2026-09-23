@@ -81,7 +81,7 @@ function fmtDue(ts){
 }
 
 // ---------- settings ----------
-const settings={zoom:1.25,vertical:false,theme:'light',new_per_day:'20',retention:'0.9',fulltext:true,front_reading:false,autoplay_entry:false,autoplay_review:'answer',audio_front:false,known_words:true};
+const settings={zoom:1.25,vertical:false,theme:'light',new_per_day:'20',retention:'0.9',fulltext:true,front_reading:false,autoplay_entry:false,autoplay_review:'answer',audio_front:false,known_words:true,search_thesaurus:true};
 function loadLocalSettings(){try{Object.assign(settings,JSON.parse(localStorage.getItem('settings')||'{}'));}catch(e){}}
 function saveLocalSettings(){try{localStorage.setItem('settings',JSON.stringify(settings));}catch(e){}}
 const THEME_BARS={light:['#f7f4ee',true],sepia:['#f1e8d6',true],dark:['#141614',false]};
@@ -189,7 +189,13 @@ async function loadDicts(){
 }
 
 // ---------- search ----------
-const search={mode:'headword',dict:'',offset:0,items:[],version:0,more:false};
+const search={mode:'headword',dict:'',offset:0,items:[],version:0,more:false,the2:[]};
+function searchThesaurusVisible(){return settings.search_thesaurus!==false||!!search.dict&&(!search.dict.startsWith('g:')||search.dict==='g:Japanese/類語');}
+function renderSearchThesaurusToggle(){
+  const on=settings.search_thesaurus!==false,b=$('search-thesaurus-toggle');
+  b.textContent=on?'類語 ON':'類語 OFF';b.classList.toggle('on',on);b.setAttribute('aria-pressed',String(on));
+}
+$('search-thesaurus-toggle').onclick=()=>{settings.search_thesaurus=settings.search_thesaurus===false;saveLocalSettings();renderSearchThesaurusToggle();runSearch();};
 const GROUP_ORDER=['Japanese','Kanji','Korean','Chinese','Thai','Russian','English'];
 const GROUP_LABEL={Japanese:'Japanese 国語',Kanji:'Kanji 漢字',Pronunciation:'Pronunciation 発音',Korean:'Korean 韓',Chinese:'Chinese 中',Thai:'Thai タイ',Russian:'Russian 露',English:'English 英'};
 const MORE_LABEL={Japanese:'More 日本語',Korean:'More 한국어',Chinese:'More 中文'};
@@ -251,7 +257,7 @@ function renderDictChips(){
 }
 // Names for tags and tabs, where the generic trimming (publisher, 辞典, 第N版) would leave just 国語 or 古語.
 const SHORT_NAMES=[[/^三省堂国語辞典/,'三省堂国語'],[/日本国語大辞典/,'日本国語大辞典'],[/^現代国語例解/,'現代国語例解'],[/^明鏡国語辞典/,'明鏡'],
-  [/^実用日本語表現/,'実用日本語表現'],[/全訳読解古語/,'全訳読解古語'],[/類語例解/,'類語例解'],[/同訓異義/,'同訓異義'],[/^故事ことわざ/,'故事ことわざ'],
+  [/^実用日本語表現/,'実用日本語表現'],[/全訳読解古語/,'全訳読解古語'],[/類語例解/,'類語例解'],[/日本語シソーラス/,'シソーラス'],[/同訓異義/,'同訓異義'],[/^故事ことわざ/,'故事ことわざ'],
   [/^新明解四字熟語/,'新明解四字熟語'],[/^日本語文法辞典/,'日本語文法'],[/^数え方辞典/,'数え方'],[/^擬音語・擬態語/,'擬音語・擬態語'],[/^全国方言/,'全国方言'],
   [/^語源由来/,'語源由来'],[/^全市区町村/,'全市区町村'],[/^絵でわかる慣用句/,'絵でわかる慣用句'],[/^JPDB/i,'JPDB'],[/^CC100/i,'CC100'],[/^hanja$/i,'Hanja 漢字'],
   [/^KRDICT/i,'KRDICT'],[/^STDICT/i,'STDICT'],[/^JMnedict/i,'JMnedict']];
@@ -329,31 +335,35 @@ async function runSearch(append=false){
   const version=++search.version;
   if(!append){search.offset=0;}else search.offset+=50;
   if(!q.trim()&&!search.dict){
-    search.items=[];$('results').innerHTML='';$('more').hidden=true;$('kanji-strip').hidden=true;$('forms').hidden=true;
+    search.items=[];search.the2=[];$('results').innerHTML='';$('more').hidden=true;$('kanji-strip').hidden=true;$('forms').hidden=true;$('the2-index').hidden=true;
     await renderSearchEmpty();return;
   }
   if(!q.trim()&&search.dict&&!search.dict.startsWith('g:')){
     // One dictionary with an empty query: its whole index, like a paper dictionary.
-    $('search-empty').innerHTML='';$('more').hidden=true;$('kanji-strip').hidden=true;$('forms').hidden=true;
+    $('search-empty').innerHTML='';$('more').hidden=true;$('kanji-strip').hidden=true;$('forms').hidden=true;$('the2-index').hidden=true;
     await mountBrowse($('results'),+search.dict,{},$('search-scroll'));
     return;
   }
   $('search-empty').innerHTML='';
   if(!append&&search.mode!=='headword')$('results').innerHTML='<div class="loading"><div class="spinner"></div></div>';
-  const data=await api('search',{q,mode:search.mode,dict:search.dict,offset:search.offset});
+  const data=await api('search',{q,mode:search.mode,dict:search.dict,offset:search.offset,hideThesaurus:!searchThesaurusVisible()});
   if(version!==search.version)return;
   search.items=append?search.items.concat(data.items):data.items;search.more=data.more;
-  if(!append){renderKanjiStrip(data.kanji||[]);renderForms(data.forms||[]);}
-  const groups=groupResults(search.items);
+  if(!append){renderKanjiStrip(data.kanji||[]);renderForms(data.forms||[]);search.the2=search.mode==='headword'?data.the2&&data.the2.items||[]:[];}
+  const indexed=renderThe2Index(q);
+  const the2Dicts=new Set(indexed.map(it=>it.dict));
+  const groups=groupResults(indexed.length?search.items.filter(it=>!the2Dicts.has(it.dict)):search.items);
   $('results').innerHTML=groups.map((g,i)=>{
     const first=g.items[0];
     const page=g.readingText?`<span class="pg">${esc(g.readingText)}</span>`:'';
-    const rank=(g.items.find(it=>it.rank)||{}).rank;
+    // A written word from a kana search (けんのう → 献納) has its own rank; the kana's rank is only for kana-only rows.
+    const rank=g.word?(g.items.map(it=>it.ranks&&it.ranks[g.key]).find(Boolean)):(g.items.find(it=>it.rank)||{}).rank;
     const tags=freqBars(rank)+g.items.map(it=>`<span class="tag ${it.kind==='kanji'?'kanji':''}">${esc(shortName(it.dictionary))}</span>`).join('');
     const snip=first.snippet?`<div class="snip">${snippetHtml(first.snippet)}</div>`:'';
     return `<button class="row" data-g="${i}"><div class="line"><div class="hw">${esc(g.key)}${page}</div><div class="meta">${tags}</div></div>${snip}</button>`;
   }).join('');
-  if(!groups.length&&!append&&(data.forms||[]).length){$('results').innerHTML='';}
+  if(!groups.length&&indexed.length){$('results').innerHTML='';}
+  else if(!groups.length&&!append&&(data.forms||[]).length){$('results').innerHTML='';}
   else if(!groups.length){
     const hint=search.mode==='headword'?'Try “Contains”, or search in definitions.':'Try a shorter phrase or another dictionary.';
     $('results').innerHTML=`<div class="empty"><span class="glyph">無</span><h2>No matches</h2>${esc(data.note||hint)}</div>`;
@@ -365,6 +375,18 @@ async function runSearch(append=false){
   }));
   $('more').hidden=!data.more;
   if(!append)$('search-scroll').scrollTop=0;
+}
+function renderThe2Index(q){
+  const box=$('the2-index');
+  const items=searchThesaurusVisible()?search.the2.filter(it=>!search.dict||search.dict==='g:Japanese/*'||search.dict==='g:Japanese/類語'||search.dict===String(it.dict)):[];
+  if(search.mode!=='headword'||!items.length){box.hidden=true;box.innerHTML='';return [];}
+  box.hidden=false;
+  box.innerHTML=`<div class="section-label">日本語シソーラス · 「${esc(q)}」の意味を選ぶ</div><div class="the2-index-list">${items.map((it,i)=>`<button class="the2-index-row" data-the2="${i}"><span class="the2-index-number">${esc(it.number)}</span><span class="the2-index-body"><b>${esc(it.title)}</b><small>${esc((it.path||[]).slice(1).join(' › '))}</small><span>${esc((it.sample||[]).slice(0,8).join(' · '))}</span></span><span class="the2-index-arrow">›</span></button>`).join('')}</div><p class="the2-index-help">番号から語群を開き、本文中の番号を押すと関連する語群へ進めます。</p>`;
+  box.querySelectorAll('[data-the2]').forEach(b=>b.onclick=handle(()=>{
+    const it=items[+b.dataset.the2];remember();
+    openEntry({rec:it.rec,dict:it.dict,dictionary:it.dictionary,key:q,page:it.number+' '+it.title,alternatives:[it]});
+  }));
+  return items;
 }
 function renderForms(forms){
   const box=$('forms');
@@ -2087,7 +2109,7 @@ async function dictMenu(id){
 
 // ---------- start ----------
 (async function init(){
-  loadLocalSettings();applyTheme();
+  loadLocalSettings();applyTheme();renderSearchThesaurusToggle();
   try{
     const server=await api('settings');
     if(server.new_per_day)settings.new_per_day=server.new_per_day;

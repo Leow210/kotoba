@@ -64,12 +64,16 @@ Tap a preview to play the video. Each one is silent and about 15–25 seconds lo
   - with some kanji written in kana (相まみえる finds 大辞林's 相▽見える, as long as it fits the reading あいまみえる).
 - **One row per word.** Results from different dictionaries join into one row with a tag per dictionary, even when one writes the reading おちあう and another 落ち合う. Yomitan dictionaries that list the same entry once per spelling (明鏡 落ち合う, 落合う, あからさま/明白) show it once.
 - **Homophones stay apart.** A kana search gives each written word its own row (けんのう → 権能, 献納, 賢能, 検納), with only that word's dictionaries as tabs. A dictionary page that holds several homophones (大辞林's けんのう) appears under each, and opens at the matching one.
+- **類語 in search:** the **類語 ON/OFF** chip beside the search box leaves thesauruses (日本語シソーラス, 類語例解) out of regular results; they stay available under More 日本語 › 類語. With it on, a headword search also shows the シソーラス index (the word's numbered meaning groups).
+- **Frequency on kana searches:** each written word gets its own rank (けんのう → 権能 25,553, 献納 78,367); the kana rank only shows for words written in kana.
 - **Ambiguous Korean forms keep both readings.** 걸었다고 can be 걷다 ("walk") or 걸다 ("bet"); the popups show the first with **or 걸다** to switch. Context decides where it can: 비운 right before another word (비운 자리) is 비우다's modifier form first, while 비운의 is the noun 비운 (否運) + 의.
 - **Lookups are fast** even on a whole speech bubble: a lookup stops at the longest start of the text that begins any headword, and verb stems and kana-for-kanji spellings are cached, so tapping a word takes a few milliseconds (at most ~0.1 s for Korean) on the phone.
 - There are separate modes for text contained in a headword, a definition or an example. Substring matching also makes the search usable for Thai text without spaces.
 - Conjugated words are traced back to their dictionary form, with a short grammar breakdown:
   - `食べさせられなかった` → **食べる** + させられる + ない + かった · causative-passive · negative · past
   - `추웠어요` → **춥다** + 았/었 + 어요 · past · polite, ㅂ-irregular
+  - `사세요`, `사니까` → **사다**, or **살다** (ㄹ drops before ㅅ/ㄴ; `아세요` → 알다, `만드세요` → 만들다)
+  - `먹었더라고요` → **먹다** · past + -더라고요 (polite 요 on a listed ending); `가나면서` → **가다** + -나면서 (colloquial -냐면서)
   - `대줬잖아` → **대주다** · past + -잖아 (endings listed under their own dictionary form, -잖다, are found too)
   - `공부했어요` → **공부** + 하다 + 았/었 + 어요 · 하다 verb · past · polite
   - `занимаюсь` → **заниматься** · 1st person singular · reflexive
@@ -160,7 +164,7 @@ Tap a preview to play the video. Each one is silent and about 15–25 seconds lo
 - **Write**, a small editor for writing in the language you're learning. Documents are HTML files in `~/Documents/Kotoba`, so they open in any browser with their furigana.
   - Bold, italic, underline, headings and lists; **縦** switches to vertical writing; **ルビ** (⌘R) adds furigana. The reading is suggested from your dictionaries, and okurigana stay outside it: 考(かんが)える.
   - Beside the page, **辞書** shows the selected word in your dictionaries (conjugations folded; save it as a card with its sentence).
-  - **類語** is a brainstormer: type or select a word (a conjugated one works) to see its 類語例解 entry, plus the entries that mention it. Click a word inside an entry to brainstorm from that word (← goes back). Select a word and press **Use** to put it in your text.
+  - **類語** is a brainstormer, following the paper 日本語シソーラス: type or select a word (conjugated works) and its index lists the numbered meaning groups it belongs to (きれい → 0021.02 美しい, 0024.03 清潔…), with where each sits in the classification. Open a group and the word you came from is marked (綺麗・奇麗). ‹ › step to the neighbouring groups, and ≪…≫ numbers jump to related ones. Click any word, then **Use** puts it in your text, or **類語 of this** searches from it. 類語例解's entries appear below.
   - **文法** asks the local Gemma 4 model to check grammar, particles, conjugation, spelling and naturalness, all on the Mac. Each suggestion shows the fix and a short explanation, with Apply, Show and Ignore. In testing it caught 面白いでした, 昨日に, 学校を行きました and 考えかた; a check takes about 5 s once the model is loaded.
 
 | Subtitle lookup | Expanded popup |

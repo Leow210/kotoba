@@ -255,7 +255,7 @@ public final class Deinflect {
                 if(hangul(last)&&jong(last)!=0&&jong(last)!=F('ㄹ')){out.add(new Form(stem+d[0],steps(d[0],d[1])));}
                 continue;
             }
-            if(d[0].startsWith("는")&&hangul(stem.charAt(stem.length()-1))&&jong(stem.charAt(stem.length()-1))==F('ㄹ')){
+            if((d[0].startsWith("는")||d[0].startsWith("네"))&&hangul(stem.charAt(stem.length()-1))&&jong(stem.charAt(stem.length()-1))==F('ㄹ')){
                 String s=stem.substring(0,stem.length()-1)+compose(cho(stem.charAt(stem.length()-1)),jung(stem.charAt(stem.length()-1)),0);
                 out.add(new Form(s+d[0],steps(d[0],d[1]+", ㄹ drops")));continue;
             }
@@ -267,9 +267,13 @@ public final class Deinflect {
         for(String[] f:finalJamo(stem,'ㅁ'))out.add(new Form(f[0],steps("ㅁ/음",note("nominal (～ㅁ)",f[1]))));
         for(String[] e:euStem(stem)){
             String b=e[0];String n=e[1];
-            out.add(new Form(b+"면",steps("으면",note("if (～면)",n))));out.add(new Form(b+"니까",steps("으니까",note("because (～니까)",n))));
-            out.add(new Form(b+"세요",steps("으세요",note("honorific polite / please (～세요)",n))));out.add(new Form(b+"셨어요",steps("으시+었+어요",note("honorific past polite",n))));
-            out.add(new Form(b+"십니다",steps("으십니다",note("honorific formal",n))));out.add(new Form(b+"십시오",steps("으십시오",note("formal imperative",n))));out.add(new Form(b+"시다",steps("으시다",note("honorific",n))));
+            // ㄹ stems lose the ㄹ before ㄴ and ㅅ (살다 → 사니까, 사세요; 알다 → 아세요) but keep it before 면, 려고, 러, 며.
+            String bn=b,nn=n;
+            char lb=b.charAt(b.length()-1);
+            if(b.equals(stem)&&hangul(lb)&&jong(lb)==F('ㄹ')){bn=b.substring(0,b.length()-1)+compose(cho(lb),jung(lb),0);nn=note("ㄹ drops",n);}
+            out.add(new Form(b+"면",steps("으면",note("if (～면)",n))));out.add(new Form(bn+"니까",steps("으니까",note("because (～니까)",nn))));
+            out.add(new Form(bn+"세요",steps("으세요",note("honorific polite / please (～세요)",nn))));out.add(new Form(bn+"셨어요",steps("으시+었+어요",note("honorific past polite",nn))));
+            out.add(new Form(bn+"십니다",steps("으십니다",note("honorific formal",nn))));out.add(new Form(bn+"십시오",steps("으십시오",note("formal imperative",nn))));out.add(new Form(bn+"시다",steps("으시다",note("honorific",nn))));
             out.add(new Form(b+"려고",steps("으려고",note("in order to (～려고)",n))));out.add(new Form(b+"러",steps("으러",note("to go/come to (～러)",n))));out.add(new Form(b+"며",steps("으며",note("while / and (～며)",n))));
         }
         for(String[] f:infinitive(stem)){

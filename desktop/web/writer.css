@@ -45,6 +45,12 @@
 .wr-thes-item summary::before{content:'▸';color:var(--muted);font-size:11px}
 .wr-thes-item[open] summary::before{content:'▾'}
 .wr-thes-item summary b{font:600 16px var(--serif)}.wr-thes-item summary small{color:var(--muted);font-size:12px}
+.wr-the2-choice{display:grid;gap:3px;width:100%;padding:10px 4px;text-align:left;border-top:1px solid var(--line);color:var(--ink)}
+.wr-the2-choice b{font:600 17px var(--serif)}
+.wr-the2-choice small,.wr-the2-choice span{color:var(--muted);font-size:12px;line-height:1.4}
+.wr-the2-choice:hover{color:var(--accent)}
+.wr-the2-heading{font:600 19px var(--serif);margin:12px 0 6px}
+.wr-the2>.wr-entry{border-top:1px solid var(--line);margin-top:7px}
 .wr-use{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:6px;padding:7px 8px;margin:4px 0;background:var(--accent-soft);border-radius:10px}
 .wr-use span{flex:1;font:600 17px var(--serif)}
 .wr-gram-actions{display:flex;gap:8px;padding:12px 12px 2px}
@@ -53,3 +59,6 @@
 .wr-fix s{color:var(--danger)}.wr-fix b{color:var(--accent)}
 .wr-issue p{margin:6px 0 0;font-size:13px;line-height:1.55;color:var(--ink2)}
 .wr-sub{margin:16px 0 4px;font-size:12px;font-weight:600;letter-spacing:.04em;color:var(--muted);text-transform:uppercase}
+.wr-the2-nav{display:flex;justify-content:space-between;gap:8px;margin:6px 0}
+.wr-the2-nav:empty{display:none}
+.wr-the2-nav .chip{max-width:48%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

@@ -43,13 +43,19 @@ public class Routes {
             case "dicts":return library.dictionaries();
             case "search":{
                 String q=d.optString("q","");
-                JSONObject result=library.search(q,d.optString("mode","headword"),d.optString("dict",""),d.optInt("offset",0));
+                boolean hideThesaurus=d.optBoolean("hideThesaurus",false);
+                JSONObject result=library.search(q,d.optString("mode","headword"),d.optString("dict",""),d.optInt("offset",0),hideThesaurus);
                 if(d.optInt("offset",0)==0&&!q.trim().isEmpty()){
                     result.put("kanji",library.kanji(q));
-                    if(d.optString("mode","headword").equals("headword"))result.put("forms",library.forms(q));
+                    if(d.optString("mode","headword").equals("headword")){
+                        result.put("forms",library.forms(q));
+                        if(!hideThesaurus)result.put("the2",library.the2Index(q));
+                    }
                 }
                 return result;
             }
+            case "the2.index":return library.the2Index(d.optString("q",""));
+            case "the2.matches":return library.the2Matches(d.getLong("rec"),d.optString("q",""));
             case "forms":return library.forms(d.getString("q"));
             case "audio":return library.audioFor(d.getString("key"),d.optString("reading",""),d.optLong("dict",0));
             case "exact":return library.exact(d.getString("key"),null);

@@ -244,13 +244,16 @@
   }
 
   /** An entry page in the side panel, focused on the word like the look-up sheet. */
+  /** A link's word without its furigana (瑰麗, not 瑰かいれい麗). */
+  function linkText(a){const c=a.cloneNode(true);c.querySelectorAll('rt,rp').forEach(x=>x.remove());return c.textContent.trim();}
   async function entryFrame(box,it,key,opts={}){
     const frame=document.createElement('iframe');frame.className='wr-frame';box.appendChild(frame);
     await new Promise(res=>{frame.onload=res;frame.src=`/d/${it.dict}/${it.rec}.entry`;});
     const wired=frameSetup(frame,{dict:it.dict,autoHeight:true,min:60,zoom:0.95,
       // In the brainstormer a linked word (思う in 考える's entry) becomes the next word to brainstorm.
       onLink:async(href,a)=>{
-        if(opts.onWord&&a&&a.textContent.trim()&&a.textContent.trim().length<=20&&!href.startsWith('#')){opts.onWord(a.textContent.trim().replace(/[\[［].*$/,''));return;}
+        if(opts.onCategory&&/^entry:\/\/\d{5}$/.test(href)){await opts.onCategory(href,a);return;}
+        if(opts.onWord&&a&&linkText(a)&&linkText(a).length<=20&&!href.startsWith('#')&&!href.startsWith('entry://@the2-')&&!/^entry:\/\/\d{5}$/.test(href)){opts.onWord(linkText(a).replace(/[\[［].*$/,''));return;}
         const ref=await api('reference',{dict:it.dict,ref:href});if(ref.rec)openEntry({rec:ref.rec,dict:it.dict,key:ref.key||'',anchor:ref.anchor||''});},
       source:()=>({dict:it.dict,dictName:it.dictionary,key,page:it.page})});
     if(!wired)return frame;
@@ -291,6 +294,7 @@
 
   // ---------- 類語 brainstormer ----------
   function thesaurusGroups(){return [...new Set(dicts.filter(d=>d.enabled&&/\/類語$/.test(d.grp||'')).map(d=>d.grp))];}
+  function isThe2(it){return /日本語シソーラス/.test(it.dictionary||'');}
   let thesToken=0;const thesHistory=[];
   async function brainstorm(word){
     const out=screen.querySelector('[data-out="thes"]');if(!out)return;
@@ -302,36 +306,104 @@
     // A conjugated word (考えた) is looked up as its dictionary form; a word the thesaurus has as it is stays as it is.
     const own=await Promise.all(groups.map(g=>api('search',{q:word,mode:'headword',dict:'g:'+g,offset:0}).then(r=>(r.items||[]).some(i=>i.exact)).catch(()=>false)));
     const base=own.some(Boolean)?word:await api('lookup',{text:word,lang:''}).then(r=>r.items.length&&r.matched===word?r.key:word).catch(()=>word);
+    // THE2 indexes member words by reading and points each one at its concept
+    // pages. Search the reading as well as the written form for kanji words.
+    const reading=await readingOf(base).catch(()=> '');
+    const queries=[...new Set([base,reading].filter(Boolean))];
+    const indexed=[],indexedSeen=new Set();
+    for(const query of queries){
+      const r=await api('the2.index',{q:query}).catch(()=>({items:[]}));
+      for(const it of r.items||[]){const id=it.dict+':'+it.rec;if(!indexedSeen.has(id)){indexedSeen.add(id);indexed.push(it);}}
+    }
+    indexed.sort((a,b)=>a.number.localeCompare(b.number));
     const heads=[],seen=new Set();
     for(const g of groups){
-      const r=await api('search',{q:base,mode:'headword',dict:'g:'+g,offset:0}).catch(()=>({items:[]}));
-      for(const it of r.items||[])if(!seen.has(it.rec)&&(it.exact||heads.length<3)){seen.add(it.rec);heads.push(it);}
+      for(const query of queries){
+        const r=await api('search',{q:query,mode:'headword',dict:'g:'+g,offset:0}).catch(()=>({items:[]}));
+        for(const it of r.items||[]){const id=it.dict+':'+it.rec;if(it.exact&&!isThe2(it)&&!seen.has(id)){seen.add(id);heads.push(it);}}
+      }
     }
     // Entries that list the word among others (a 類語 group), from the full text.
     const mentions=[];
-    for(const g of groups){
-      const r=await api('search',{q:base,mode:'definition',dict:'g:'+g,offset:0}).catch(()=>({items:[]}));
-      // Real entries only: one-character pages (が, だ: the dictionary's own index pages) aren't 類語 groups.
-      for(const it of r.items||[]){const k=String(it.key||it.page||'').replace(/[【】\[\]（）()・\s]/g,'');if(!seen.has(it.rec)&&k.length>=2&&k!==base){seen.add(it.rec);mentions.push(it);}}
+    if(!indexed.length){
+      for(const g of groups){
+        const r=await api('search',{q:base,mode:'definition',dict:'g:'+g,offset:0}).catch(()=>({items:[]}));
+        // Use text mentions only as a fallback when no numbered groups are available.
+        for(const it of r.items||[]){const k=String(it.key||it.page||'').replace(/[【】\[\]（）()・\s]/g,'');const id=it.dict+':'+it.rec;if(!isThe2(it)&&!seen.has(id)&&k.length>=2&&k!==base){seen.add(id);mentions.push(it);}}
+      }
     }
     if(token!==thesToken)return;
     if(thesHistory[thesHistory.length-1]!==base)thesHistory.push(base);
     const back=thesHistory.length>1?`<button class="chip small" data-a="back">← ${esc(thesHistory[thesHistory.length-2])}</button>`:'';
-    if(!heads.length&&!mentions.length){out.innerHTML=`<div class="wr-word">${back}<b>${esc(base)}</b></div><p class="wr-hint">Not in your thesaurus. Try the dictionary form or a simpler word.</p>`;wireBack(out);return;}
-    out.innerHTML=`<div class="wr-word">${back}<b>${esc(base)}</b><small>${heads.length} ${heads.length===1?'entry':'entries'}${mentions.length?` · mentioned in ${mentions.length}${mentions.length>=50?'+':''}`:''}</small></div>
+    if(!indexed.length&&!heads.length&&!mentions.length){out.innerHTML=`<div class="wr-word">${back}<b>${esc(base)}</b></div><p class="wr-hint">Not in your thesaurus. Try the dictionary form or a simpler word.</p>`;wireBack(out);return;}
+    out.innerHTML=`<div class="wr-word">${back}<b>${esc(base)}</b><small>${indexed.length?indexed.length+' numbered groups':''}${heads.length?' · '+heads.length+' other entries':''}</small></div>
       <div class="wr-use" hidden><span></span><button class="btn small primary" data-a="use">Use</button><button class="btn small" data-a="go">類語 of this</button></div>
+      <div class="wr-the2"></div>
       <div class="wr-thes"></div>`;
     wireBack(out);
+    const the2=out.querySelector('.wr-the2'),trail=[];
+    const showChoices=()=>{
+      the2.innerHTML=indexed.length?`<div class="wr-sub">日本語シソーラス · 番号と意味で選ぶ</div>${indexed.map((it,i)=>`<button class="wr-the2-choice" data-the2="${i}"><b>${esc(it.number)} ${esc(it.title)}</b><small>${esc((it.path||[]).slice(1).join(' › '))}</small><span>${esc((it.sample||[]).slice(0,8).join(' · '))}</span></button>`).join('')}<p class="wr-hint">語群を開き、本文中の番号から関連する語群へ進めます。</p>`:'';
+      the2.querySelectorAll('[data-the2]').forEach(b=>b.onclick=()=>{trail.push(indexed[+b.dataset.the2]);showPage();});
+    };
+    const showPage=()=>{
+      const it=trail[trail.length-1];
+      the2.innerHTML=`<button class="chip small" data-a="the2back">← ${trail.length>1?'前の語群':'カテゴリー一覧'}</button><div class="wr-the2-heading">${esc(it.number?it.number+' ':'')}${esc(it.title||'語群')}</div><div class="wr-the2-nav"></div><div class="wr-entry"></div><div class="wr-the2-nav"></div>`;
+      the2.querySelector('[data-a="the2back"]').onclick=()=>{trail.pop();if(trail.length)showPage();else showChoices();};
+      const go=(rec,title)=>{trail.push({rec,dict:it.dict,dictionary:it.dictionary,title});showPage();};
+      entryFrame(the2.querySelector('.wr-entry'),it,base,{focus:false,onWord:(w)=>pickWord(w,out),onCategory:async(href,a)=>{
+        const ref=await api('reference',{dict:it.dict,ref:href});
+        if(ref.rec)go(ref.rec,a.textContent.trim());
+      }}).then(async f=>{
+        if(trail[trail.length-1]!==it||!f.kotobaDoc)return;
+        const doc=f.kotobaDoc;
+        const title=doc.querySelector('body header .the2-title');
+        const heading=the2.querySelector('.wr-the2-heading');
+        if(title&&heading)heading.textContent=title.textContent.trim();
+        watchFrameSelection(f,out);
+        // ③ The word you came from, marked in its group, with the words around it.
+        const found=new Set();
+        for(const q of queries)for(const w of await api('the2.matches',{rec:it.rec,q}).catch(()=>[]))found.add(w);
+        const style=doc.createElement('style');style.textContent='a.the2-word-link.wr-hit{background:#f6e3a1;border-radius:4px;box-shadow:0 0 0 3px #f6e3a1;font-weight:700}';doc.head.appendChild(style);
+        const hits=[...doc.querySelectorAll('a.the2-word-link')].filter(a=>found.has(linkText(a)));
+        hits.forEach(a=>a.classList.add('wr-hit'));
+        if(hits.length){
+          const panel=screen.querySelector('[data-panel="thes"]');
+          panel.scrollTop+=hits[0].getBoundingClientRect().top+f.getBoundingClientRect().top-panel.getBoundingClientRect().top-160;
+        }
+        // ④ The groups on either side (0021.01 · 0021.03) hold the neighbouring meanings.
+        const id=(doc.querySelector('dic-item')||{}).id||'';
+        if(!/^\d{5}$/.test(id))return;
+        const side=async(d)=>{
+          const ref=await api('reference',{dict:it.dict,ref:'entry://'+String(+id+d).padStart(5,'0')}).catch(()=>({}));
+          if(!ref.rec)return null;
+          const html=await (await fetch(`/d/${it.dict}/${ref.rec}.entry`)).text();
+          const m=html.match(/class="the2-title"[^>]*>([\s\S]*?)<\/div>/);
+          return m?{rec:ref.rec,title:m[1].replace(/<rt>[\s\S]*?<\/rt>/g,'').replace(/<[^>]+>/g,'').replace(/\s+/g,' ').trim()}:null;
+        };
+        const [prev,next]=await Promise.all([side(-1),side(1)]);
+        if(trail[trail.length-1]!==it)return;
+        the2.querySelectorAll('.wr-the2-nav').forEach(nav=>{
+          nav.innerHTML=(prev?`<button class="chip small" data-n="prev">‹ ${esc(prev.title)}</button>`:'<span></span>')+(next?`<button class="chip small" data-n="next">${esc(next.title)} ›</button>`:'');
+          nav.querySelectorAll('[data-n]').forEach(b=>b.onclick=()=>{const t=b.dataset.n==='prev'?prev:next;trail[trail.length-1]={...t,dict:it.dict,dictionary:it.dictionary};showPage();});
+        });
+      });
+    };
+    showChoices();
     const list=out.querySelector('.wr-thes');
     const all=[...heads.map(it=>({it,head:true})),...mentions.slice(0,20).map(it=>({it,head:false}))];
     all.forEach(({it,head},i)=>{
       if(!head&&(i===0||all[i-1].head)){const l=document.createElement('div');l.className='wr-sub';l.textContent=`Entries that mention ${base}`;list.appendChild(l);}
-      const sec=document.createElement('details');sec.className='wr-thes-item';sec.open=head||!heads.length&&i<2;
+      const sec=document.createElement('details');sec.className='wr-thes-item';
       const title=String(it.keys||it.key||'').split('\u0001')[0]||it.page;
       sec.innerHTML=`<summary><b>${esc(title)}</b><small>${esc(shortName(it.dictionary))}${head?'':' · mentions '+esc(base)}</small></summary><div class="wr-entry"></div>`;
       list.appendChild(sec);
       let loaded=false;
-      const load=()=>{if(loaded)return;loaded=true;entryFrame(sec.querySelector('.wr-entry'),it,head?base:title,{focus:head,onWord:(w)=>brainstorm(w)}).then(f=>watchFrameSelection(f,out));};
+      const load=()=>{if(loaded)return;loaded=true;entryFrame(sec.querySelector('.wr-entry'),it,head?base:title,{focus:head,onWord:(w)=>brainstorm(w)}).then(f=>{
+        const concept=f.kotobaDoc&&f.kotobaDoc.querySelector('body header .the2-title, body header title, body [data-name="title"]');
+        if(concept&&concept.textContent.trim())sec.querySelector('summary b').textContent=concept.textContent.trim();
+        watchFrameSelection(f,out);
+      });};
       if(sec.open)load();
       sec.addEventListener('toggle',()=>{if(sec.open)load();});
     });
@@ -346,6 +418,13 @@
     const ed=editor();if(!ed)return;
     const sel=getSelection();if(sel.rangeCount&&ed.contains(sel.anchorNode))savedRange=sel.getRangeAt(0).cloneRange();
   });
+  /** A word clicked in a group: put it in your text, or look up its own groups. */
+  function pickWord(w,out){
+    const bar=out.querySelector('.wr-use');if(!bar){brainstorm(w);return;}
+    bar.hidden=false;bar.querySelector('span').textContent=w;
+    bar.querySelector('[data-a="use"]').onclick=()=>useWord(w);
+    bar.querySelector('[data-a="go"]').onclick=()=>brainstorm(w);
+  }
   function watchFrameSelection(frame,out){
     const doc=frame&&frame.kotobaDoc;if(!doc)return;
     doc.addEventListener('selectionchange',()=>{

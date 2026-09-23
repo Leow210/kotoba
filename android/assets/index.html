@@ -10,10 +10,13 @@
 <div id="app">
   <section class="screen" id="screen-search">
     <div class="search-head" id="search-head">
-      <div class="field">
-        <svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
-        <input id="q" type="search" enterkeyhint="search" placeholder="Search your dictionaries" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
-        <button class="icon-btn" id="q-clear" aria-label="Clear" hidden><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      <div class="search-field-row">
+        <div class="field">
+          <svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+          <input id="q" type="search" enterkeyhint="search" placeholder="Search your dictionaries" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+          <button class="icon-btn" id="q-clear" aria-label="Clear" hidden><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+        </div>
+        <button class="chip small search-thesaurus-toggle" id="search-thesaurus-toggle" type="button" aria-pressed="true" title="Show or hide thesaurus dictionaries in regular search">類語 ON</button>
       </div>
       <div class="modes" id="modes" role="tablist">
         <button class="chip on" data-mode="headword">Headword</button>
@@ -26,6 +29,7 @@
     <div class="scroll" id="search-scroll">
       <div class="kanji-strip" id="kanji-strip" hidden></div>
       <div class="forms" id="forms" hidden></div>
+      <div class="the2-index" id="the2-index" hidden></div>
       <div class="list" id="results"></div>
       <button class="more-btn" id="more" hidden>Show more</button>
       <div id="search-empty"></div>

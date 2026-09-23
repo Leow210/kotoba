@@ -4,7 +4,7 @@
 set -e
 HERE="$(cd "$(dirname "$0")" && pwd)"
 "$HERE/build-core.sh" >/dev/null
-if ! ( cd "$HERE/mac" && swift build -c release > "$HERE/build/swift.log" 2>&1 ); then grep -E "error" -A3 "$HERE/build/swift.log"; exit 1; fi
+if ! ( cd "$HERE/mac" && swift build -c release --disable-sandbox > "$HERE/build/swift.log" 2>&1 ); then grep -E "error" -A3 "$HERE/build/swift.log"; exit 1; fi
 APP="$HERE/build/Kotoba.app"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources/core" "$APP/Contents/Resources/assets" "$APP/Contents/Resources/web"
