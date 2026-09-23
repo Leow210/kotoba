@@ -40,7 +40,7 @@ Display › Text size) and ⌘0 returns to your default. Hold the configured hov
 over a word to open its dictionary. A plain click does not look up a word on the Mac unless enabled in
 Settings › Reading; click and drag still selects text.
 
-Comics work as on the phone (⌘+ / ⌘− zoom in 25% steps up to 4×, ⌘0 fits the page again), including the 文 text layer (the same PaddleOCR models on onnxruntime for macOS,
+Comics work as on the phone (⌘+ / ⌘− zoom from 25% to 400%, including smaller than the screen to see more of a webtoon at once; ⌘0 fits the page again), including the 文 text layer (the same PaddleOCR models on onnxruntime for macOS,
 about 0.2 s a page). The phone's Mihon webtoons are mirrored to `/Volumes/T7/Mihon` by Syncthing (receive-only; its `.stignore` keeps only `downloads/* (KO)` and `autobackup/`, so manga stays on the phone);
 while the drive is plugged in, Kotoba rescans `downloads/` and imports the newest `autobackup/*.tachibk` (titles,
 categories, read chapters) by itself. Covers come from `mihon-covers/` in the data folder, as on the phone.

@@ -271,19 +271,20 @@ async function openComic(series,chapterId,startPage=0){
   let zoom=1;
   function scroller(){return settings.mode==='webtoon'?view:(view.children[pagedIndex()]||view);}
   function setZoom(z,cx,cy){
-    z=Math.max(1,Math.min(4,z));if(Math.abs(z-zoom)<0.001)return;
+    // Below 1 the pages get smaller than the screen (more of a webtoon at once); above 1 they're wider and the view pans.
+    z=Math.max(0.25,Math.min(4,z));if(Math.abs(z-1)<0.02)z=1;if(Math.abs(z-zoom)<0.001)return;
     const sc=scroller(),r=sc.getBoundingClientRect();
     const mx=(cx??r.left+r.width/2)-r.left,my=(cy??r.top+r.height/2)-r.top;
     const px=(sc.scrollLeft+mx)/zoom,py=(sc.scrollTop+my)/zoom;
     const old=zoom;zoom=z;
-    view.style.setProperty('--cz',z);view.classList.toggle('zoomed',z>1);
+    view.style.setProperty('--cz',z);view.classList.toggle('zoomed',z>1);view.classList.toggle('shrunk',z<1);
     if(settings.mode==='webtoon'){sc.scrollLeft=px*z-mx;sc.scrollTop=py*z-my;}
     else{sc.scrollLeft=px*z-mx;sc.scrollTop=py*z-my;}
     if(old===1||z===1)requestAnimationFrame(placeLayers);else placeLayers();
   }
   function zoomAt(e){setZoom(zoom>1?1:2.2,e.clientX,e.clientY);}
   // Keyboard zoom on the Mac (⌘+ / ⌘− / ⌘0): d is 1, -1 or 0 (back to fit).
-  el.kotobaZoom=(d)=>{setZoom(d===0?1:zoom*(d>0?1.25:0.8));toast(zoom>1?`Zoom ${Math.round(zoom*100)}%`:'Fit to screen',900);};
+  el.kotobaZoom=(d)=>{setZoom(d===0?1:zoom*(d>0?1.25:0.8));toast(zoom===1?'Fit to screen':`Zoom ${Math.round(zoom*100)}%`,900);};
   // Pinch
   let pinch=null;
   const dist=(t)=>Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY);
@@ -397,7 +398,7 @@ async function openComic(series,chapterId,startPage=0){
   }
   async function open(ch,page){
     await pageCount(ch);
-    zoom=1;view.style.setProperty('--cz',1);view.classList.remove('zoomed');
+    zoom=1;view.style.setProperty('--cz',1);view.classList.remove('zoomed','shrunk');
     if(settings.mode==='webtoon')await openWebtoon(ch,page);else await openPaged(ch,page);
     updateUi();saveProgress(true);
     if(settings.ocr){el.classList.add('ocr-on');el.querySelector('[data-a="ocrpage"]').hidden=false;scheduleOcr();}

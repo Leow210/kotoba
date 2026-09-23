@@ -350,6 +350,10 @@ svg.i.sm{width:16px;height:16px}
 /* Pinch / double-tap zoom: images get wider (--cz) and the view pans */
 .comic-view.webtoon img.cpage{width:calc(100% * var(--cz,1))!important;max-width:none}
 .comic-view.webtoon.zoomed{overflow-x:auto}
+/* Zoomed out below fit (⌘− on the Mac): smaller pages, centred */
+.comic-view.webtoon.shrunk img.cpage{margin-left:auto;margin-right:auto}
+.comic-view.paged.shrunk img.cpage{max-width:calc(100% * var(--cz,1));max-height:calc(100% * var(--cz,1))}
+.comic-view.paged.fit-height.shrunk img.cpage{height:calc(100% * var(--cz,1))}
 .comic-view.paged.zoomed .slide{overflow:auto;align-items:flex-start;justify-content:flex-start}
 .comic-view.paged.zoomed img.cpage{width:calc(100% * var(--cz,1));max-width:none;max-height:none;height:auto}
 .comic-view.paged.zoomed .slide{position:relative}
