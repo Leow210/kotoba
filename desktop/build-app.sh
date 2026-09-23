@@ -9,6 +9,7 @@ APP="$HERE/build/Kotoba.app"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources/core" "$APP/Contents/Resources/assets" "$APP/Contents/Resources/web"
 cp "$HERE/mac/.build/release/Kotoba" "$APP/Contents/MacOS/Kotoba"
+cp "$HERE/mac/.build/release/KotobaOCR" "$APP/Contents/MacOS/kotoba-ocr"
 cp "$HERE/build/kotoba-core.jar" "$HERE"/libs/*.jar "$APP/Contents/Resources/core/"
 # The phone's interface, with the OCR models for the comic reader's text layer.
 ( cd "$HERE/../android/assets" && find . -type f | while IFS= read -r f; do mkdir -p "$APP/Contents/Resources/assets/$(dirname "$f")"; cp "$f" "$APP/Contents/Resources/assets/$f"; done )

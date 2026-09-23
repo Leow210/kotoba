@@ -56,6 +56,10 @@ public class DesktopServer {
         sync=new Sync(store);
         routes.books=new Books(context,store.db);
         routes.ocr=new Ocr(context,store.db);
+        // Apple's recognizer (the kotoba-ocr helper beside the app) for Korean; Settings can switch back to PaddleOCR.
+        File ocrExe=new File(web.getParentFile().getParentFile(),"MacOS/kotoba-ocr");
+        if(!ocrExe.canExecute())ocrExe=new File(web.getParentFile(),"mac/.build/release/KotobaOCR");
+        if(ocrExe.canExecute())Ocr.external=new VisionOcr(ocrExe,store);
         routes.comics=new Comics(context,store.db,uri->FileChannel.open(Path.of(uri.startsWith("file://")?uri.substring(7):uri),StandardOpenOption.READ));
         byte[] t=new byte[18];new SecureRandom().nextBytes(t);
         StringBuilder b=new StringBuilder();for(byte x:t)b.append(String.format("%02x",x));
@@ -425,6 +429,47 @@ public class DesktopServer {
         }
         Object[] f=routes.dictFile(dict,URLDecoder.decode(href,StandardCharsets.UTF_8));
         return f==null?null:new Object[]{f[0],f[1]};
+    }
+
+    /** Apple Vision through the kotoba-ocr helper, kept running between pages (one request per line). */
+    static final class VisionOcr implements Ocr.LineReader {
+        final File exe;final Store store;
+        Process process;java.io.BufferedWriter toHelper;java.io.BufferedReader fromHelper;
+        VisionOcr(File exe,Store store){this.exe=exe;this.store=store;}
+        public boolean handles(String lang){return "ko".equals(lang)&&!"paddle".equals(store.setting("ocr_engine",""));}
+        public synchronized List<Ocr.Line> read(byte[] image,String lang,int[] size) throws Exception {
+            File tmp=File.createTempFile("kotoba-ocr",".img");
+            try{
+                Files.write(tmp.toPath(),image);
+                String reply=null;
+                for(int attempt=0;attempt<2&&reply==null;attempt++){
+                    if(process==null||!process.isAlive()){
+                        process=new ProcessBuilder(exe.getPath()).redirectError(ProcessBuilder.Redirect.DISCARD).start();
+                        toHelper=new java.io.BufferedWriter(new java.io.OutputStreamWriter(process.getOutputStream(),StandardCharsets.UTF_8));
+                        fromHelper=new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream(),StandardCharsets.UTF_8));
+                    }
+                    try{toHelper.write(lang+"\t"+tmp.getPath()+"\n");toHelper.flush();reply=fromHelper.readLine();}
+                    catch(IOException e){process.destroy();process=null;}
+                    if(reply==null&&process!=null){process.destroy();process=null;}
+                }
+                if(reply==null)throw new Exception("Text recognition stopped.");
+                JSONObject r=new JSONObject(reply);
+                if(r.has("error"))throw new Exception(r.getString("error"));
+                size[0]=(int)Math.round(r.getDouble("w"));size[1]=(int)Math.round(r.getDouble("h"));
+                List<Ocr.Line> lines=new java.util.ArrayList<>();
+                JSONArray ls=r.getJSONArray("lines");
+                for(int i=0;i<ls.length();i++){
+                    JSONObject o=ls.getJSONObject(i);
+                    Ocr.Line l=new Ocr.Line();
+                    // Vision's boxes hug the letters; pad them like PaddleOCR's so the text layer covers the whole line.
+                    float x=(float)o.getDouble("x"),y=(float)o.getDouble("y"),w=(float)o.getDouble("w"),h=(float)o.getDouble("h"),pad=h*0.25f;
+                    l.x1=Math.max(0,x-pad);l.y1=Math.max(0,y-pad);l.x2=Math.min(size[0],x+w+pad);l.y2=Math.min(size[1],y+h+pad);
+                    l.text=o.getString("text");l.conf=(float)o.getDouble("conf");
+                    lines.add(l);
+                }
+                return lines;
+            }finally{tmp.delete();}
+        }
     }
 
     boolean authorized(HttpExchange x){

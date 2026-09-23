@@ -14,5 +14,7 @@ let package = Package(
             swiftSettings: [.unsafeFlags(["-I/opt/homebrew/include"])],
             linkerSettings: [.unsafeFlags(["-L/opt/homebrew/lib", "-Xlinker", "-rpath", "-Xlinker", "/opt/homebrew/lib"]), .linkedLibrary("mpv")]
         ),
+        // Apple's text recognizer for comic and screen text, run by the Java core.
+        .executableTarget(name: "KotobaOCR", path: "Sources/KotobaOCR"),
     ]
 )

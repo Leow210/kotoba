@@ -46,16 +46,30 @@ public final class Ocr {
 
     public static final class Line { public float x1,y1,x2,y2,conf;public String text=""; }
 
+    /**
+     * Another recognizer for some languages (on the Mac, Apple's Vision reads Korean far better than the mobile model).
+     * It returns lines in pixels; filtering, bubble grouping and caching are the same as for PaddleOCR.
+     */
+    public interface LineReader {
+        boolean handles(String lang);
+        /** Lines of text in the image; size gets {width, height}. */
+        List<Line> read(byte[] image,String lang,int[] size) throws Exception;
+    }
+    public static volatile LineReader external;
+    static boolean externalFor(String lang){LineReader r=external;return r!=null&&r.handles(lang);}
+    /** Cached results remember which recognizer made them. */
+    static int version(String lang){return externalFor(lang)?VERSION*1000+1:VERSION;}
+
     /** Recognized text on one comic page, cached. */
     public JSONObject page(Comics comics,long chapter,int index,String lang,boolean refresh) throws Exception {
         if(!refresh){
             JSONArray r=Store.rows(db,"SELECT data FROM ocr_cache WHERE chapter=? AND page=? AND lang=?",Long.toString(chapter),Integer.toString(index),lang);
-            if(r.length()>0){JSONObject c=new JSONObject(r.getJSONObject(0).getString("data"));if(c.optInt("v")==VERSION)return c.put("cached",true);}
+            if(r.length()>0){JSONObject c=new JSONObject(r.getJSONObject(0).getString("data"));if(c.optInt("v")==version(lang))return c.put("cached",true);}
         }
         Object[] res=comics.page(chapter,index);
         if(res==null)throw new IllegalArgumentException("No such page");
         long t=System.currentTimeMillis();
-        JSONObject out=recognize((byte[])res[0],lang).put("v",VERSION);
+        JSONObject out=recognize((byte[])res[0],lang).put("v",version(lang));
         out.put("ms",System.currentTimeMillis()-t);
         db.execSQL("INSERT OR REPLACE INTO ocr_cache(chapter,page,lang,data) VALUES(?,?,?,?)",new Object[]{chapter,index,lang,out.toString()});
         return out;
@@ -63,6 +77,13 @@ public final class Ocr {
     public void clear(long chapter){db.execSQL("DELETE FROM ocr_cache WHERE chapter=?",new Object[]{chapter});}
 
     public JSONObject recognize(byte[] image,String lang) throws Exception {
+        if(externalFor(lang)){
+            int[] size=new int[2];
+            List<Line> kept=new ArrayList<>();
+            // Vision's confidences run lower than PaddleOCR's for text it reads correctly.
+            for(Line l:external.read(image,lang,size))if(keep(l,lang,0.2f))kept.add(l);
+            return blocks(kept,size[0],size[1]);
+        }
         BitmapFactory.Options o=new BitmapFactory.Options();o.inPreferredConfig=Bitmap.Config.ARGB_8888;
         Bitmap bmp=BitmapFactory.decodeByteArray(image,0,image.length,o);
         if(bmp==null)throw new IllegalArgumentException("Unreadable image");
@@ -101,21 +122,27 @@ public final class Ocr {
             if(l.x2-l.x1<4||l.y2-l.y1<4)continue;
             if(columns&&vertical(l)&&(widths.size()>=3&&l.x2-l.x1<median*0.6f||l.x2-l.x1<median*0.8f&&besideWider(l,lines)))continue;
             recognizeLine(bmp,l);
-            if("ko".equals(lang)){
-                l.text=fixKorean(l.text);
-                // Short lines with no Korean or CJK on a Korean page are artwork or site watermarks (000000, YoN).
-                String tt=l.text.trim();
-                if(tt.codePointCount(0,tt.length())<=6&&tt.codePoints().noneMatch(c->c>=0xAC00&&c<=0xD7A3||isCjk(c)))continue;
-            }
-            if(l.text.trim().isEmpty()||l.conf<MIN_CONF)continue;
-            // Decorative shapes decode to symbols only (……, ※, ：).
-            if(l.text.codePoints().noneMatch(Character::isLetterOrDigit))continue;
-            // A lone Latin letter or digit on a Korean/Japanese page is almost always a shape in the artwork.
-            String tt=l.text.trim();
-            if(tt.codePointCount(0,tt.length())==1&&tt.codePointAt(0)<0x250)continue;
-            kept.add(l);
+            if("ko".equals(lang))l.text=fixKorean(l.text);
+            if(keep(l,lang,MIN_CONF))kept.add(l);
         }
         bmp.recycle();
+        return blocks(kept,W,H);
+    }
+
+    /** Whether a recognized line is text worth showing (not artwork, watermarks or stray shapes). */
+    static boolean keep(Line l,String lang,float minConf){
+        String tt=l.text.trim();
+        // Short lines with no Korean or CJK on a Korean page are artwork or site watermarks (000000, YoN).
+        if("ko".equals(lang)&&tt.codePointCount(0,tt.length())<=6&&tt.codePoints().noneMatch(c->c>=0xAC00&&c<=0xD7A3||isCjk(c)))return false;
+        if(tt.isEmpty()||l.conf<minConf)return false;
+        // Decorative shapes decode to symbols only (……, ※, ：).
+        if(l.text.codePoints().noneMatch(Character::isLetterOrDigit))return false;
+        // A lone Latin letter or digit on a Korean/Japanese page is almost always a shape in the artwork.
+        return !(tt.codePointCount(0,tt.length())==1&&tt.codePointAt(0)<0x250);
+    }
+
+    /** Lines grouped into speech bubbles, as the page's text layer. */
+    static JSONObject blocks(List<Line> kept,int W,int H) throws Exception {
         JSONObject out=new JSONObject().put("w",W).put("h",H);
         JSONArray blocks=new JSONArray();
         for(List<Line> g:group(kept)){
