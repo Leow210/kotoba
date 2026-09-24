@@ -1,11 +1,12 @@
 // ==UserScript==
 // @name         Kotoba Video Text
 // @namespace    app.kotoba.desktop
-// @version      0.8.0
+// @version      0.9.0
 // @description  Look up YouTube and GagaOOLala subtitles in Kotoba for Mac: hold Shift over a word; YouTube Music's song goes to Kotoba's lyrics. Works in Firefox and Chrome (Tampermonkey).
 // @match        https://www.youtube.com/watch*
 // @match        https://www.gagaoolala.com/*/videos/*
 // @match        https://music.youtube.com/*
+// @match        https://www.viki.com/*
 // @run-at       document-idle
 // @noframes
 // @grant        GM_xmlhttpRequest
@@ -142,6 +143,7 @@
   ui.innerHTML = H(`<div id="kotoba-video-toolbar">
       <button type="button" id="kotoba-video-toggle" aria-pressed="true" title="Show the caption as text you can look up (hold Shift over a word)">文 Kotoba</button>
       <button type="button" id="kotoba-video-pause" aria-pressed="true" title="Pause the video while a word is shown">⏸ on lookup</button>
+      <button type="button" id="kotoba-video-live" aria-pressed="false" title="Subtitles from the show's audio, made on your Mac (Qwen3-ASR on the T7) and kept for rewatching">🎙 Live subs</button>
       <select id="kotoba-video-lang" aria-label="Subtitle language"><option value="auto">Auto language</option><option value="ja">日本語</option><option value="zh">中文</option><option value="ko">한국어</option><option value="th">ไทย</option><option value="ru">Русский</option></select>
     </div><div id="kotoba-video-line"><span id="kotoba-video-text"></span></div>`);
   document.body.appendChild(ui);
@@ -149,6 +151,35 @@
   pop.id = 'kotoba-video-pop'; pop.className = 'kotoba-pop'; pop.hidden = true;
   const toggle = ui.querySelector('#kotoba-video-toggle'), pauseBtn = ui.querySelector('#kotoba-video-pause');
   const select = ui.querySelector('#kotoba-video-lang'), text = ui.querySelector('#kotoba-video-text');
+  const liveBtn = ui.querySelector('#kotoba-video-live');
+
+  // ---------- live subtitles (made on the Mac from the show's audio) ----------
+  // While on, the video's time goes to Kotoba several times a second; Kotoba captures the browser's sound, turns each
+  // spoken line into text and places it on this episode's timeline. The lines come back here and show at their time,
+  // like a subtitle track; an episode heard before shows its lines at once.
+  let live = store.get('kotoba.live.' + location.hostname, 'false') === 'true';
+  let liveLines = [], liveRev = -1, liveKey = '';
+  const episodeKey = () => location.hostname + location.pathname.replace(/\/$/, '');
+  function liveTick() {
+    const v = largestVideo();
+    if (!v) return;
+    const key = episodeKey();
+    if (key !== liveKey) { liveKey = key; liveLines = []; liveRev = -1; }
+    if (!live && liveRev >= 0 && !liveLines.length) return;
+    const lang = language === 'auto' ? (guessLanguage(liveLines.map(l => l.text).join('')) || 'ko') : language;
+    kotoba('captions.report', { key, title: document.title, time: v.currentTime, playing: !v.paused && !v.ended, rate: v.playbackRate || 1,
+      live, lang, since: liveRev }).then(r => {
+      if (!r || key !== liveKey) return;
+      if (r.lines) liveLines = r.lines;
+      if (typeof r.rev === 'number') liveRev = r.rev;
+    }).catch(() => {});
+  }
+  function liveLineAt(t) {
+    let best = '';
+    for (const l of liveLines) { if (l.t0 <= t + 0.15 && t <= l.t1 + 0.8) best = l.text; if (l.t0 > t + 0.15) break; }
+    return best;
+  }
+  setInterval(liveTick, 250);
   select.value = language;
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -224,6 +255,12 @@
     ui.style.width = `${width}px`;
     ui.style.height = `${Math.max(80, Math.min(130, rect.height * .16))}px`;
     text.style.fontSize = `${Math.max(18, Math.min(34, rect.width / 32))}px`;
+    // Live subtitles (or lines saved from an earlier watch) take the place of the site's own.
+    if (enabled && (live || liveLines.length)) {
+      const current = liveLineAt(video.currentTime);
+      if (current !== lastText && !pinned) { lastText = current; drawCaption(current); hidePop(); }
+      return;
+    }
     const source = document.querySelector(sourceSelector);
     if (!enabled || !source) { showNative(); if (!pinned) { text.textContent = ''; lastText = ''; } return; }
     const current = readCaption(source);
@@ -513,6 +550,11 @@
   toggle.addEventListener('click', () => { enabled = !enabled; store.set('kotoba.videoText.enabled', String(enabled)); toggle.setAttribute('aria-pressed', String(enabled)); if (!enabled) hidePop(); update(); });
   pauseBtn.addEventListener('click', () => { pauseOnLookup = !pauseOnLookup; store.set('kotoba.videoText.pause', String(pauseOnLookup)); pauseBtn.setAttribute('aria-pressed', String(pauseOnLookup)); });
   select.addEventListener('change', () => { language = select.value; store.set('kotoba.videoText.language', language); text.lang = guessLanguage(lastText); });
+  liveBtn.addEventListener('click', () => {
+    live = !live; store.set('kotoba.live.' + location.hostname, String(live)); liveBtn.setAttribute('aria-pressed', String(live));
+    liveTick(); if (!live) { lastText = ''; text.textContent = ''; }
+  });
+  liveBtn.setAttribute('aria-pressed', String(live));
   toggle.setAttribute('aria-pressed', String(enabled));
   pauseBtn.setAttribute('aria-pressed', String(pauseOnLookup));
   addEventListener('pagehide', showNative);

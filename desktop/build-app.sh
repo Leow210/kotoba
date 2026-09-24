@@ -14,6 +14,7 @@ cp "$HERE/build/kotoba-core.jar" "$HERE"/libs/*.jar "$APP/Contents/Resources/cor
 # The phone's interface, with the OCR models for the comic reader's text layer.
 ( cd "$HERE/../android/assets" && find . -type f | while IFS= read -r f; do mkdir -p "$APP/Contents/Resources/assets/$(dirname "$f")"; cp "$f" "$APP/Contents/Resources/assets/$f"; done )
 cp "$HERE"/web/* "$APP/Contents/Resources/web/"
+mkdir -p "$APP/Contents/Resources/asr" && cp "$HERE"/asr/*.py "$APP/Contents/Resources/asr/"
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

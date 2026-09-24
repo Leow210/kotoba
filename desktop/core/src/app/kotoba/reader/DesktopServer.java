@@ -101,6 +101,9 @@ public class DesktopServer {
             case "translate.config":return translator.config();
             case "translate.set":translator.set(d);return translator.config();
             case "translate":return translator.translate(d.getString("text"),d.optString("from",""),d.optString("to",""),d.optString("engine",""),d.optString("context",""));
+            case "captions.report":return captionsReport(d);
+            case "captions.add":return captionsAdd(d);
+            case "captions.want":return captionsWant();
             case "music.now":return musicNow();
             case "music.control":return musicControl(d.getString("action"),d.optDouble("t",-1));
             case "music.report":return musicReport(d);
@@ -348,7 +351,103 @@ public class DesktopServer {
     /** The helper's fixed address (the main server's port changes every launch). 127.0.0.1 only. */
     static final int HELPER_PORT=47823;
     /** Requests the helper may make: looking words up and saving cards, nothing else. */
-    static final java.util.Set<String> HELPER_ROUTES=java.util.Set.of("lookup","gloss.rec","freq","item.similar","item.save","folders","folder.save","dicts","known.get","known.set","music.report");
+    static final java.util.Set<String> HELPER_ROUTES=java.util.Set.of("lookup","gloss.rec","freq","item.similar","item.save","folders","folder.save","dicts","known.get","known.set","music.report","captions.report");
+
+    // ---------- live subtitles (a show in the browser with no subtitles in its language) ----------
+    // The browser helper reports the episode and the video's time several times a second while its Live subs button is
+    // on; the Mac app captures the browser's audio and a Qwen3-ASR worker turns each spoken line into text with
+    // wall-clock times, which are placed on the video's own clock here. Lines are kept per episode, so a rewatch has them.
+
+    static final class Report { final long wall; final double time; final boolean playing; final double rate;
+        Report(long w,double t,boolean p,double r){wall=w;time=t;playing=p;rate=r;} }
+    final java.util.ArrayDeque<Report> captionReports=new java.util.ArrayDeque<>();
+    volatile String captionKey="",captionTitle="",captionLang="ko";volatile long captionLive=0;
+    final java.util.Map<String,JSONObject> captionEpisodes=new java.util.HashMap<>();
+
+    File captionFile(String key){
+        try{
+            byte[] h=java.security.MessageDigest.getInstance("SHA-1").digest(key.getBytes(StandardCharsets.UTF_8));
+            StringBuilder b=new StringBuilder();for(int i=0;i<8;i++)b.append(String.format("%02x",h[i]));
+            File dir=new File(data,"captions");dir.mkdirs();
+            return new File(dir,b+".json");
+        }catch(Exception e){throw new RuntimeException(e);}
+    }
+    synchronized JSONObject captionEpisode(String key) throws Exception {
+        JSONObject ep=captionEpisodes.get(key);
+        if(ep==null){
+            File f=captionFile(key);
+            ep=f.exists()?new JSONObject(Files.readString(f.toPath())):new JSONObject().put("key",key).put("lines",new JSONArray()).put("rev",0);
+            captionEpisodes.put(key,ep);
+        }
+        return ep;
+    }
+
+    /** From the helper: where the video is; answers with the episode's lines newer than the helper has. */
+    JSONObject captionsReport(JSONObject d) throws Exception {
+        String key=d.optString("key","");
+        if(key.isEmpty())return new JSONObject();
+        boolean live=d.optBoolean("live",false);
+        synchronized(this){
+            if(live){
+                if(!key.equals(captionKey)){captionReports.clear();captionKey=key;}
+                captionTitle=d.optString("title","");captionLang=d.optString("lang","ko");
+                captionReports.addLast(new Report(System.currentTimeMillis(),d.optDouble("time",0),d.optBoolean("playing",false),d.optDouble("rate",1)));
+                while(captionReports.size()>2400)captionReports.removeFirst();// about ten minutes
+                captionLive=System.currentTimeMillis();
+            }else if(key.equals(captionKey))captionLive=0;
+        }
+        JSONObject ep=captionEpisode(key);
+        int since=d.optInt("since",-1);
+        JSONObject out=new JSONObject().put("rev",ep.getInt("rev"));
+        if(ep.getInt("rev")!=since)out.put("lines",ep.getJSONArray("lines"));
+        return out;
+    }
+
+    /** For the Mac app: capture audio now? In which language? */
+    synchronized JSONObject captionsWant(){
+        boolean active=captionLive>0&&System.currentTimeMillis()-captionLive<3000&&!captionReports.isEmpty()&&captionReports.peekLast().playing;
+        boolean recent=captionLive>0&&System.currentTimeMillis()-captionLive<20000;
+        return new JSONObject().put("active",active).put("keep",recent).put("lang",captionLang).put("key",captionKey);
+    }
+
+    /** From the Mac app: a line the worker heard, with the wall-clock times of its audio. */
+    JSONObject captionsAdd(JSONObject d) throws Exception {
+        long start=d.getLong("start"),end=d.getLong("end");
+        double t0,t1;String key;
+        synchronized(this){
+            key=captionKey;
+            t0=videoTime(start);t1=videoTime(end);
+        }
+        if(key.isEmpty()||Double.isNaN(t0)||Double.isNaN(t1)||t1<=t0)return new JSONObject().put("placed",false);
+        String text=d.getString("text").trim();
+        JSONObject ep=captionEpisode(key);
+        synchronized(this){
+            JSONArray lines=ep.getJSONArray("lines");
+            // Heard before (rewound): the line already there stays.
+            for(int i=0;i<lines.length();i++){
+                JSONObject l=lines.getJSONObject(i);
+                double ov=Math.min(t1,l.getDouble("t1"))-Math.max(t0,l.getDouble("t0"));
+                if(ov>0.5*(t1-t0))return new JSONObject().put("placed",false).put("duplicate",true);
+            }
+            java.util.List<JSONObject> all=new java.util.ArrayList<>();
+            for(int i=0;i<lines.length();i++)all.add(lines.getJSONObject(i));
+            all.add(new JSONObject().put("t0",Math.round(t0*100)/100.0).put("t1",Math.round(t1*100)/100.0).put("text",text));
+            all.sort((a,b)->Double.compare(a.optDouble("t0"),b.optDouble("t0")));
+            ep.put("lines",new JSONArray(all)).put("rev",ep.getInt("rev")+1).put("title",captionTitle).put("key",key);
+            Files.writeString(captionFile(key).toPath(),ep.toString());
+        }
+        return new JSONObject().put("placed",true).put("t0",t0).put("t1",t1);
+    }
+
+    /** The video's time at a wall-clock moment, from the helper's reports around it (NaN while paused). */
+    double videoTime(long wall){
+        Report before=null;
+        for(Report r:captionReports){if(r.wall<=wall)before=r;else break;}
+        if(before==null)before=captionReports.peekFirst();
+        if(before==null)return Double.NaN;
+        if(!before.playing)return before.time;
+        return before.time+(wall-before.wall)/1000.0*before.rate;
+    }
 
     // ---------- now playing (for synced lyrics) ----------
 

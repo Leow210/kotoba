@@ -15,6 +15,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     var players: [PlayerWindow] = []
     var pendingOpen: [URL] = []
     lazy var overlay = GameOverlay(app: self)
+    lazy var liveCaptions = LiveCaptions(app: self)
+    var coreToken = ""
     var overlayKey: HotKey?
 
     static func main() {
@@ -146,6 +148,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
             DispatchQueue.main.async {
                 let url = URL(string: "http://127.0.0.1:\(port)/?t=\(parts[4])")!
                 self?.base = URL(string: "http://127.0.0.1:\(port)")
+                self?.coreToken = String(parts[4])
+                self?.liveCaptions.start()
                 self?.web.load(URLRequest(url: url))
                 if let pending = self?.pendingOpen { self?.pendingOpen = []; pending.forEach { self?.openVideo($0) } }
             }
@@ -326,6 +330,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         NSApp.windowsMenu = windowMenu
     }
     @objc func reload() { web.reload() }
+
+    /// A route of the core, from here (live subtitles), with the session cookie the web view uses.
+    func coreCall(_ route: String, _ body: [String: Any], _ done: @escaping ([String: Any]?) -> Void) {
+        guard let base else { done(nil); return }
+        var req = URLRequest(url: base.appendingPathComponent("api/" + route))
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("kotoba=\(coreToken)", forHTTPHeaderField: "Cookie")
+        req.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        req.timeoutInterval = 10
+        URLSession.shared.dataTask(with: req) { data, _, _ in
+            guard let data, let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { done(nil); return }
+            done(obj["data"] as? [String: Any])
+        }.resume()
+    }
+    /// The live-subtitle worker script: in the app, or in the repository when run from the build folder.
+    func liveAsrScript() -> String? {
+        for p in [res("asr/live_asr.py", "desktop/asr/live_asr.py")] where FileManager.default.fileExists(atPath: p) { return p }
+        return nil
+    }
     func registerOverlayKey() {
         overlayKey = nil
         let c = HotKey.overlayChoices[HotKey.overlayChoice]!
