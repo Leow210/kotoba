@@ -519,7 +519,7 @@ svg.i.sm{width:16px;height:16px}
 .dgroup-list .dict-row{padding:10px 14px 10px 6px;border-bottom:0;border-top:1px solid var(--line);background:var(--surface);position:relative}
 .dgroup.sub .dgroup-list .dict-row{padding-left:22px}
 .dict-row .drag{flex:none;width:32px;height:40px;display:grid;place-items:center;color:var(--muted);font-size:20px;touch-action:none;cursor:grab;user-select:none}
-.dict-row.dragging{z-index:3;box-shadow:0 6px 18px rgba(0,0,0,.18);border-radius:10px}
+.dict-row.dragging{z-index:3;cursor:grabbing;transition:none;box-shadow:0 6px 18px rgba(0,0,0,.18);border-radius:10px}
 
 /* Frequency bars (1–4 by rank) in result rows and entry chips. */
 .fbars{display:inline-flex;align-items:flex-end;gap:1.5px;height:12px;margin-right:2px;vertical-align:middle}

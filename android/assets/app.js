@@ -2044,32 +2044,52 @@ async function saveDisplayOrder(){
   try{localStorage.setItem('manualOrder','1');}catch(e){}
   await api('dict.reorder',{ids});await loadDicts();
 }
-/** Press and drag the ≡ handle to move a dictionary within its group. */
+/** Press and drag the ≡ handle to move a dictionary within its group. The dragged row follows the finger; the
+ *  rows it passes move out of its way (the dragged row itself stays put in the DOM, which keeps the pointer captured). */
 function enableDrag(handleEl){
   handleEl.addEventListener('pointerdown',e=>{
+    if(e.button>0)return;
     e.preventDefault();
-    const rowEl=handleEl.closest('.dict-row'),list=rowEl.parentElement;
-    handleEl.setPointerCapture(e.pointerId);
+    const rowEl=handleEl.closest('.dict-row'),list=rowEl.parentElement,id=e.pointerId;
+    try{handleEl.setPointerCapture(id);}catch(_){}
+    let scroller=list;while(scroller&&scroller!==document.body&&!(scroller.scrollHeight>scroller.clientHeight&&/auto|scroll/.test(getComputedStyle(scroller).overflowY)))scroller=scroller.parentElement;
+    if(!scroller||scroller===document.body)scroller=document.scrollingElement;
+    const grab=e.clientY-rowEl.getBoundingClientRect().top;
+    let y=e.clientY,moved=false,raf=0,done=false;
     rowEl.classList.add('dragging');
-    let lastY=e.clientY,moved=false;
-    const move=ev=>{
-      const dy=ev.clientY-lastY;
-      rowEl.style.transform=`translateY(${dy}px)`;
-      const rows=[...list.children].filter(r=>r!==rowEl);
-      const mid=rowEl.getBoundingClientRect().top+rowEl.offsetHeight/2;
-      for(const r of rows){
-        const rr=r.getBoundingClientRect(),c=rr.top+rr.height/2;
-        const after=r.compareDocumentPosition(rowEl)&Node.DOCUMENT_POSITION_FOLLOWING;
-        if(after&&mid>c){const top=rowEl.getBoundingClientRect().top;r.after(rowEl);lastY+=rowEl.getBoundingClientRect().top-top;rowEl.style.transform=`translateY(${ev.clientY-lastY}px)`;moved=true;break;}
-        if(!after&&mid<c){const top=rowEl.getBoundingClientRect().top;r.before(rowEl);lastY+=rowEl.getBoundingClientRect().top-top;rowEl.style.transform=`translateY(${ev.clientY-lastY}px)`;moved=true;break;}
+    let tf=0;  // the translateY applied now
+    const place=()=>{
+      // The finger wants the row's top at y-grab; swap with neighbours while its middle has passed theirs.
+      const h=rowEl.offsetHeight,mid=y-grab+h/2;
+      for(let guard=0;guard<50;guard++){
+        const prev=rowEl.previousElementSibling,next=rowEl.nextElementSibling;
+        if(next&&next.classList.contains('dict-row')){const r=next.getBoundingClientRect();if(mid>r.top+r.height/2){rowEl.before(next);moved=true;continue;}}
+        if(prev&&prev.classList.contains('dict-row')){const r=prev.getBoundingClientRect();if(mid<r.top+r.height/2){rowEl.after(prev);moved=true;continue;}}
+        break;
       }
+      // Offset from the row's own slot, kept within its group's list.
+      const slot=rowEl.getBoundingClientRect().top-tf,lr=list.getBoundingClientRect();
+      tf=Math.max(lr.top-slot,Math.min(lr.bottom-h-slot,y-grab-slot));
+      rowEl.style.transform=`translateY(${tf}px)`;
     };
-    const end=()=>{
-      handleEl.removeEventListener('pointermove',move);handleEl.removeEventListener('pointerup',end);handleEl.removeEventListener('pointercancel',end);
+    const tick=()=>{
+      raf=0;if(done)return;
+      // Near the top or bottom edge of the scrolling area: scroll, and keep the row under the finger.
+      const sr=scroller===document.scrollingElement?{top:0,bottom:innerHeight}:scroller.getBoundingClientRect();
+      const edge=48,v=y<sr.top+edge?-Math.ceil((sr.top+edge-y)/4):y>sr.bottom-edge?Math.ceil((y-sr.bottom+edge)/4):0;
+      if(v){const before=scroller.scrollTop;scroller.scrollTop+=v;if(scroller.scrollTop!==before){place();raf=requestAnimationFrame(tick);}}
+    };
+    const move=ev=>{if(ev.pointerId!==id)return;ev.preventDefault();y=ev.clientY;place();if(!raf)raf=requestAnimationFrame(tick);};
+    const end=ev=>{
+      if(ev&&ev.pointerId!==id||done)return;done=true;
+      if(raf)cancelAnimationFrame(raf);
+      window.removeEventListener('pointermove',move,true);window.removeEventListener('pointerup',end,true);window.removeEventListener('pointercancel',end,true);
       rowEl.classList.remove('dragging');rowEl.style.transform='';
+      try{handleEl.releasePointerCapture(id);}catch(_){}
       if(moved)handle(saveDisplayOrder)();
     };
-    handleEl.addEventListener('pointermove',move);handleEl.addEventListener('pointerup',end);handleEl.addEventListener('pointercancel',end);
+    // On the window, so the drag carries on even if the pointer leaves the handle.
+    window.addEventListener('pointermove',move,{capture:true,passive:false});window.addEventListener('pointerup',end,true);window.addEventListener('pointercancel',end,true);
   });
 }
 async function moveGroup(g,dir){
