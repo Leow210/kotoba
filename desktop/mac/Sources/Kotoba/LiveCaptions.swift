@@ -93,7 +93,6 @@ final class LiveCaptions: NSObject {
     var aggregateID = AudioObjectID(kAudioObjectUnknown)
     var ioProc: AudioDeviceIOProcID?
     var tapFormat = AudioStreamBasicDescription()
-    var resamplePos = 0.0
     var capturing: Bool { ioProc != nil }
 
     func startCapture() {
@@ -128,7 +127,6 @@ final class LiveCaptions: NSObject {
         var agg = AudioObjectID(kAudioObjectUnknown)
         guard AudioHardwareCreateAggregateDevice(dict as CFDictionary, &agg) == noErr else { stopCapture(); return }
         aggregateID = agg
-        resamplePos = 0
         var proc: AudioDeviceIOProcID?
         let status = AudioDeviceCreateIOProcIDWithBlock(&proc, agg, audioQueue) { [weak self] _, input, _, _, _ in
             self?.received(input)
@@ -195,14 +193,17 @@ final class LiveCaptions: NSObject {
         let step = rate / 16000
         var down: [Float] = []
         down.reserveCapacity(Int(Double(mono.count) / step) + 1)
-        var pos = resamplePos
+        // Each buffer on its own: a fraction of a sample left over is dropped (carrying it over once went negative and
+        // read before the buffer).
+        var pos = 0.0
         while pos + step <= Double(mono.count) {
-            let a = Int(pos), b = min(mono.count, Int(pos + step))
-            var s: Float = 0; for i in a..<b { s += mono[i] }
-            down.append(s / Float(max(1, b - a)))
+            let a = max(0, Int(pos)), b = min(mono.count, Int(pos + step))
+            if b > a {
+                var s: Float = 0; for i in a..<b { s += mono[i] }
+                down.append(s / Float(b - a))
+            }
             pos += step
         }
-        resamplePos = pos - Double(mono.count)
         guard !down.isEmpty else { return }
         let wall = Date().timeIntervalSince1970 * 1000 - Double(down.count) / 16.0
         var header = Data()
