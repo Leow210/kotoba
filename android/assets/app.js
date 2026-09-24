@@ -824,7 +824,8 @@ function frameSetup(frame,opts){
     const href=a.getAttribute('href')||'';
     if(!href)return;
     if(/^sound:\/\//i.test(href)||AUDIO_RE.test(href)){playAudio(opts.dict,href);return;}
-    if(/^https?:/i.test(href)){toast('Web links are disabled in offline mode');return;}
+    // Web links in an entry (a place's Wikipedia page…) open in the browser.
+    if(/^https?:/i.test(href)){if(window.Kotoba&&Kotoba.openUrl)Kotoba.openUrl(href);else toast('Can’t open web links here');return;}
     if(/^move\?/.test(href)||/^javascript:/i.test(href))return;
     opts.onLink&&handle(opts.onLink)(href,a);
   },true);

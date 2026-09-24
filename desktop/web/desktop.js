@@ -24,6 +24,7 @@
       }).catch(e=>say(e.message));
     },
     restoreBackup(){mac({type:'pickFile',purpose:'restore',extensions:['json']});},
+    openUrl(url){if(/^https?:\/\//i.test(url))mac({type:'open',url});},
     openResource(dict,name){mac({type:'open',url:location.origin+'/d/'+dict+'/'+encodeURI(name)});},
     setBars(){},exitApp(){},
     pickBooks(){mac({type:'pickFile',purpose:'books',extensions:['epub','txt'],multiple:true});},

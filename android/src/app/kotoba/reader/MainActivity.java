@@ -290,6 +290,11 @@ public class MainActivity extends Activity {
             startActivityForResult(i,PICK_MIHON);
         });}
         /** Appendix PDFs: saved where a PDF viewer can open them (the WebView can't show PDFs inline). */
+        /** A web link from an entry (a place's Wikipedia page): the phone's browser. */
+        @JavascriptInterface public void openUrl(String url){
+            if(url==null||!url.matches("(?i)https?://.+"))return;
+            runOnUiThread(()->{try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(url)));}catch(Exception e){event("toast","No browser to open that link");}});
+        }
         @JavascriptInterface public void openResource(long dict,String name){pool.execute(()->{
             try{
                 byte[] b=name.startsWith("files/")?extras.file(dict,name):library.resource(dict,name);
