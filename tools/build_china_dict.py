@@ -249,8 +249,11 @@ def main(work, out):
             if n and n not in names:
                 names.append(n)
                 names += [s for s in short_names(n) if s not in names]
+        # Every name of a place (广州市, 广州, 廣州市) carries the full name's reading, so dictionary apps that fold
+        # identical entries (Kotoba does) show one entry per place, whichever name was searched or hovered.
+        full_reading = reading(d.get('zh') or names[0])
         for n in names:
-            terms.append([n, reading(n), '', '', 0, gloss, 0, ''])
+            terms.append([n, full_reading, '', '', 0, gloss, 0, ''])
     print('terms', len(terms), 'maps missing', len(missing), missing[:10])
     index = {'title': '中国行政区划辞典（地级）', 'format': 3, 'revision': time.strftime('%Y-%m'), 'author': 'Kotoba (Wikidata, DataV)',
              'description': '中国的省级与地级行政区：位置图、所属省份、人口（2020年第七次全国人口普查）、面积、维基百科链接。'
