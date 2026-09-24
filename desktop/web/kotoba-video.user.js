@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kotoba Video Text
 // @namespace    app.kotoba.desktop
-// @version      0.9.2
+// @version      0.9.3
 // @description  Look up YouTube and GagaOOLala subtitles in Kotoba for Mac: hold Shift over a word; YouTube Music's song goes to Kotoba's lyrics. Works in Firefox and Chrome (Tampermonkey).
 // @match        https://www.youtube.com/watch*
 // @match        https://www.gagaoolala.com/*/videos/*
@@ -118,8 +118,9 @@
     .kotoba-pop .k-tab { font: 700 11px/1.9 -apple-system,BlinkMacSystemFont,sans-serif; letter-spacing: .02em; border: 0; background: transparent; border-radius: 9px; padding: 0 8px; color: #72766f; cursor: pointer; }
     .kotoba-pop .k-tab:hover { background: #ece7dc; }
     .kotoba-pop .k-tab.on { background: #e2ece5; color: #2f6b55; }
-    .kotoba-pop:not(.k-big) .k-tab:not(.on) { display: none; }
-    .kotoba-pop:not(.k-big) .k-tab.on { background: transparent; padding: 0; cursor: default; }
+    .kotoba-pop:not(.k-big) .k-tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-top: 5px; gap: 3px; }
+    .kotoba-pop:not(.k-big) .k-tabs::-webkit-scrollbar { display: none; }
+    .kotoba-pop:not(.k-big) .k-tab { flex: none; font-size: 10.5px; padding: 0 6px; line-height: 1.8; }
     .kotoba-pop:not(.k-big) .k-more { display: none; }
     .kotoba-pop .k-entry { margin: 4px -6px 0; }
     .kotoba-pop .k-entry iframe { display: block; width: 100%; height: 60px; border: 0; background: transparent; }

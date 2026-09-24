@@ -39,8 +39,10 @@ body.idle #subs{bottom:34px}
 .p-tab{font:700 11px/1.9 var(--sans);letter-spacing:.02em;border:0;background:transparent;border-radius:9px;padding:0 8px;color:#72766f;cursor:pointer}
 .p-tab:hover{background:#ece7dc}
 .p-tab.on{background:#e2ece5;color:#2f6b55}
-.kpop:not(.big) .p-tab:not(.on){display:none}
-.kpop:not(.big) .p-tab.on{background:transparent;padding:0;cursor:default}
+/* Compact: every dictionary stays one click away, on one small row that scrolls sideways. */
+.kpop:not(.big) .p-tabs{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-top:5px;gap:3px}
+.kpop:not(.big) .p-tabs::-webkit-scrollbar{display:none}
+.kpop:not(.big) .p-tab{flex:none;font-size:10.5px;padding:0 6px;line-height:1.8}
 .p-entry{margin:4px -6px 0}
 .p-entry iframe{display:block;width:100%;height:60px;border:0;background:transparent}
 .kpop.big .p-entry{margin-top:6px;border-top:1px solid #ebe5da;padding-top:4px}
