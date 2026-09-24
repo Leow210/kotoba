@@ -106,3 +106,8 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;heigh
 .k-row{display:flex;align-items:center;gap:8px;padding:3px 8px;border-bottom:1px solid rgba(255,255,255,.06)}
 .k-row .k-word{flex:1;font-size:18px}.k-row small{opacity:.55}
 .k-row.done .k-word{opacity:.4}
+/* Folder for new cards, and the new-folder name box in its place. */
+.p-folder{font:600 12px var(--sans);border:1px solid #cfdcd3;background:#fff;color:#2f6b55;border-radius:8px;padding:3px 6px;max-width:150px;cursor:pointer}
+.p-newfolder{display:inline-flex;gap:4px}
+.p-newfolder input{font:12px var(--sans);border:1px solid #9fc1ae;border-radius:8px;padding:3px 7px;width:130px;outline:none}
+.p-newfolder button{font:600 12px var(--sans);border:0;background:#2f6b55;color:#fff;border-radius:8px;padding:4px 10px;cursor:pointer}

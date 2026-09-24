@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kotoba Video Text
 // @namespace    app.kotoba.desktop
-// @version      0.6.0
+// @version      0.7.0
 // @description  Look up YouTube and GagaOOLala subtitles in Kotoba for Mac: hold Shift over a word. Works in Firefox and Chrome (Tampermonkey).
 // @match        https://www.youtube.com/watch*
 // @match        https://www.gagaoolala.com/*/videos/*
@@ -107,6 +107,9 @@
     .kotoba-pop .k-actions button { font: 600 12px -apple-system,BlinkMacSystemFont,sans-serif; border: 0; background: #e2ece5; color: #2f6b55; border-radius: 8px; padding: 4px 10px; cursor: pointer; }
     .kotoba-pop.k-big .k-actions button { font-size: 12.5px; border-radius: 9px; padding: 6px 11px; }
     .kotoba-pop .k-actions button:first-child { background: #2f6b55; color: #fff; }
+    .kotoba-pop .k-newfolder { display: inline-flex; gap: 4px; }
+    .kotoba-pop .k-newfolder input { font: 12px -apple-system,BlinkMacSystemFont,sans-serif; border: 1px solid #9fc1ae; border-radius: 8px; padding: 3px 7px; width: 130px; outline: none; background: #fff; color: #1d211f; }
+    .kotoba-pop .k-newfolder button { font: 600 12px -apple-system,BlinkMacSystemFont,sans-serif; border: 0; background: #2f6b55; color: #fff; border-radius: 8px; padding: 4px 10px; cursor: pointer; }
     .kotoba-pop .k-folder { font: 600 12px -apple-system,BlinkMacSystemFont,sans-serif; border: 1px solid #cfdcd3; background: #fff; color: #2f6b55; border-radius: 8px; padding: 3px 6px; max-width: 150px; cursor: pointer; }
     .kotoba-pop .k-note { color: #72766f; font-size: 13px; }
   `;
@@ -253,12 +256,26 @@
   const cardFolder = () => { try { return +GM_getValue('kotoba.folder', 1) || 1; } catch (e) { return +store.get('kotoba.folder', '1') || 1; } };
   const setCardFolder = (id) => { try { GM_setValue('kotoba.folder', id); } catch (e) { store.set('kotoba.folder', String(id)); } };
   let foldersCache = null;
+  /** "＋ New folder…": a name box in place of the menu; Enter makes the folder in Kotoba and picks it, Esc goes back. */
+  function newFolderBox(sel) {
+    const box = document.createElement('span'); box.className = 'k-newfolder';
+    box.innerHTML = H('<input placeholder="New folder name" maxlength="100"><button>Add</button>');
+    sel.replaceWith(box);
+    const input = box.querySelector('input'); input.focus();
+    const done = (id) => { box.replaceWith(sel); if (id) setCardFolder(id); fillFolders(sel, true); };
+    const add = async () => {
+      const name = input.value.trim(); if (!name) { done(null); return; }
+      try { const r = await kotoba('folder.save', { name }); done(r.id); } catch (err) { input.value = ''; input.placeholder = err.message; }
+    };
+    box.querySelector('button').addEventListener('click', e => { e.stopPropagation(); add(); });
+    input.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') add(); if (e.key === 'Escape') done(null); });
+  }
   function fillFolders(sel, fresh) {
     if (!foldersCache || fresh) foldersCache = kotoba('folders').catch(() => null);
     foldersCache.then(list => {
       if (!list || !sel.isConnected) return;
       const now = cardFolder(), id = list.some(f => f.id === now) ? now : (list[0] || { id: 1 }).id;
-      sel.innerHTML = H(list.map(f => `<option value="${f.id}"${f.id === id ? ' selected' : ''}>${esc(f.name)}</option>`).join(''));
+      sel.innerHTML = H(list.map(f => `<option value="${f.id}"${f.id === id ? ' selected' : ''}>${esc(f.name)}</option>`).join('') + '<option value="new">＋ New folder…</option>');
     });
   }
 
@@ -423,10 +440,10 @@
     el.addEventListener('mouseleave', e => { if (!pinned && !inPopup(e.relatedTarget) && !(e.relatedTarget && text.contains(e.relatedTarget))) hidePop(); });
     // The site mustn't treat clicks and keys in the popup as player controls.
     for (const type of ['click', 'mousedown', 'mouseup', 'dblclick', 'keydown']) el.addEventListener(type, e => e.stopPropagation());
-    el.addEventListener('click', e => { if (e.target.closest('.k-folder')) { pinned = true; return; } onPopClick(P, e); });
+    el.addEventListener('click', e => { if (e.target.closest('.k-folder,.k-newfolder')) { pinned = true; return; } onPopClick(P, e); });
     // Opening the folder menu mustn't close the popup (the menu sits outside it), and the choice is remembered.
     el.addEventListener('mousedown', e => { const f = e.target.closest('.k-folder'); if (f) { pinned = true; fillFolders(f, true); } });
-    el.addEventListener('change', e => { const f = e.target.closest('.k-folder'); if (f) setCardFolder(+f.value); });
+    el.addEventListener('change', e => { const f = e.target.closest('.k-folder'); if (!f) return; if (f.value === 'new') newFolderBox(f); else setCardFolder(+f.value); });
   }
   wire(main);
   function paintKnown(b, k) { b.classList.toggle('on', !!k.known); b.title = k.how === 'card' ? 'Known (a learned card)' : k.known ? 'Marked known — click to unmark' : 'Mark as known'; }

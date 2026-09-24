@@ -249,8 +249,9 @@ async function showPop(res,cue,r1,r2,P=pop){
       ${res.explain||alts(res).length?`<div class="p-explain">${esc(res.explain||'')}${alts(res).map((f,j)=>`<button class="p-alt" data-p="alt" data-j="${j}" title="${esc(f.explain||'')}">or ${esc(f.base)}</button>`).join('')}</div>`:''}
       <div class="p-tabs">${items.map((it,n)=>`<button class="p-tab${n?'':' on'}" data-p="tab" data-n="${n}">${esc(shortName(it.dictionary))}</button>`).join('')}</div>
       <div class="p-entry"></div>
-      <div class="p-actions"><button data-p="card">＋ Card</button><button data-p="main">Open in Kotoba</button><button data-p="copy">Copy</button></div>`;
+      <div class="p-actions"><button data-p="card">＋ Card</button><select class="p-folder" title="Folder for new cards"></select><button data-p="main">Open in Kotoba</button><button data-p="copy">Copy</button></div>`;
     P.items=items;
+    fillFolders(P.el.querySelector('.p-folder'));
     const kb=P.el.querySelector('.p-known');
     if(kb)api('known.get',{word:res.key,dict:items[0]?items[0].dict:0,lang:P.level?P.lang:st.lang}).then(k=>paintKnown(kb,k)).catch(()=>{});
     // The entry as the dictionary lays it out (same page as the main window), not flattened text.
@@ -383,6 +384,35 @@ async function lookupInFrame(P,f,node,off){
 }
 function clearFrameHighlight(P){const f=P&&P.el.querySelector('.p-entry iframe');try{f.contentWindow.CSS.highlights.delete('kotoba');}catch(e){}}
 wire(pop);
+// ---------- folders for new cards (the ＋ Card menu; ＋ Sentence and C use the same one) ----------
+function fillFolders(sel){
+  if(!sel)return;
+  api('folders').then(list=>{
+    const now=store.get('player.folder',1),id=list.some(f=>f.id===now)?now:(list[0]||{id:1}).id;
+    sel.innerHTML=list.map(f=>`<option value="${f.id}"${f.id===id?' selected':''}>${esc(f.name)}</option>`).join('')+'<option value="new">＋ New folder…</option>';
+  }).catch(()=>{});
+}
+/** "＋ New folder…": a name box in place of the menu; Enter makes the folder and picks it, Esc goes back. */
+function newFolderBox(sel,onDone){
+  const box=document.createElement('span');box.className='p-newfolder';
+  box.innerHTML='<input placeholder="New folder name" maxlength="100"><button>Add</button>';
+  sel.replaceWith(box);
+  const input=box.querySelector('input');input.focus();
+  const done=(id)=>{box.replaceWith(sel);if(id)store.set('player.folder',id);fillFolders(sel);onDone&&onDone(id);};
+  const add=async()=>{
+    const name=input.value.trim();if(!name){done(null);return;}
+    try{const r=await api('folder.save',{name});osd('Folder “'+name+'” added');done(r.id);}catch(err){osd(err.message);}
+  };
+  box.querySelector('button').onclick=(e)=>{e.stopPropagation();add();};
+  input.addEventListener('keydown',(e)=>{e.stopPropagation();if(e.key==='Enter')add();if(e.key==='Escape')done(null);});
+}
+document.addEventListener('change',(e)=>{
+  const sel=e.target.closest&&e.target.closest('.p-folder');if(!sel)return;
+  pop.pinned=true;
+  if(sel.value==='new')newFolderBox(sel);else store.set('player.folder',+sel.value);
+});
+document.addEventListener('mousedown',(e)=>{if(e.target.closest&&e.target.closest('.p-folder,.p-newfolder'))pop.pinned=true;},true);
+
 async function onPopClick(P,e){
   pop.pinned=true;
   const b=e.target.closest('[data-p]');if(!b)return;
@@ -590,7 +620,7 @@ document.addEventListener('mousemove',wake);wake();
 send({cmd:'ready'});
 
 document.addEventListener('keydown',(e)=>{
-  if(e.target.tagName==='INPUT'&&e.target.type!=='range')return;
+  if(e.target.tagName==='INPUT'&&e.target.type!=='range'||e.target.tagName==='SELECT')return;
   const k=e.key.length===1?e.key.toLowerCase():e.key;
   const run={' ':()=>send({cmd:'toggle'}),'ArrowLeft':()=>send({cmd:'seekBy',t:e.shiftKey?-1:-5}),'ArrowRight':()=>send({cmd:'seekBy',t:e.shiftKey?1:5}),
     'ArrowUp':()=>send({cmd:'volume',v:Math.min(130,st.vol+5)}),'ArrowDown':()=>send({cmd:'volume',v:Math.max(0,st.vol-5)}),
