@@ -1,0 +1,29 @@
+/* Screen text over games (?overlay=1): only the screenshot layer, sheets and pages show; the app itself stays hidden. */
+html.game-overlay,html.game-overlay body{background:transparent!important}
+html.game-overlay #app>.screen,html.game-overlay .tabbar,html.game-overlay #toast:empty{display:none!important}
+html.game-overlay #pages{left:auto!important;right:24px;top:70px;bottom:24px;width:520px;border-radius:18px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.45)}
+html.game-overlay #pages:empty{display:none}
+html.game-overlay .sheet{left:auto;right:24px;bottom:24px;width:520px;max-height:78%;border-radius:20px;box-shadow:0 10px 40px rgba(0,0,0,.45)}
+html.game-overlay .scrim{background:transparent;pointer-events:none}
+html.game-overlay #selbar{display:none!important}
+#go-layer{position:fixed;inset:0;z-index:5;background:rgba(0,0,0,.01)}
+#go-layer.frozen{background:#000}
+#go-img{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;user-select:none;-webkit-user-drag:none;opacity:0}
+#go-layer.frozen #go-img{opacity:1}
+#go-boxes{position:absolute;inset:0}
+.go-line{position:absolute;border:2px solid rgba(124,194,160,.9);border-radius:6px;background:rgba(124,194,160,.08);box-shadow:0 0 0 1px rgba(0,0,0,.35);cursor:pointer;padding:0;transition:background .12s}
+.go-line:hover{background:rgba(124,194,160,.28);border-color:#7cc2a0}
+.go-line.on{background:rgba(246,227,161,.28);border-color:#f6e3a1}
+#go-bar{position:absolute;top:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;padding:6px 8px 6px 16px;border-radius:14px;background:rgba(20,26,23,.88);color:#eef3ef;font:13px -apple-system,BlinkMacSystemFont,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.4);backdrop-filter:blur(10px);white-space:nowrap}
+#go-bar b{font-weight:600}
+#go-status{color:#a9b8ae}
+#go-bar button{border:0;border-radius:9px;background:rgba(255,255,255,.08);color:#eef3ef;font:600 12.5px -apple-system,BlinkMacSystemFont,sans-serif;padding:5px 10px;cursor:pointer}
+#go-bar button:hover{background:rgba(255,255,255,.16)}
+#go-bar .go-langs{display:flex;gap:2px;padding:0 4px;border-left:1px solid rgba(255,255,255,.15);border-right:1px solid rgba(255,255,255,.15)}
+#go-bar .go-langs button{background:transparent;font-weight:500}
+#go-bar .go-langs button.on{background:#7cc2a0;color:#0f1a14}
+#go-hl{position:absolute;background:rgba(246,227,161,.35);border:2px solid #f6e3a1;border-radius:5px;pointer-events:none}
+/* #app is position:fixed (its own stacking context): lift it above the screenshot layer, clicks passing through its
+   empty areas to the line boxes; sheets and pages take their own clicks. */
+html.game-overlay #app{z-index:6;pointer-events:none}
+html.game-overlay #pages>.page,html.game-overlay .sheet{pointer-events:auto}

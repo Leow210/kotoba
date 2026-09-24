@@ -5,6 +5,7 @@
   python3 tools/mac.py --player-shot out.png          the newest video window's layer (subtitles, popup; not the video)
   python3 tools/mac.py --player 'return st.cues.length' evaluates in the newest video window's layer
   python3 tools/mac.py --player 'mpv:time-pos'        reads an mpv property of the newest video
+  python3 tools/mac.py --overlay 'return lines.length' evaluates in the screen-text overlay (⌥⌘O); --overlay-shot out.png
 """
 import json,os,subprocess,sys,tempfile,time
 def post(name,obj):
@@ -17,12 +18,12 @@ def wait(path,timeout=60):
         if os.path.exists(path)and os.path.getsize(path)>0:time.sleep(.1);return
         time.sleep(.1)
     sys.exit('no answer from Kotoba (is it running with DevHooks on?)')
-if sys.argv[1] in('--shot','--player-shot'):
+if sys.argv[1] in('--shot','--player-shot','--overlay-shot'):
     out=os.path.abspath(sys.argv[2])
     if os.path.exists(out):os.unlink(out)
-    post('app.kotoba.desktop.snapshot',('player:' if sys.argv[1]=='--player-shot' else '')+out);wait(out);print('saved')
+    post('app.kotoba.desktop.snapshot',{'--player-shot':'player:','--overlay-shot':'overlay:'}.get(sys.argv[1],'')+out);wait(out);print('saved')
 else:
-    player=sys.argv[1]=='--player'
-    script=sys.argv[2] if player else sys.argv[1]
+    prefix={'--player':'player:','--overlay':'overlay:'}.get(sys.argv[1],'')
+    script=sys.argv[2] if prefix else sys.argv[1]
     out=tempfile.mktemp(suffix='.txt')
-    post('app.kotoba.desktop.eval',('player:' if player else '')+out+'\n'+script);wait(out,300);print(open(out).read());os.unlink(out)
+    post('app.kotoba.desktop.eval',prefix+out+'\n'+script);wait(out,300);print(open(out).read());os.unlink(out)

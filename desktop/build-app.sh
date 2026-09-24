@@ -30,5 +30,11 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>NSAppTransportSecurity</key><dict><key>NSAllowsLocalNetworking</key><true/></dict>
 </dict></plist>
 PLIST
-codesign --force --deep --sign - "$APP" 2>/dev/null || true
+# A stable local identity (a self-signed "Kotoba Local Signing" certificate in the login keychain) keeps macOS
+# permissions such as Screen Recording across rebuilds; without it, ad-hoc signing (permissions reset each build).
+if security find-identity -p codesigning 2>/dev/null | grep -q "Kotoba Local Signing"; then
+  codesign --force --deep --sign "Kotoba Local Signing" "$APP" 2>/dev/null || codesign --force --deep --sign - "$APP" 2>/dev/null || true
+else
+  codesign --force --deep --sign - "$APP" 2>/dev/null || true
+fi
 echo "$APP"

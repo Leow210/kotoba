@@ -1,5 +1,6 @@
 import Cocoa
 import WebKit
+import Carbon.HIToolbox
 
 /// Kotoba for Mac. The interface is the same HTML/JS as the phone app, served by the Java core (DesktopServer) on
 /// 127.0.0.1; this app starts the core, shows the interface in a window, and answers the interface's requests for
@@ -13,6 +14,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     var base: URL?
     var players: [PlayerWindow] = []
     var pendingOpen: [URL] = []
+    lazy var overlay = GameOverlay(app: self)
+    var overlayKey: HotKey?
 
     static func main() {
         let app = NSApplication.shared
@@ -66,6 +69,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         startCore()
+        // ⌃⌘O anywhere, even inside a full-screen game: read the screen's text. (Not Option: games such as WuWa use it
+        // to show the cursor.)
+        overlayKey = HotKey(keyCode: kVK_ANSI_O, modifiers: cmdKey | controlKey, id: 1) { [weak self] in self?.overlay.toggle() }
         if UserDefaults.standard.bool(forKey: "DevHooks") { installDevHooks() }
     }
 
@@ -77,18 +83,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
             guard let self, var path = n.object as? String else { return }
             var target: WKWebView = self.web
             if path.hasPrefix("player:"), let p = self.players.last { path.removeFirst(7); target = p.overlay }
+            if path.hasPrefix("overlay:"), let w = self.overlay.web { path.removeFirst(8); target = w }
             target.takeSnapshot(with: nil) { image, _ in
                 guard let image, let tiff = image.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff),
                       let png = rep.representation(using: .png, properties: [:]) else { return }
                 try? png.write(to: URL(fileURLWithPath: path))
             }
         }
+        center.addObserver(forName: .init("app.kotoba.desktop.overlay"), object: nil, queue: .main) { [weak self] _ in self?.overlay.toggle() }
         center.addObserver(forName: .init("app.kotoba.desktop.eval"), object: nil, queue: .main) { [weak self] n in
             guard let self, let spec = n.object as? String, let nl = spec.firstIndex(of: "\n") else { return }
             var out = String(spec[..<nl]), script = String(spec[spec.index(after: nl)...])
             // "player:" evaluates in the newest video window's layer instead of the main window.
             var target: WKWebView = self.web
             if out.hasPrefix("player:"), let p = self.players.last { out.removeFirst(7); target = p.overlay }
+            if out.hasPrefix("overlay:"), let w = self.overlay.web { out.removeFirst(8); target = w }
             if script.hasPrefix("mpv:"), let p = self.players.last {
                 let name = String(script.dropFirst(4))
                 try? (p.video.get(name) ?? "null").write(toFile: out, atomically: true, encoding: .utf8)
@@ -299,6 +308,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         let view = NSMenu(title: "View")
         view.addItem(withTitle: "Reload", action: #selector(reload), keyEquivalent: "r")
         view.addItem(withTitle: "Enter Full Screen", action: #selector(NSWindow.toggleFullScreen(_:)), keyEquivalent: "f")
+        view.addItem(.separator())
+        let read = view.addItem(withTitle: "Read Screen Text (⌃⌘O, works in games)", action: #selector(readScreen), keyEquivalent: "")
+        read.target = self
         viewItem.submenu = view
         let windowItem = NSMenuItem(); main.addItem(windowItem)
         let windowMenu = NSMenu(title: "Window")
@@ -309,4 +321,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         NSApp.windowsMenu = windowMenu
     }
     @objc func reload() { web.reload() }
+    @objc func readScreen() {
+        // From the menu Kotoba is in front, so the capture waits for the menu to close; the key works from anywhere.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in self?.overlay.toggle() }
+    }
 }

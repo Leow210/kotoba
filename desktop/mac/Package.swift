@@ -4,7 +4,7 @@ import PackageDescription
 // Kotoba for Mac: a window around the Kotoba interface (served by the Java core) plus an mpv video player.
 let package = Package(
     name: "Kotoba",
-    platforms: [.macOS(.v13)],
+    platforms: [.macOS(.v14)],
     targets: [
         .systemLibrary(name: "CMpv", path: "Sources/CMpv"),
         .executableTarget(

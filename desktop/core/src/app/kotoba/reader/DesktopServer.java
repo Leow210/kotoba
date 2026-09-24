@@ -587,7 +587,7 @@ public class DesktopServer {
                 int at=html.indexOf("<script");
                 String inject="<link rel=\"stylesheet\" href=\"/desktop.css\"><script src=\"/hover-modifier.js\"></script><script src=\"/desktop.js\"></script>";
                 html=at<0?html+inject:html.substring(0,at)+inject+html.substring(at);
-                html=html.replace("</body>","<script src=\"/desktop-after.js\"></script><link rel=\"stylesheet\" href=\"/writer.css\"><script src=\"/writer.js\"></script></body>");
+                html=html.replace("</body>","<script src=\"/desktop-after.js\"></script><link rel=\"stylesheet\" href=\"/writer.css\"><script src=\"/writer.js\"></script><link rel=\"stylesheet\" href=\"/overlay.css\"><script src=\"/overlay.js\"></script></body>");
                 bytes=html.getBytes(StandardCharsets.UTF_8);
             }
             send(x,200,mime,bytes,null);
