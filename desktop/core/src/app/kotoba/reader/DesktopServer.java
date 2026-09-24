@@ -420,6 +420,9 @@ public class DesktopServer {
         }
         if(key.isEmpty()||Double.isNaN(t0)||Double.isNaN(t1)||t1<=t0)return new JSONObject().put("placed",false);
         String text=d.getString("text").trim();
+        // No line lasts much longer than it takes to say (audio from before the first report once made one span 85 s).
+        double longest=Math.max(2.5,text.codePointCount(0,text.length())*0.35+1.5);
+        if(t1-t0>longest)t0=t1-longest;
         JSONObject ep=captionEpisode(key);
         synchronized(this){
             JSONArray lines=ep.getJSONArray("lines");

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kotoba Video Text
 // @namespace    app.kotoba.desktop
-// @version      0.9.0
+// @version      0.9.1
 // @description  Look up YouTube and GagaOOLala subtitles in Kotoba for Mac: hold Shift over a word; YouTube Music's song goes to Kotoba's lyrics. Works in Firefox and Chrome (Tampermonkey).
 // @match        https://www.youtube.com/watch*
 // @match        https://www.gagaoolala.com/*/videos/*
@@ -174,10 +174,12 @@
       if (typeof r.rev === 'number') liveRev = r.rev;
     }).catch(() => {});
   }
+  // The latest line that has begun, held until the next one starts (a live line only arrives a second or so after it
+  // ends) for at most 3.5 s past its end.
   function liveLineAt(t) {
-    let best = '';
-    for (const l of liveLines) { if (l.t0 <= t + 0.15 && t <= l.t1 + 0.8) best = l.text; if (l.t0 > t + 0.15) break; }
-    return best;
+    let best = null;
+    for (const l of liveLines) { if (l.t0 <= t + 0.15) best = l; else break; }
+    return best && t <= best.t1 + 3.5 ? best.text : '';
   }
   setInterval(liveTick, 250);
   select.value = language;
