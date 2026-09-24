@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kotoba Video Text
 // @namespace    app.kotoba.desktop
-// @version      0.9.1
+// @version      0.9.2
 // @description  Look up YouTube and GagaOOLala subtitles in Kotoba for Mac: hold Shift over a word; YouTube Music's song goes to Kotoba's lyrics. Works in Firefox and Chrome (Tampermonkey).
 // @match        https://www.youtube.com/watch*
 // @match        https://www.gagaoolala.com/*/videos/*
@@ -283,8 +283,9 @@
     clearTimeout(lookupTimer);
     lookupTimer = setTimeout(() => lookup(+hoverSpan.dataset.i), 60);
   }
-  async function lookup(i) {
-    const chars = flat(), from = chars.slice(i, i + 24).join('');
+  /** i: the character to start at; only: a selected stretch to look up instead of the longest word from i. */
+  async function lookup(i, only) {
+    const chars = flat(), from = only || chars.slice(i, i + 24).join('');
     if (!from.trim() || /^[\s\p{P}]/u.test(from)) return;
     const lang = text.lang === 'en' ? '' : text.lang;
     let res;
@@ -431,6 +432,27 @@
     d.addEventListener('mousemove', e => { lastFrame = { f, x: e.clientX, y: e.clientY, probe }; probe(e.clientX, e.clientY, e.shiftKey); });
     d.addEventListener('keydown', e => { if (e.key === 'Shift' && lastFrame && lastFrame.f === f) probe(lastFrame.x, lastFrame.y, true); });
     d.addEventListener('click', e => { pinned = true; const a = e.target.closest && e.target.closest('a[href]'); if (a) e.preventDefault(); });
+    // Or select a word in the entry: the next popup looks up exactly what was selected.
+    d.addEventListener('mouseup', () => setTimeout(() => {
+      const sel = d.getSelection(); if (!sel || sel.isCollapsed || !sel.rangeCount) return;
+      const str = sel.toString().replace(/\s+/g, ''); if (!str || str.length > 24) return;
+      pinned = true;
+      lookupRange(P, f, sel.getRangeAt(0).cloneRange(), str);
+    }, 10));
+  }
+  async function lookupRange(P, f, range, str) {
+    const lang = textLang(str);
+    const tok = {}; frameTok = tok;
+    let res; try { res = await kotoba('lookup', { text: str, lang: lang === 'zh' || lang === 'th' ? lang : '' }); } catch (e) { return; }
+    if (frameTok !== tok) return;
+    if (!res.items.length) { showMessage(`No entry for “${str}”`, text); return; }
+    try { f.contentWindow.CSS.highlights.set('kotoba', new f.contentWindow.Highlight(range)); } catch (e) {}
+    try { f.contentDocument.getSelection().removeAllRanges(); } catch (e) {}
+    res.written = str; res.line = main.res && main.res.line;
+    const fr = f.getBoundingClientRect(), rects = range.getClientRects();
+    const a = rects[0] || range.getBoundingClientRect(), z = rects[rects.length - 1] || a;
+    const C = popupAt(P.level + 1); C.lang = lang;
+    showPop(res, { left: a.left + fr.left, right: z.right + fr.left, top: a.top + fr.top, bottom: z.bottom + fr.top }, C);
   }
   function textLang(t) {
     const c = t.trim()[0] || '';
@@ -487,6 +509,20 @@
   }
   const inPopup = t => !!(t && t.closest && t.closest('.kotoba-pop'));
 
+  // Drag across part of the line to look up exactly that (a shorter word than Shift picks, a stem, a single hanja).
+  text.addEventListener('mouseup', e => {
+    e.stopPropagation();
+    setTimeout(() => {
+      const sel = getSelection(); if (!sel || sel.isCollapsed || !sel.rangeCount) return;
+      const str = sel.toString().replace(/\s+/g, ''); if (!str || str.length > 24) return;
+      const r = sel.getRangeAt(0), start = r.startContainer.nodeType === 3 ? r.startContainer.parentElement : r.startContainer;
+      const span = start && (start.closest ? start.closest('.k-ch') : null) || text.querySelector('.k-ch');
+      if (!span || !text.contains(span)) return;
+      pinned = true; lookupAt = '';
+      lookup(+span.dataset.i, str).then(() => sel.removeAllRanges());
+    }, 10);
+  });
+  for (const type of ['mousedown', 'click']) text.addEventListener(type, e => e.stopPropagation());
   text.addEventListener('mousemove', e => { shift = e.shiftKey; const s = e.target.closest('.k-ch'); if (s) { hoverSpan = s; trigger(); } });
   text.addEventListener('mouseleave', e => { hoverSpan = null; if (inPopup(e.relatedTarget)) return; setTimeout(() => { if (!pinned && !document.querySelector('.kotoba-pop:hover')) hidePop(); }, 300); });
   // Holding Shift while already over a word looks it up without moving.
