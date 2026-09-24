@@ -591,6 +591,8 @@ svg.i.sm{width:16px;height:16px}
 .music-page.mu-hide-tr .mu-tr{display:none}
 .mu-acts{display:none;gap:6px;flex-wrap:wrap;margin-top:6px}
 .mu-line.open .mu-acts,.mu-line.now .mu-acts{display:flex}
+/* A line you opened takes the buttons from the current one. */
+.mu-lines:has(.mu-line.open) .mu-line.now:not(.open) .mu-acts{display:none}
 .mu-acts button{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;font-weight:600;padding:5px 10px;border-radius:9px;background:var(--surface);border:1px solid var(--line);color:var(--ink2)}
 .mu-acts button svg{width:14px;height:14px}
 /* Several entries for the word on one dictionary page */

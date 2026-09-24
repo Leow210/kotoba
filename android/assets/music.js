@@ -103,6 +103,8 @@
         return;
       }
       const w=e.target.closest('.mu-w');
+      // Only one line shows its buttons: tapping another line closes the last one.
+      f('lines').querySelectorAll('.mu-line.open').forEach(x=>{if(x!==line)x.classList.remove('open');});
       // A tap beside the words: the song jumps to this line (unsynced lyrics just show the line's buttons).
       if(!w){
         if(l.t>=0&&now&&now.control){
@@ -113,6 +115,7 @@
         return;
       }
       const word=wordAt(l.text,w);if(!word)return;
+      line.classList.add('open');
       line.querySelectorAll('.mu-w.on').forEach(x=>x.classList.remove('on'));
       if(w.dataset.end!=null)line.querySelectorAll('.mu-w').forEach(x=>{if(x.dataset.end===w.dataset.end&&+x.dataset.o>=+w.dataset.o)x.classList.add('on');});else w.classList.add('on');
       if(opts.pause&&now&&now.playing){pausedByUs=true;api('music.control',{action:'pause'}).then(r=>{now=r;nowAt=Date.now();}).catch(()=>{});}
