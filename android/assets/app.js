@@ -430,7 +430,7 @@ async function renderSearchEmpty(){
     phone&&window.Kotoba&&Kotoba.startScreenText&&{id:'screen',glyph:'文',title:'Screen text',sub:'over games and apps',run:()=>Kotoba.startScreenText()},
     dicts.some(d=>d.kind==='kanji'&&d.enabled)&&{id:'kanji',glyph:'漢',title:'Kanji grid',sub:'by radical and strokes',run:()=>openKanjiGrid()},
     {id:'lists',glyph:'Tt',title:'Word lists',sub:'and your saved words',run:()=>showTab('folders')},
-    {id:'random',glyph:'🎲',title:'Random word',sub:'from your dictionaries',run:async()=>{const r=await api('random',{dict:search.dict&&!search.dict.startsWith('g:')?+search.dict:0});openEntry({rec:r.rec,dict:r.dict,key:r.key});}},
+    {id:'random',glyph:icon('shuffle'),title:'Random word',sub:'from your dictionaries',run:async()=>{const r=await api('random',{dict:search.dict&&!search.dict.startsWith('g:')?+search.dict:0});openEntry({rec:r.rec,dict:r.dict,key:r.key});}},
   ].filter(Boolean);
   const toolGrid=`<div class="tools">${tools.map(t=>`<button class="tool" data-tool="${t.id}"><span class="tool-glyph">${t.glyph}</span><b>${esc(t.title)}</b><small>${esc(t.sub)}</small></button>`).join('')}</div>`;
   // Recent searches only when switched on (Settings › Reading).
