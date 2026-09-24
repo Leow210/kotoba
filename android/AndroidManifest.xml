@@ -3,6 +3,11 @@
     <!-- The scanner takes its own photos, so nothing is added to the phone's gallery. -->
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
+    <!-- Screen text over games: a floating button and a layer over other apps, fed by a screen capture kept in memory. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <queries><package android:name="com.google.android.apps.translate"/><intent><action android:name="android.intent.action.PROCESS_TEXT"/><data android:mimeType="text/plain"/></intent></queries>
     <application android:label="Kotoba" android:theme="@android:style/Theme.Material.Light.NoActionBar" android:allowBackup="false" android:usesCleartextTraffic="false" android:icon="@drawable/icon" android:largeHeap="true" android:extractNativeLibs="true" android:debuggable="true">
         <!-- The GPU (OpenCL) for PaddleOCR-VL through LiteRT-LM; optional, so phones without it still install. -->
@@ -16,5 +21,6 @@
             <intent-filter android:label="Look up in Kotoba"><action android:name="android.intent.action.SEND"/><category android:name="android.intent.category.DEFAULT"/><data android:mimeType="text/plain"/></intent-filter>
             <intent-filter android:label="Scan text in Kotoba"><action android:name="android.intent.action.SEND"/><category android:name="android.intent.category.DEFAULT"/><data android:mimeType="image/*"/></intent-filter>
         </activity>
+        <service android:name=".ScreenText" android:exported="false" android:foregroundServiceType="mediaProjection"/>
     </application>
 </manifest>

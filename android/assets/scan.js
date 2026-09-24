@@ -206,5 +206,11 @@ window.openScan=async function(name){
     const b=document.createElement('button');b.className='chip';b.id='go-scan';b.innerHTML='写 Scan text';
     b.onclick=handle(()=>openScan());
     row.parentElement.insertBefore(b,row.parentElement.firstChild);
+    // Phone: read text off the screen over games and other apps (a floating 文 button).
+    if(window.Kotoba&&Kotoba.startScreenText&&!row.parentElement.querySelector('#go-screen')){
+      const g=document.createElement('button');g.className='chip';g.id='go-screen';g.innerHTML='文 Screen text over games';
+      g.onclick=()=>Kotoba.startScreenText();
+      b.after(g);
+    }
   };
 })();

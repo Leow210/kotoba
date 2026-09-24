@@ -36,7 +36,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class MainActivity extends Activity {
     static final String HOST="appassets.androidplatform.net";
     static final String ORIGIN="https://"+HOST;
-    static final int PICK_FOLDER=51,EXPORT=52,RESTORE=53,PICK_BOOKS=54,PICK_COMIC_TREE=55,PICK_COMIC_FILES=56,PICK_WORDLIST=57,PICK_MIHON=58,PICK_COVER=59,SCAN_PICK=61,CAMERA_PERMISSION=62,SYNC_FOLDER=63;
+    static final int PICK_FOLDER=51,EXPORT=52,RESTORE=53,PICK_BOOKS=54,PICK_COMIC_TREE=55,PICK_COMIC_FILES=56,PICK_WORDLIST=57,PICK_MIHON=58,PICK_COVER=59,SCAN_PICK=61,CAMERA_PERMISSION=62,SYNC_FOLDER=63,SCREEN_CAPTURE=64;
+    /** The running app, for the screen-text overlay (ScreenText), which answers its page with this app's routes. */
+    static MainActivity current;
     long coverSeries;
 
     KotobaWebView web;
@@ -94,6 +96,7 @@ public class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle state){
         super.onCreate(state);
+        current=this;
         getWindow().setStatusBarColor(Color.rgb(247,244,238));
         getWindow().setNavigationBarColor(Color.rgb(247,244,238));
         getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
@@ -208,6 +211,16 @@ public class MainActivity extends Activity {
         }
         /** The comic reader is being scrolled or touched: background OCR waits so it doesn't take the GPU from drawing. */
         @JavascriptInterface public void interacting(){Ocr.touch();}
+        /** Screen text over games: permission to draw over apps, then Android's screen-capture consent, then the 文 button. */
+        @JavascriptInterface public void startScreenText(){runOnUiThread(()->{
+            if(ScreenText.running!=null){event("toast","Screen text is on: tap 文 over a game");moveTaskToBack(true);return;}
+            if(!android.provider.Settings.canDrawOverlays(MainActivity.this)){
+                event("toast","Allow Kotoba to appear on top, then come back and tap Screen text again");
+                startActivity(new Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,Uri.parse("package:"+getPackageName())));
+                return;
+            }
+            startActivityForResult(getSystemService(android.media.projection.MediaProjectionManager.class).createScreenCaptureIntent(),SCREEN_CAPTURE);
+        });}
         @JavascriptInterface public void copy(String text){runOnUiThread(()->{((ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("Kotoba",text));});}
         @JavascriptInterface public void share(String text){runOnUiThread(()->startActivity(Intent.createChooser(new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT,text),"Share")));}
         /** The folder a sync tool (Syncthing…) shares with the Mac. */
@@ -554,6 +567,14 @@ public class MainActivity extends Activity {
 
     @Override protected void onActivityResult(int request,int result,Intent intent){
         super.onActivityResult(request,result,intent);
+        if(request==SCREEN_CAPTURE){
+            if(result==RESULT_OK&&intent!=null){
+                startForegroundService(new Intent(this,ScreenText.class).putExtra("code",result).putExtra("data",intent));
+                event("toast","Tap 文 over a game to read its text");
+                moveTaskToBack(true);
+            }
+            return;
+        }
         if(request==SCAN_PICK&&result==RESULT_OK&&intent!=null&&intent.getData()!=null){
             Uri u=intent.getData();
             pool.execute(()->{

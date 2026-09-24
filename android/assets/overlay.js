@@ -1,13 +1,18 @@
 'use strict';
 /*
- * Screen text over games (the Mac's ⌃⌘O panel): the whole Kotoba interface loads here with ?overlay=1, hidden, and
+ * Screen text over games — the Mac's shortcut panel, and the phone's floating 文 button (ScreenText.java): the whole
+ * Kotoba interface loads here with ?overlay=1, hidden, and
  * this layer shows the frozen screenshot with a box per line of text. A line opens the same sheet as a comic bubble:
  * tap words to look them up, translate, save a card (with its folder) or a sentence card with a crop of the screen.
  */
 (function(){
   if(!/[?&]overlay=1/.test(location.search))return;
   document.documentElement.classList.add('game-overlay');
-  const post=(m)=>{try{window.webkit.messageHandlers.overlay.postMessage(m);}catch(e){}};
+  // The Mac app listens on a WebKit handler; the phone's overlay window on its Java bridge.
+  const post=(m)=>{try{if(window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.overlay)window.webkit.messageHandlers.overlay.postMessage(m);else if(window.Kotoba&&Kotoba.overlay)Kotoba.overlay(JSON.stringify(m));}catch(e){}};
+  // No hover on a phone: a tap looks up the word under the finger (the Mac clicks a line, and hovers with Shift for words).
+  const touch=!document.documentElement.classList.contains('desktop');
+  if(touch)document.documentElement.classList.add('game-overlay-touch');
   const LANGS=[['ja','日本語'],['ko','한국어'],['zh','中文'],['en','English']];
   const layer=document.createElement('div');layer.id='go-layer';layer.hidden=true;
   layer.innerHTML=`<img id="go-img" alt=""><div id="go-boxes"></div>
@@ -32,10 +37,10 @@
       const d=document.createElement('button');d.className='go-line';d.dataset.i=i;d.title=l.text;
       const pad=3;
       Object.assign(d.style,{left:(l.x*k-pad)+'px',top:(l.y*k-pad)+'px',width:(l.w*k+pad*2)+'px',height:(l.h*k+pad*2)+'px'});
-      d.onclick=()=>openLine(i);
+      d.onclick=(e)=>{if(touch){const at=charAt(e.clientX,e.clientY);if(at){hoverAt=at.li+':'+at.ci;hoverLookup(at.li,at.ci);}}else openLine(i);};
       box.appendChild(d);
     });
-    status(lines.length?`${lines.length} line${lines.length===1?'':'s'} · click a line, or hold ${window.KotobaHover&&KotobaHover.get()!=='none'?KotobaHover.label():'Shift'} over a word`:'No text found. Try another language or Rescan.');
+    status(lines.length?(touch?`${lines.length} line${lines.length===1?'':'s'} · tap a word`:`${lines.length} line${lines.length===1?'':'s'} · click a line, or hold ${window.KotobaHover&&KotobaHover.get()!=='none'?KotobaHover.label():'Shift'} over a word`):'No text found. Try another language or Rescan.');
   }
 
   /** A crop of the screenshot around a line, for a sentence card's picture (at most 900 px wide). */
@@ -61,6 +66,90 @@
     // Lines in reading order: top to bottom (Vision gives them roughly so), joined for translation or saving.
     ocrTextSheet(lines.map(x=>x.text).join('\n'),{lang:shot.lang==='en'?'':shot.lang,source:shot.app||'Screen',title:(shot.app||'Screen')+' · all text',context:''});
   }
+
+  /** Character boxes when the recognizer gives none (the phone's): the line split evenly, across or down. */
+  function withChars(l){
+    const n=Array.from(l.text).length;
+    if(l.chars&&l.chars.length===n)return l;
+    const down=l.h>l.w*1.5,chars=[];
+    for(let i=0;i<n;i++)chars.push(down?[l.x,l.y+l.h*i/n,l.w,l.h/n]:[l.x+l.w*i/n,l.y,l.w/n,l.h]);
+    return {...l,chars};
+  }
+  /** Boxes that overlap become one line (a bubble read as two, a name over its dialogue), in reading order. */
+  function mergeOverlaps(ls){
+    const out=ls.slice();
+    const hit=(a,b)=>a.x<b.x+b.w&&b.x<a.x+a.w&&a.y<b.y+b.h&&b.y<a.y+a.h;
+    const join=(a,b)=>{
+      const ov=Math.min(a.y+a.h,b.y+b.h)-Math.max(a.y,b.y);
+      const sameRow=ov>0.5*Math.min(a.h,b.h);
+      const [p,q]=sameRow?(a.x<=b.x?[a,b]:[b,a]):(a.y<=b.y?[a,b]:[b,a]);
+      const cjk=/[\u3040-\u30ff\u3400-\u9fff]/;
+      const space=cjk.test(p.text.slice(-1))&&cjk.test(q.text[0])?'':' ';
+      const x=Math.min(a.x,b.x),y=Math.min(a.y,b.y);
+      return {x,y,w:Math.max(a.x+a.w,b.x+b.w)-x,h:Math.max(a.y+a.h,b.y+b.h)-y,text:p.text+space+q.text,
+        chars:p.chars.concat(space?[[]]:[],q.chars),conf:Math.min(p.conf||1,q.conf||1)};
+    };
+    for(let changed=true;changed;){
+      changed=false;
+      for(let i=0;i<out.length&&!changed;i++)for(let j=i+1;j<out.length;j++)if(hit(out[i],out[j])){out[i]=join(out[i],out[j]);out.splice(j,1);changed=true;break;}
+    }
+    return out.sort((a,b)=>a.y-b.y||a.x-b.x);
+  }
+
+  // The popup can be dragged by its top (grab handle or title) and stays where it was left for the next ones.
+  let sheetPos=null;try{sheetPos=JSON.parse(localStorage.getItem('overlay.sheetPos')||'null');}catch(e){}
+  function placeSheet(sh){
+    if(!sheetPos)return;
+    // A lookup opened from inside a popup sits a little down and to the side of it, so both stay visible.
+    const step=Math.max(0,sheetStack.indexOf(sheetStack.find(e=>e.sheet===sh))||0)*28;
+    // Size first (within the screen), then the place slides so the whole popup stays on screen.
+    let w=null,h=null;
+    if(sheetPos.w){
+      w=Math.max(260,Math.min(innerWidth-8,sheetPos.w));h=Math.max(180,Math.min(innerHeight-8,sheetPos.h));
+      Object.assign(sh.style,{width:w+'px',height:h+'px',maxHeight:'none'});
+    }
+    if(sheetPos.x==null)return;
+    const bw=w??sh.getBoundingClientRect().width,bh=h??sh.getBoundingClientRect().height;
+    const x=Math.max(0,Math.min(innerWidth-bw-4,sheetPos.x-step)),y=Math.max(0,Math.min(innerHeight-bh-4,sheetPos.y+step));
+    Object.assign(sh.style,{left:x+'px',top:y+'px',right:'auto',bottom:'auto'});
+  }
+  const saveSheet=()=>{try{localStorage.setItem('overlay.sheetPos',JSON.stringify(sheetPos));}catch(err){}};
+  /** Every edge and corner resizes the popup (a side: width or height only; a corner: both); the size is kept like its place. */
+  function resizable(sh){
+    for(const dir of ['n','s','e','w','ne','nw','se','sw']){
+      const grip=document.createElement('div');grip.className='go-rs go-rs-'+dir;sh.appendChild(grip);
+      grip.addEventListener('pointerdown',e=>{
+        e.preventDefault();e.stopPropagation();
+        const r=sh.getBoundingClientRect(),sx=e.clientX,sy=e.clientY;
+        sheetPos={...(sheetPos||{}),x:r.left,y:r.top,w:r.width,h:r.height};placeSheet(sh);
+        try{grip.setPointerCapture(e.pointerId);}catch(err){}sh.classList.add('dragging');
+        const move=(ev)=>{
+          const dx=ev.clientX-sx,dy=ev.clientY-sy;let {left:x,top:y,width:w,height:h}=r;
+          if(dir.includes('e'))w=r.width+dx;
+          if(dir.includes('s'))h=r.height+dy;
+          if(dir.includes('w')){w=Math.max(260,r.width-dx);x=r.right-w;}
+          if(dir.includes('n')){h=Math.max(180,r.height-dy);y=r.bottom-h;}
+          sheetPos={...sheetPos,x,y,w,h};placeSheet(sh);
+        };
+        const up=()=>{grip.removeEventListener('pointermove',move);grip.removeEventListener('pointerup',up);sh.classList.remove('dragging');saveSheet();};
+        grip.addEventListener('pointermove',move);grip.addEventListener('pointerup',up);
+      });
+    }
+  }
+  function draggable(sh){
+    placeSheet(sh);resizable(sh);
+    const handle=(e)=>e.target.closest('.grab,.sheet-head')&&!e.target.closest('button,input,select,a');
+    sh.addEventListener('pointerdown',e=>{
+      if(!handle(e))return;
+      e.preventDefault();
+      const r=sh.getBoundingClientRect(),dx=e.clientX-r.left,dy=e.clientY-r.top;
+      try{sh.setPointerCapture(e.pointerId);}catch(err){}sh.classList.add('dragging');
+      const move=(ev)=>{sheetPos={...(sheetPos||{}),x:ev.clientX-dx,y:ev.clientY-dy};placeSheet(sh);};
+      const up=()=>{sh.removeEventListener('pointermove',move);sh.removeEventListener('pointerup',up);sh.classList.remove('dragging');saveSheet();};
+      sh.addEventListener('pointermove',move);sh.addEventListener('pointerup',up);
+    });
+  }
+  new MutationObserver(ms=>ms.forEach(m=>m.addedNodes.forEach(n=>{if(n.classList&&n.classList.contains('sheet'))draggable(n);}))).observe(document.getElementById('sheets'),{childList:true});
 
   // Hold Shift (or the hover key chosen in Settings) over the picture: the word under the pointer lights up and its
   // entry opens beside it, as in the video player. Characters come with their own boxes from Vision.
@@ -114,7 +203,7 @@
       $$('#go-app').textContent=d.app||'Screen';status('Reading text…');paintLangs();
       paintFreeze();layer.hidden=false;
     },
-    lines(l){lines=l.filter(x=>x.text&&x.text.trim());render();},
+    lines(l){lines=mergeOverlaps(l.filter(x=>x.text&&x.text.trim()).map(withChars));render();},
     // The screenshot only ever lives here, in memory; closing drops it.
     hide(){layer.hidden=true;closeAllOverlays();shot=null;lines=[];$$('#go-img').removeAttribute('src');$$('#go-boxes').innerHTML='';hl.hidden=true;},
   };
@@ -134,6 +223,8 @@
     e.preventDefault();e.stopPropagation();
     if(sheetStack.length)closeSheet();else if(pageStack.length)popPage();else post({cmd:'close'});
   },true);
+  // The phone's Back key (sent by the overlay window).
+  window.gameOverlayBack=()=>{if(sheetStack.length)closeSheet();else if(pageStack.length)popPage();else post({cmd:'close'});};
   addEventListener('resize',()=>{if(lines.length)render();});
   if(document.readyState==='complete')post({cmd:'ready'});else addEventListener('load',()=>post({cmd:'ready'}));
 })();

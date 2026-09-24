@@ -1,0 +1,57 @@
+/* Screen text over games (?overlay=1): only the screenshot layer, sheets and pages show; the app itself stays hidden. */
+html.game-overlay,html.game-overlay body{background:transparent!important}
+html.game-overlay #app>.screen,html.game-overlay .tabbar,html.game-overlay #toast:empty{display:none!important}
+html.game-overlay #pages{left:auto!important;right:12px;top:56px;bottom:12px;width:min(520px,48vw);border-radius:18px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.45)}
+html.game-overlay #pages:empty{display:none}
+html.game-overlay .sheet{left:auto;right:12px;bottom:12px;width:min(520px,48vw);max-height:calc(100% - 70px);border-radius:20px;box-shadow:0 10px 40px rgba(0,0,0,.45)}
+html.game-overlay .scrim{background:transparent;pointer-events:none}
+/* Select (or long-press) a word inside a definition: Look up, Save… sit under the toolbar, above the popups. */
+html.game-overlay #selbar{top:50px;bottom:auto!important;left:50%!important;right:auto;transform:translateX(-50%);max-width:min(560px,94vw);pointer-events:auto;z-index:40}
+#go-layer{position:fixed;inset:0;z-index:5;background:rgba(0,0,0,.01)}
+#go-layer.frozen{background:#000}
+#go-img{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;user-select:none;-webkit-user-drag:none;opacity:0}
+#go-layer.frozen #go-img{opacity:1}
+#go-boxes{position:absolute;inset:0}
+.go-line{position:absolute;border:2px solid rgba(124,194,160,.9);border-radius:6px;background:rgba(124,194,160,.08);box-shadow:0 0 0 1px rgba(0,0,0,.35);cursor:pointer;padding:0;transition:background .12s}
+.go-line:hover{background:rgba(124,194,160,.28);border-color:#7cc2a0}
+.go-line.on{background:rgba(246,227,161,.28);border-color:#f6e3a1}
+#go-bar{position:absolute;top:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;padding:6px 8px 6px 16px;border-radius:14px;background:rgba(20,26,23,.88);color:#eef3ef;font:13px -apple-system,BlinkMacSystemFont,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.4);backdrop-filter:blur(10px);white-space:nowrap}
+#go-bar b{font-weight:600}
+#go-status{color:#a9b8ae}
+#go-bar button{border:0;border-radius:9px;background:rgba(255,255,255,.08);color:#eef3ef;font:600 12.5px -apple-system,BlinkMacSystemFont,sans-serif;padding:5px 10px;cursor:pointer}
+#go-bar button:hover{background:rgba(255,255,255,.16)}
+#go-bar .go-langs{display:flex;gap:2px;padding:0 4px;border-left:1px solid rgba(255,255,255,.15);border-right:1px solid rgba(255,255,255,.15)}
+#go-bar .go-langs button{background:transparent;font-weight:500}
+#go-bar .go-langs button.on{background:#7cc2a0;color:#0f1a14}
+#go-hl{position:absolute;background:rgba(246,227,161,.35);border:2px solid #f6e3a1;border-radius:5px;pointer-events:none}
+/* #app is position:fixed (its own stacking context): lift it above the screenshot layer, clicks passing through its
+   empty areas to the line boxes; sheets and pages take their own clicks. */
+html.game-overlay #app{z-index:6;pointer-events:none}
+html.game-overlay #pages>.page,html.game-overlay .sheet{pointer-events:auto}
+/* Phone: a compact bar that fits a landscape game; a portrait phone keeps the usual bottom sheet. */
+html.game-overlay-touch #go-bar{top:6px;padding:4px 4px 4px 10px;gap:4px;font-size:12px;max-width:calc(100% - 16px);overflow-x:auto}
+html.game-overlay-touch #go-bar button{padding:5px 8px;font-size:12px}
+html.game-overlay-touch #go-app{display:none}
+@media (orientation:portrait){html.game-overlay-touch .sheet{left:0;right:0;bottom:0;width:auto;border-radius:22px 22px 0 0}}
+/* The popup moves by its top bar. */
+html.game-overlay .sheet .grab,html.game-overlay .sheet .sheet-head{cursor:grab;touch-action:none}
+html.game-overlay .sheet.dragging{transition:none;cursor:grabbing;opacity:.94}
+html.game-overlay .sheet .grab{height:14px}
+/* Resize from any edge or corner (invisible strips; a small mark shows the bottom-right corner). */
+html.game-overlay .sheet .go-rs{position:absolute;z-index:3;touch-action:none}
+html.game-overlay .sheet .go-rs-n,html.game-overlay .sheet .go-rs-s{left:14px;right:14px;height:8px;cursor:ns-resize}
+html.game-overlay .sheet .go-rs-n{top:-3px}html.game-overlay .sheet .go-rs-s{bottom:-3px}
+html.game-overlay .sheet .go-rs-e,html.game-overlay .sheet .go-rs-w{top:14px;bottom:14px;width:8px;cursor:ew-resize}
+html.game-overlay .sheet .go-rs-e{right:-3px}html.game-overlay .sheet .go-rs-w{left:-3px}
+html.game-overlay .sheet .go-rs-ne,html.game-overlay .sheet .go-rs-nw,html.game-overlay .sheet .go-rs-se,html.game-overlay .sheet .go-rs-sw{width:18px;height:18px}
+html.game-overlay .sheet .go-rs-ne{top:-3px;right:-3px;cursor:nesw-resize}html.game-overlay .sheet .go-rs-sw{bottom:-3px;left:-3px;cursor:nesw-resize}
+html.game-overlay .sheet .go-rs-nw{top:-3px;left:-3px;cursor:nwse-resize}
+html.game-overlay .sheet .go-rs-se{bottom:-3px;right:-3px;cursor:nwse-resize;
+  background:linear-gradient(135deg,transparent 0 55%,var(--muted) 55% 60%,transparent 60% 70%,var(--muted) 70% 75%,transparent 75%);opacity:.7}
+/* Touch: fatter edges for fingers. */
+html.game-overlay-touch .sheet .go-rs-n,html.game-overlay-touch .sheet .go-rs-s{height:16px}
+html.game-overlay-touch .sheet .go-rs-e,html.game-overlay-touch .sheet .go-rs-w{width:16px}
+html.game-overlay-touch .sheet .go-rs-ne,html.game-overlay-touch .sheet .go-rs-nw,html.game-overlay-touch .sheet .go-rs-se,html.game-overlay-touch .sheet .go-rs-sw{width:28px;height:28px}
+/* A resized popup: its body (and a dictionary entry inside) fills the new height. */
+html.game-overlay .sheet[style*="height"] .sheet-body{flex:1;min-height:0;overflow:auto}
+html.game-overlay .sheet[style*="height"] .lookup-frame{height:100%!important}
