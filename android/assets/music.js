@@ -133,10 +133,10 @@
       let i=-1;for(let k=0;k<lyrics.lines.length;k++){if(lyrics.lines[k].t<=t)i=k;else break;}
       if(i===active)return;
       const lines=f('lines').querySelectorAll('.mu-line');
-      if(active>=0&&lines[active])lines[active].classList.remove('now');
       active=i;
-      lines.forEach((x,k)=>x.classList.toggle('past',k<i));
-      if(i>=0&&lines[i]){lines[i].classList.add('now');if(opts.follow&&Date.now()-userScrolled>4000&&!sheetStack.length)lines[i].scrollIntoView({block:'center',behavior:'smooth'});}
+      // Exactly one current line (after a jump the previous one mustn't stay lit).
+      lines.forEach((x,k)=>{x.classList.toggle('past',k<i);x.classList.toggle('now',k===i);});
+      if(i>=0&&lines[i]){if(opts.follow&&Date.now()-userScrolled>4000&&!sheetStack.length)lines[i].scrollIntoView({block:'center',behavior:'smooth'});}
     }
     tick();
 
