@@ -417,6 +417,9 @@ public class DesktopServer {
         synchronized(this){
             key=captionKey;
             t0=videoTime(start);t1=videoTime(end);
+            // Played on after a pause, or a seek, while the line was being heard: it belongs after that.
+            double resumed=resumedAt(start,end);
+            if(!Double.isNaN(resumed))t0=resumed;
         }
         if(key.isEmpty()||Double.isNaN(t0)||Double.isNaN(t1)||t1<=t0)return new JSONObject().put("placed",false);
         String text=d.getString("text").trim();
@@ -440,6 +443,21 @@ public class DesktopServer {
             Files.writeString(captionFile(key).toPath(),ep.toString());
         }
         return new JSONObject().put("placed",true).put("t0",t0).put("t1",t1);
+    }
+
+    /** The video's time where playback last resumed or jumped between two wall-clock moments (NaN if it ran straight through). */
+    double resumedAt(long start,long end){
+        Report prev=null;double at=Double.NaN;
+        for(Report r:captionReports){
+            if(r.wall>end)break;
+            if(prev!=null&&r.wall>=start&&r.playing){
+                boolean resumed=!prev.playing;
+                boolean jumped=prev.playing&&Math.abs(r.time-(prev.time+(r.wall-prev.wall)/1000.0*prev.rate))>1.0;
+                if(resumed||jumped)at=r.time;
+            }
+            prev=r;
+        }
+        return at;
     }
 
     /** The video's time at a wall-clock moment, from the helper's reports around it (NaN while paused). */

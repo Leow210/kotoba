@@ -38,9 +38,10 @@ final class LiveCaptions: NSObject {
                     if self.worker == nil || self.workerLang != lang { self.startWorker(lang) }
                     if !self.capturing && !self.starting && self.ready { self.startCapture() }
                 } else {
-                    // Paused: stop listening soon, and let the model go after a while (it loads again in a second or two).
+                    // Paused: keep listening while Live subs is on (a paused browser sends silence), so the first words
+                    // after play aren't lost to restarting the capture; stop once it's off, and let the model go after a while.
                     if self.idleSince == nil { self.idleSince = Date() }
-                    if self.capturing, Date().timeIntervalSince(self.idleSince!) > 2 { self.stopCapture() }
+                    if self.capturing, !keep { self.stopCapture() }
                     if self.worker != nil, !keep, Date().timeIntervalSince(self.idleSince!) > 60 { self.stopWorker() }
                 }
             }
