@@ -1,13 +1,15 @@
 // ==UserScript==
 // @name         Kotoba Video Text
 // @namespace    app.kotoba.desktop
-// @version      0.5.0
+// @version      0.6.0
 // @description  Look up YouTube and GagaOOLala subtitles in Kotoba for Mac: hold Shift over a word. Works in Firefox and Chrome (Tampermonkey).
 // @match        https://www.youtube.com/watch*
 // @match        https://www.gagaoolala.com/*/videos/*
 // @run-at       document-idle
 // @noframes
 // @grant        GM_xmlhttpRequest
+// @grant        GM_getValue
+// @grant        GM_setValue
 // @connect      127.0.0.1
 // ==/UserScript==
 
@@ -105,6 +107,7 @@
     .kotoba-pop .k-actions button { font: 600 12px -apple-system,BlinkMacSystemFont,sans-serif; border: 0; background: #e2ece5; color: #2f6b55; border-radius: 8px; padding: 4px 10px; cursor: pointer; }
     .kotoba-pop.k-big .k-actions button { font-size: 12.5px; border-radius: 9px; padding: 6px 11px; }
     .kotoba-pop .k-actions button:first-child { background: #2f6b55; color: #fff; }
+    .kotoba-pop .k-folder { font: 600 12px -apple-system,BlinkMacSystemFont,sans-serif; border: 1px solid #cfdcd3; background: #fff; color: #2f6b55; border-radius: 8px; padding: 3px 6px; max-width: 150px; cursor: pointer; }
     .kotoba-pop .k-note { color: #72766f; font-size: 13px; }
   `;
   document.documentElement.appendChild(style);
@@ -246,6 +249,18 @@
   // Other readings of the same form (걸었다고: 걷다 or 걸다); only the context can decide.
   const alts = res => (res.forms || []).filter(f => f.base && f.base !== res.key && f.items && f.items.length).slice(0, 2);
   const big = () => store.get('kotoba.popBig', '0') === '1';
+  // The folder new cards go to: chosen in the popup, remembered across sites (Tampermonkey's storage, not the page's).
+  const cardFolder = () => { try { return +GM_getValue('kotoba.folder', 1) || 1; } catch (e) { return +store.get('kotoba.folder', '1') || 1; } };
+  const setCardFolder = (id) => { try { GM_setValue('kotoba.folder', id); } catch (e) { store.set('kotoba.folder', String(id)); } };
+  let foldersCache = null;
+  function fillFolders(sel, fresh) {
+    if (!foldersCache || fresh) foldersCache = kotoba('folders').catch(() => null);
+    foldersCache.then(list => {
+      if (!list || !sel.isConnected) return;
+      const now = cardFolder(), id = list.some(f => f.id === now) ? now : (list[0] || { id: 1 }).id;
+      sel.innerHTML = H(list.map(f => `<option value="${f.id}"${f.id === id ? ' selected' : ''}>${esc(f.name)}</option>`).join(''));
+    });
+  }
 
   // Popups stack: stack[0] is the caption word's; a word hovered inside an entry opens the next one.
   const main = { el: pop, level: 0 };
@@ -267,9 +282,10 @@
       ${res.explain || alts(res).length ? `<div class="k-explain">${esc(res.explain || '')}${alts(res).map((f, j) => `<button class="k-alt" data-k="alt" data-j="${j}" title="${esc(f.explain || '')}">or ${esc(f.base)}</button>`).join('')}</div>` : ''}
       <div class="k-tabs">${items.map((it, n) => `<button class="k-tab${n ? '' : ' on'}" data-k="tab" data-n="${n}">${esc(shortName(it.dictionary))}</button>`).join('')}</div>
       <div class="k-entry"></div>
-      <div class="k-actions"><button data-k="card">＋ Card</button><button class="k-more" data-k="open">Open in Kotoba</button><button class="k-more" data-k="copy">Copy</button></div>`);
+      <div class="k-actions"><button data-k="card">＋ Card</button><select class="k-folder" title="Folder for new cards"><option value="${cardFolder()}">…</option></select><button class="k-more" data-k="open">Open in Kotoba</button><button class="k-more" data-k="copy">Copy</button></div>`);
     P.el.classList.toggle('k-big', big());
     P.items = items;
+    fillFolders(P.el.querySelector('.k-folder'), false);
     P.el.hidden = false; place(P);
     const kb = P.el.querySelector('.k-known');
     kotoba('known.get', { word: res.key, dict: items[0] ? items[0].dict : 0, lang: P.lang || '' }).then(k => paintKnown(kb, k)).catch(() => { kb.hidden = true; });
@@ -407,7 +423,10 @@
     el.addEventListener('mouseleave', e => { if (!pinned && !inPopup(e.relatedTarget) && !(e.relatedTarget && text.contains(e.relatedTarget))) hidePop(); });
     // The site mustn't treat clicks and keys in the popup as player controls.
     for (const type of ['click', 'mousedown', 'mouseup', 'dblclick', 'keydown']) el.addEventListener(type, e => e.stopPropagation());
-    el.addEventListener('click', e => onPopClick(P, e));
+    el.addEventListener('click', e => { if (e.target.closest('.k-folder')) { pinned = true; return; } onPopClick(P, e); });
+    // Opening the folder menu mustn't close the popup (the menu sits outside it), and the choice is remembered.
+    el.addEventListener('mousedown', e => { const f = e.target.closest('.k-folder'); if (f) { pinned = true; fillFolders(f, true); } });
+    el.addEventListener('change', e => { const f = e.target.closest('.k-folder'); if (f) setCardFolder(+f.value); });
   }
   wire(main);
   function paintKnown(b, k) { b.classList.toggle('on', !!k.known); b.title = k.how === 'card' ? 'Known (a learned card)' : k.known ? 'Marked known — click to unmark' : 'Mark as known'; }
@@ -445,7 +464,7 @@
         const headword = text.lang === 'zh' && res.written && !P.level ? res.written : res.key;
         const reading = it.page && it.page !== res.key && /^[぀-ヿ가-힣a-zāáǎàēéěèīíǐìōóǒòūúǔùü\s0-9]+$/i.test(it.page) ? it.page : '';
         const v = videoEl(), t = v ? Math.floor(v.currentTime) : 0;
-        await kotoba('item.save', { folder_id: 1, headword, reading, back: g.text, dict: it.dict, dict_name: it.dictionary, page: it.page || res.key,
+        await kotoba('item.save', { folder_id: +(P.el.querySelector('.k-folder') || {}).value || cardFolder(), headword, reading, back: g.text, dict: it.dict, dict_name: it.dictionary, page: it.page || res.key,
           kind: 'entry', context: res.line || '', note: `${document.title.replace(/ - YouTube$/, '')} · ${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`, review: true });
         P.el.querySelector('.k-saved').textContent = '★ saved'; b.textContent = 'Saved';
       } catch (err) { showMessage(err.message, text); }
