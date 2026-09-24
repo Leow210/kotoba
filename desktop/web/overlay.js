@@ -13,7 +13,7 @@
   layer.innerHTML=`<img id="go-img" alt=""><div id="go-boxes"></div>
     <div id="go-bar"><b id="go-app"></b><span id="go-status"></span>
       <span class="go-langs">${LANGS.map(([k,v])=>`<button data-lang="${k}">${v}</button>`).join('')}</span>
-      <button data-a="freeze" title="Show the screenshot instead of the live game">Freeze</button><button data-a="all">All text</button><button data-a="rescan" title="Take a new screenshot">Rescan</button><button data-a="close" title="Close (Esc or ⌃⌘O)">✕</button></div>`;
+      <button data-a="freeze" title="Show the screenshot instead of the live game">Freeze</button><button data-a="all">All text</button><button data-a="rescan" title="Take a new screenshot">Rescan</button><button data-a="close" title="Close (Esc, or the shortcut again)">✕</button></div>`;
   document.body.appendChild(layer);
   const $$=(s)=>layer.querySelector(s);
   let shot=null,lines=[];

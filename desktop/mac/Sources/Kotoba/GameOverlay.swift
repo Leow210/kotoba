@@ -10,7 +10,7 @@ final class OverlayPanel: NSPanel {
     override var canBecomeMain: Bool { false }
 }
 
-/// Screen text over games and other apps (⌃⌘O): a screenshot of the display under the pointer (screen capture only —
+/// Screen text over games and other apps (⌃` by default, see HotKey.overlayChoices): a screenshot of the display under the pointer (screen capture only —
 /// nothing reads or touches the game itself), read by Apple Vision, and a see-through panel above everything with a
 /// box per line over the live game (or the frozen shot). The capture stays in memory: nothing is written to disk. A line opens Kotoba's text sheet: tap words to look up, translate, save cards and sentence cards.
 final class GameOverlay: NSObject, WKScriptMessageHandler {
@@ -221,5 +221,18 @@ final class HotKey {
             }, 1, &spec, nil, nil)
         }
         RegisterEventHotKey(UInt32(keyCode), UInt32(modifiers), EventHotKeyID(signature: OSType(0x4B544241), id: id), GetApplicationEventTarget(), 0, &ref)
+    }
+    deinit { if let ref { UnregisterEventHotKey(ref) } }
+
+    /// Shortcut choices for the screen-text overlay (Settings › Reading). Two keys, easy to press mid-dialogue.
+    static let overlayChoices: [String: (key: Int, mods: Int, label: String)] = [
+        "ctrl-grave": (kVK_ANSI_Grave, controlKey, "⌃`"),
+        "ctrl-1": (kVK_ANSI_1, controlKey, "⌃1"),
+        "ctrl-q": (kVK_ANSI_Q, controlKey, "⌃Q"),
+        "ctrl-cmd-o": (kVK_ANSI_O, controlKey | cmdKey, "⌃⌘O"),
+    ]
+    static var overlayChoice: String {
+        let v = UserDefaults.standard.string(forKey: "OverlayShortcut") ?? "ctrl-grave"
+        return overlayChoices[v] == nil ? "ctrl-grave" : v
     }
 }

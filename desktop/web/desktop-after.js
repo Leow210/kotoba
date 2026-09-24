@@ -41,6 +41,19 @@
           <label class="toggle"><input type="checkbox" id="desktop-click-lookup" ${KotobaHover.clickLookup()?'checked':''}><span></span></label>`;
         box.appendChild(clickRow);
         clickRow.querySelector('input').onchange=e=>KotobaHover.setClickLookup(e.target.checked);
+        // The screen-text overlay's shortcut (games included); the Mac app registers it system-wide.
+        const keys=[['ctrl-grave','⌃`'],['ctrl-1','⌃1'],['ctrl-q','⌃Q'],['ctrl-cmd-o','⌃⌘O']];
+        let cur='ctrl-grave';try{cur=localStorage.getItem('overlayShortcut')||cur;}catch(e){}
+        const keyRow=document.createElement('div');keyRow.className='switch-row';
+        keyRow.innerHTML=`<div><b>Screen text shortcut</b><small>Shows the text on screen (a game, an app) with lookups; press again to go back. Works while a game is in front.</small></div>
+          <div class="chips">${keys.map(([k,l])=>`<button class="chip small ${cur===k?'on':''}" data-okey="${k}">${l}</button>`).join('')}</div>`;
+        box.appendChild(keyRow);
+        keyRow.querySelectorAll('[data-okey]').forEach(b=>b.onclick=()=>{
+          try{localStorage.setItem('overlayShortcut',b.dataset.okey);}catch(e){}
+          mac({type:'overlayShortcut',key:b.dataset.okey});
+          keyRow.querySelectorAll('[data-okey]').forEach(x=>x.classList.toggle('on',x===b));
+          toast('Screen text: '+b.textContent,1500);
+        });
       }
       moveSettings();
       renderTranslationSettings();

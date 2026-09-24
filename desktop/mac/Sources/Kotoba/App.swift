@@ -69,9 +69,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         startCore()
-        // ⌃⌘O anywhere, even inside a full-screen game: read the screen's text. (Not Option: games such as WuWa use it
-        // to show the cursor.)
-        overlayKey = HotKey(keyCode: kVK_ANSI_O, modifiers: cmdKey | controlKey, id: 1) { [weak self] in self?.overlay.toggle() }
+        // ⌃` (or the shortcut chosen in Settings) anywhere, even inside a full-screen game: read the screen's text.
+        // Never Option: games such as WuWa use it to show the cursor.
+        registerOverlayKey()
         if UserDefaults.standard.bool(forKey: "DevHooks") { installDevHooks() }
     }
 
@@ -215,6 +215,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         case "copy":
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(m["text"] as? String ?? "", forType: .string)
+        case "overlayShortcut":
+            if let k = m["key"] as? String, HotKey.overlayChoices[k] != nil {
+                UserDefaults.standard.set(k, forKey: "OverlayShortcut")
+                registerOverlayKey()
+            }
         case "activate":
             NSApp.activate(ignoringOtherApps: true)
             window.makeKeyAndOrderFront(nil)
@@ -309,7 +314,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         view.addItem(withTitle: "Reload", action: #selector(reload), keyEquivalent: "r")
         view.addItem(withTitle: "Enter Full Screen", action: #selector(NSWindow.toggleFullScreen(_:)), keyEquivalent: "f")
         view.addItem(.separator())
-        let read = view.addItem(withTitle: "Read Screen Text (⌃⌘O, works in games)", action: #selector(readScreen), keyEquivalent: "")
+        let read = view.addItem(withTitle: "Read Screen Text (works in games)", action: #selector(readScreen), keyEquivalent: "")
         read.target = self
         viewItem.submenu = view
         let windowItem = NSMenuItem(); main.addItem(windowItem)
@@ -321,6 +326,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         NSApp.windowsMenu = windowMenu
     }
     @objc func reload() { web.reload() }
+    func registerOverlayKey() {
+        overlayKey = nil
+        let c = HotKey.overlayChoices[HotKey.overlayChoice]!
+        overlayKey = HotKey(keyCode: c.key, modifiers: c.mods, id: 1) { [weak self] in self?.overlay.toggle() }
+    }
     @objc func readScreen() {
         // From the menu Kotoba is in front, so the capture waits for the menu to close; the key works from anywhere.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in self?.overlay.toggle() }
