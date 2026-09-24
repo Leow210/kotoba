@@ -420,13 +420,25 @@ async function renderSearchEmpty(){
     return;
   }
   const history=await api('history').catch(()=>[]);
-  const browse=`<div class="section-label">Browse a dictionary<button id="random-any" style="display:inline-flex;align-items:center;gap:5px">${icon('shuffle','i sm')} Random word</button></div><div class="history">${dicts.filter(d=>d.enabled&&searchable(d)).map(d=>`<button class="chip" data-browse="${d.id}">${esc(shortName(d.name))}</button>`).join('')}</div>`+
+  const browse=`<div class="section-label">Browse a dictionary</div><div class="history">${dicts.filter(d=>d.enabled&&searchable(d)).map(d=>`<button class="chip" data-browse="${d.id}">${esc(shortName(d.name))}</button>`).join('')}</div>`+
     (dicts.some(d=>d.enabled&&!searchable(d))?`<div class="section-label">Frequency lists</div><div class="history">${dicts.filter(d=>d.enabled&&!searchable(d)).map(d=>`<button class="chip" data-freqlist="${d.id}">${freqBars(1)} ${esc(shortName(d.name))}</button>`).join('')}</div>`:'');
-  box.innerHTML=(history.length?`<div class="section-label">Recent<button id="clear-history">Clear</button></div><div class="history">${history.map(h=>`<button class="chip" data-h="${esc(h.query)}">${esc(h.query)}</button>`).join('')}</div>`:
-    `<div class="empty" style="padding-bottom:10px"><span class="glyph">言</span><h2>Look something up</h2>Type a word, reading or phrase.<br>Kana, kanji, Hangul, Thai and Cyrillic all work.</div>`)+browse;
+  // Tools first: the features that aren't a search (lyrics, scanning, screen text…), as tiles anyone can find.
+  const phone=!document.documentElement.classList.contains('desktop');
+  const tools=[
+    {id:'music',glyph:'♪',title:'Lyrics',sub:'for the song that’s playing',run:()=>window.openMusic&&openMusic()},
+    phone&&{id:'scan',glyph:'写',title:'Scan text',sub:'photo or screenshot',run:()=>window.openScan&&openScan()},
+    phone&&window.Kotoba&&Kotoba.startScreenText&&{id:'screen',glyph:'文',title:'Screen text',sub:'over games and apps',run:()=>Kotoba.startScreenText()},
+    dicts.some(d=>d.kind==='kanji'&&d.enabled)&&{id:'kanji',glyph:'漢',title:'Kanji grid',sub:'by radical and strokes',run:()=>openKanjiGrid()},
+    {id:'lists',glyph:'Tt',title:'Word lists',sub:'and your saved words',run:()=>showTab('folders')},
+    {id:'random',glyph:'🎲',title:'Random word',sub:'from your dictionaries',run:async()=>{const r=await api('random',{dict:search.dict&&!search.dict.startsWith('g:')?+search.dict:0});openEntry({rec:r.rec,dict:r.dict,key:r.key});}},
+  ].filter(Boolean);
+  const toolGrid=`<div class="tools">${tools.map(t=>`<button class="tool" data-tool="${t.id}"><span class="tool-glyph">${t.glyph}</span><b>${esc(t.title)}</b><small>${esc(t.sub)}</small></button>`).join('')}</div>`;
+  // Recent searches only when switched on (Settings › Reading).
+  const recent=settings.show_recent&&history.length?`<div class="section-label">Recent<button id="clear-history">Clear</button></div><div class="history">${history.map(h=>`<button class="chip" data-h="${esc(h.query)}">${esc(h.query)}</button>`).join('')}</div>`:'';
+  box.innerHTML=toolGrid+recent+browse;
+  box.querySelectorAll('[data-tool]').forEach(b=>b.onclick=handle(()=>tools.find(t=>t.id===b.dataset.tool).run()));
   box.querySelectorAll('[data-browse]').forEach(b=>b.onclick=handle(()=>openBrowse(+b.dataset.browse)));
   box.querySelectorAll('[data-freqlist]').forEach(b=>b.onclick=handle(()=>openFreqList(+b.dataset.freqlist)));
-  $('random-any').onclick=handle(async()=>{const r=await api('random',{dict:search.dict&&!search.dict.startsWith('g:')?+search.dict:0});openEntry({rec:r.rec,dict:r.dict,key:r.key});});
   box.querySelectorAll('[data-h]').forEach(b=>b.onclick=()=>{$('q').value=b.dataset.h;$('q-clear').hidden=false;runSearch();});
   const clear=$('clear-history');if(clear)clear.onclick=handle(async()=>{await api('history.clear');renderSearchEmpty();});
 }
@@ -1429,18 +1441,36 @@ async function lookupSheet(text,sel,extra={}){
   let index=0;
   const items=r.items;
   const formNote=r.explain?`<div class="form-note"><b>${esc(r.matched)}</b> → ${esc(r.key)} · ${esc(r.explain)}</div>`:'';
-  const s=openSheet(`${formNote}<div class="dict-tabs" id="lk-tabs" ${items.length<2?'hidden':''}></div><div class="sheet-body" style="padding:0"><iframe class="lookup-frame" id="lk-frame"></iframe></div><div class="sheet-foot"><button class="btn wide" id="lk-open">${icon('book')} Open</button><button class="btn primary wide" id="lk-card">${icon('star')} Save</button></div>`,{title:r.key,tall:false,onClose:extra.onClose});
+  const s=openSheet(`${formNote}<div class="dict-tabs" id="lk-tabs" ${items.length<2?'hidden':''}></div><div class="lk-units" id="lk-units" hidden></div><div class="sheet-body" style="padding:0"><iframe class="lookup-frame" id="lk-frame"></iframe></div><div class="sheet-foot"><button class="btn wide" id="lk-open">${icon('book')} Open</button><button class="btn primary wide" id="lk-card">${icon('star')} Save</button></div>`,{title:r.key,tall:false,onClose:extra.onClose});
   const frame=s.sheet.querySelector('#lk-frame');
   let wired=null,focusUnit=null;
   const show=async(i)=>{
     index=i;const it=items[i];
-    s.sheet.querySelector('#lk-tabs').innerHTML=items.map((x,n)=>`<button class="chip small ${n===i?'on':''}" data-t="${n}">${esc(shortName(x.dictionary))}</button>`).join('');
+    // Several pages from one dictionary (homographs filed apart) are numbered: 朝鮮語 1, 朝鮮語 2.
+    const nth=(n)=>{const same=items.filter(x=>x.dict===items[n].dict);return same.length>1?' '+(same.indexOf(items[n])+1):'';};
+    s.sheet.querySelector('#lk-tabs').innerHTML=items.map((x,n)=>`<button class="chip small ${n===i?'on':''}" data-t="${n}">${esc(shortName(x.dictionary))}${nth(n)}</button>`).join('');
     s.sheet.querySelectorAll('#lk-tabs [data-t]').forEach(b=>b.onclick=()=>show(+b.dataset.t));
     await new Promise(res=>{frame.onload=res;frame.src=`/d/${it.dict}/${it.rec}.entry`;});
     wired=frameSetup(frame,{dict:it.dict,autoHeight:false,onLink:async(href)=>{const ref=await api('reference',{dict:it.dict,ref:href});if(ref.rec){closeSheet(s);openEntry({rec:ref.rec,dict:it.dict,key:ref.key||'',anchor:ref.anchor||''});}},source:()=>({dict:it.dict,dictName:it.dictionary,key:r.key,page:it.page,info:focusUnit?unitInfo(focusUnit,r.key):null})});
     if(!wired)return;
     const f=findFocus(wired.doc,r.key,'');focusUnit=f.focus;if(!kanjiHead(it.dict,r.key))applyFocus(wired.doc,f.focus,f.units);
-    frame.style.height=Math.min(window.innerHeight*0.55,Math.max(160,wired.doc.body.getBoundingClientRect().bottom+10))+'px';
+    const fit=()=>{frame.style.height=Math.min(window.innerHeight*0.55,Math.max(160,wired.doc.body.getBoundingClientRect().bottom+10))+'px';};
+    fit();
+    // One page holding several entries for this word (朝鮮語辞典: 비운1 否運, 비운2 悲運, 비운3 飛雲): a chip for each, and All.
+    const base=(w)=>norm(String(w||'').replace(/[0-9０-９①-⑳\s]/g,''));
+    const same=f.focus?f.units.filter(u=>base(unitInfo(u,r.key).word)===base(r.key)):[];
+    const box=s.sheet.querySelector('#lk-units');
+    box.hidden=same.length<2;
+    if(same.length>=2){
+      const label=(u)=>{const w=unitInfo(u,r.key).word||r.key;const m=u.textContent.match(/[〔【［(（]([^〕】］)）]{1,12})[〕】］)）]/);return w+(m?' '+m[1]:'');};
+      box.innerHTML=`<span class="lk-units-n">${same.length} entries</span>`+same.map((u,n)=>`<button class="chip small ${u===f.focus?'on':''}" data-u="${n}">${esc(label(u))}</button>`).join('')+`<button class="chip small" data-u="all">All</button>`;
+      box.querySelectorAll('[data-u]').forEach(b=>b.onclick=()=>{
+        const u=b.dataset.u==='all'?null:same[+b.dataset.u];
+        focusUnit=u||f.focus;applyFocus(wired.doc,u,f.units);
+        box.querySelectorAll('[data-u]').forEach(x=>x.classList.toggle('on',x===b));
+        wired.doc.documentElement.scrollTop=0;setTimeout(fit,30);
+      });
+    }
   };
   if(knownOn()){
     const kb=document.createElement('button');kb.className='icon-btn';kb.setAttribute('aria-label','Known word');kb.innerHTML=icon('check');
@@ -1929,6 +1959,7 @@ async function renderLibrary(){
       <div class="switch-row"><div><b>Vertical text (縦書き)</b><small>Show entries in vertical writing</small></div><label class="toggle"><input type="checkbox" id="set-vertical" ${settings.vertical?'checked':''}><span></span></label></div>
       <div class="switch-row"><div><b>Theme</b></div><div class="chips">${['light','sepia','dark'].map(t=>`<button class="chip small ${settings.theme===t?'on':''}" data-theme-set="${t}">${t[0].toUpperCase()+t.slice(1)}</button>`).join('')}</div></div>
       <div class="switch-row"><div><b>Track known words</b><small>A ✓ on entries, your vocabulary size, and how much of a chapter or episode you’d know. Nothing is highlighted while you read.</small></div><label class="toggle"><input type="checkbox" id="set-known" ${knownOn()?'checked':''}><span></span></label></div>
+      <div class="switch-row"><div><b>Recent searches</b><small>Show your recent searches on the Dictionary home screen</small></div><label class="toggle"><input type="checkbox" id="set-recent" ${settings.show_recent?'checked':''}><span></span></label></div>
       <div class="switch-row"><div><b>Show reading on card front</b><small>Otherwise the reading appears with the answer</small></div><label class="toggle"><input type="checkbox" id="set-front" ${settings.front_reading?'checked':''}><span></span></label></div>
     </div>
     <div class="section-label">Audio</div>
@@ -1955,6 +1986,7 @@ async function renderLibrary(){
   $('library-home').querySelectorAll('[data-z]').forEach(b=>b.onclick=()=>{settings.zoom=Math.max(0.7,Math.min(2.6,+(settings.zoom+ +b.dataset.z).toFixed(2)));saveLocalSettings();$('zv').textContent=Math.round(settings.zoom*100)+'%';});
   $('set-vertical').onchange=e=>{settings.vertical=e.target.checked;saveLocalSettings();};
   $('set-front').onchange=e=>{settings.front_reading=e.target.checked;saveLocalSettings();};
+  $('set-recent').onchange=e=>{settings.show_recent=e.target.checked;saveLocalSettings();renderSearchEmpty();};
   $('set-known').onchange=e=>{settings.known_words=e.target.checked;saveLocalSettings();};
   $('set-ap-entry').onchange=e=>{settings.autoplay_entry=e.target.checked;saveLocalSettings();};
   $('set-audio-front').onchange=e=>{settings.audio_front=e.target.checked;saveLocalSettings();};

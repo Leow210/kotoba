@@ -119,7 +119,8 @@ public class Lyrics {
     static double score(JSONObject r,String candTitle,String candArtist,double candDuration,String title,String artist,double duration){
         double d=duration>0&&candDuration>0?Math.abs(candDuration-duration):2;
         if(!fits(r,title,artist))d+=20;
-        if(!similar(candArtist,artist))d+=3;
+        // Another artist: out, unless the names are in different scripts (Atom Chanakan / อะตอม ชนกันต์ may be the same person).
+        if(!similar(candArtist,artist))d+=scripts(candArtist).equals(scripts(artist))?10:2;
         if(!norm(candTitle).contains(norm(clean(title)))&&!norm(clean(title)).contains(norm(candTitle)))d+=4;
         if(!r.optBoolean("synced"))d+=1.5;
         return d;
@@ -131,16 +132,16 @@ public class Lyrics {
         for(String t:y.split(" "))if(t.length()>1&&x.contains(t))return true;
         return false;
     }
-    /** Lyrics written in the scripts the title or artist use (kana/kanji, Hangul, Thai, Cyrillic), when they use any. */
+    /** Lyrics in a non-Latin script when the title or artist is written in one (kana/kanji, Hangul, Thai, Cyrillic). */
     static boolean fits(JSONObject r,String title,String artist){
         String want=scripts(title+" "+artist);
         if(want.isEmpty())return true;
         StringBuilder text=new StringBuilder();
         JSONArray ls=r.optJSONArray("lines");
         if(ls!=null)for(int i=0;i<ls.length();i++)text.append(ls.optJSONObject(i).optString("text")).append('\n');
-        String have=scripts(text.toString());
-        for(char c:want.toCharArray())if(have.indexOf(c)>=0)return true;
-        return false;
+        // Any of those scripts will do: 二十三 (NetEase's title for IU's 스물셋) has Korean lyrics. What's ruled out is a
+        // translation into a Latin-script language (a Vietnamese version of 米津玄師's Lemon).
+        return !scripts(text.toString()).isEmpty();
     }
     /** c: Chinese/Japanese, k: Korean, t: Thai, r: Cyrillic. */
     static String scripts(String s){

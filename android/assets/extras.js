@@ -298,13 +298,11 @@ async function openAppendixPage(dictId,name,label){
     const counts=await api('appendix.counts').catch(()=>[]);
     const withFuroku=counts.filter(c=>c.n>0&&dictById(c.dict));
     const div=document.createElement('div');
-    div.innerHTML=`<div class="section-label">Explore</div><div class="history">
-      ${dicts.some(d=>d.kind==='kanji'&&d.enabled)?`<button class="chip" id="go-kanji">漢 Kanji grid</button>`:''}
-      <button class="chip" id="go-lists">${icon('text','i sm')} Word lists</button>
+    // The kanji grid, word lists and other tools are tiles at the top now; the dictionaries' appendices stay here.
+    if(!withFuroku.length)return;
+    div.innerHTML=`<div class="section-label">Appendices (付録)</div><div class="history">
       ${withFuroku.map(c=>`<button class="chip" data-furoku="${c.dict}">付録 ${esc(shortName(dictById(c.dict).name))}</button>`).join('')}</div>`;
     box.appendChild(div);
-    const k=div.querySelector('#go-kanji');if(k)k.onclick=handle(()=>openKanjiGrid());
-    div.querySelector('#go-lists').onclick=()=>showTab('folders');
     div.querySelectorAll('[data-furoku]').forEach(b=>b.onclick=handle(()=>openAppendix(+b.dataset.furoku)));
   };
 })();

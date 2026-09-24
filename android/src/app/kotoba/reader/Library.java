@@ -1707,6 +1707,13 @@ public class Library {
         try(Cursor c=db.rawQuery("SELECT 1 FROM keys k JOIN dicts d ON d.id=k.dict WHERE k.norm=? AND d.enabled=1 AND d.status='ready' AND d.kind='term' LIMIT 1",new String[]{n})){return c.moveToFirst();}
     }
 
+    /** Helper verbs after a verb's -아/어 form, with what they add. */
+    static final java.util.Map<String,String> KO_AUX=java.util.Map.ofEntries(
+        java.util.Map.entry("내다","all the way, out"),java.util.Map.entry("주다","for someone"),java.util.Map.entry("드리다","for someone, humble"),
+        java.util.Map.entry("보다","try doing"),java.util.Map.entry("버리다","completely, regrettably"),java.util.Map.entry("놓다","in advance, and leave it"),
+        java.util.Map.entry("두다","in advance, and keep it"),java.util.Map.entry("가다","gradually, going on"),java.util.Map.entry("오다","gradually, up to now"),
+        java.util.Map.entry("지다","becoming, passive"),java.util.Map.entry("대다","over and over"),java.util.Map.entry("있다","resulting state"),
+        java.util.Map.entry("치우다","get it over with"),java.util.Map.entry("먹다","(regrettably) end up"),java.util.Map.entry("나다","through to the end"));
     static final java.util.Set<String> NOUN_PARTICLES=java.util.Set.of("의","을","를","에","에서","에게","한테","께","께서","와","과","처럼","만큼","조차","마저","밖에","로","으로","로부터","으로부터","에게서","한테서","에서부터");
     static final String[] KO_PARTICLES={"에서부터","에게서","한테서","으로부터","로부터","이라고","이라는","이라도","이었다","이었어요","입니다","이에요","이지만","에서도","에게도","한테도","까지도","부터도","으로도","에서는","에게는","으로는","이든지","이랑","이나","이야","이며","이고","인데","였다","였어요","예요","라고","라는","라도","로도","로는","에도","에는","과는","와는","하고","처럼","보다","만큼","까지","부터","조차","마저","밖에","든지","에서","에게","한테","께서","으로","이다","이든","로","와","과","도","만","들","의","은","는","이","가","을","를","에","께","랑","나","야","며","고","요","든"};
 
@@ -1822,6 +1829,28 @@ public class Library {
                     parts[1].put("explain","noun + "+particles).put("chain",b+" + "+particles).put("extra",extra);
                     add.accept(parts[1],b);break;
                 }
+            }
+        }
+        // 4b. A verb in its -아/어 form + a helper verb, each conjugated as usual: 쏟아내 = 쏟다 + 내다 ("pour out"),
+        // 먹어 버렸어 = 먹다 + 버리다, 알아봤어요 = 알다 + 보다. Dictionaries rarely list every pair as one word.
+        if(out.isEmpty())for(int k=word.length()-1;k>=1&&out.isEmpty();k--){
+            String left=word.substring(0,k),right=word.substring(k);
+            char last=left.charAt(left.length()-1);
+            if(last<0xAC00||last>0xD7A3||(last-0xAC00)%28!=0)continue;// the -아/어 form ends in an open syllable
+            String aux=null,auxNote=null;JSONArray auxRows=null;
+            for(Deinflect.Candidate c:Deinflect.korean(right,w->{try{return koKey(w);}catch(Exception e){return false;}},this::koreanStems)){
+                String note=KO_AUX.get(c.base);if(note==null)continue;
+                JSONArray rows=koEntries(c.base);if(rows.length()==0)continue;
+                aux=c.base;auxNote=note+(c.explain().isEmpty()?"":" · "+c.explain());auxRows=rows;break;
+            }
+            if(aux==null&&KO_AUX.containsKey(right+"다")&&koKey(right+"다")){aux=right+"다";auxNote=KO_AUX.get(aux);auxRows=koEntries(aux);}
+            if(aux==null)continue;
+            for(Deinflect.Candidate c:Deinflect.korean(left,w->{try{return koKey(w);}catch(Exception e){return false;}},this::koreanStems)){
+                if(!c.explain().contains("informal")&&!c.chain().contains("아/어"))continue;
+                JSONArray rows=koEntries(c.base);if(rows.length()==0)continue;
+                String auxEnding=aux.substring(0,aux.length()-1);
+                add.accept(new JSONObject().put("base",c.base).put("explain","+ "+aux+" ("+auxNote+")").put("chain",c.base+" + -아/어 "+auxEnding+"-").put("items",rows).put("extra",auxRows),c.base);
+                break;
             }
         }
         // 5. Compound noun (장례식장 = 장례 + 식장), or a prefix + a conjugated word (떠 + 올렸다 → 올리다).

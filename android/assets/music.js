@@ -86,7 +86,7 @@
         f('lines').querySelector('[data-a="find2"]').onclick=findSheet;return;
       }
       lang=textLang(r.lines.map(l=>l.text).join('\n'),'');
-      f('lines').innerHTML=`<p class="hint mu-source">${esc(r.source)}${r.synced?'':' · not synced'}</p>`+r.lines.map((l,i)=>`<div class="mu-line" data-i="${i}"><div class="mu-text" lang="${lang}">${tappable(l.text)}</div>${l.tr?`<div class="mu-tr">${esc(l.tr)}</div>`:''}<div class="mu-acts"><button data-l="tr">${icon('share')} Translate</button><button data-l="card">${icon('star')} Sentence</button>${l.t>=0&&now&&now.control?`<button data-l="seek">▶ ${fmt(l.t)}</button>`:''}<button data-l="copy">${icon('copy')}</button></div></div>`).join('');
+      f('lines').innerHTML=`<p class="hint mu-source">${esc(r.source)}${r.synced?'':' · not synced'}</p>`+r.lines.map((l,i)=>`<div class="mu-line" data-i="${i}"><div class="mu-text" lang="${lang}">${tappable(l.text)}</div>${l.tr?`<div class="mu-tr">${esc(l.tr)}</div>`:''}<div class="mu-acts"><button data-l="tr">${icon('share')} Translate</button><button data-l="card">${icon('star')} Sentence</button><button data-l="copy">${icon('copy')}</button></div></div>`).join('');
     }
 
     // Words: look up (pausing the music if chosen, and playing on when the lookup closes).
@@ -99,12 +99,19 @@
         const around=lyrics.lines.slice(Math.max(0,+line.dataset.i-2),+line.dataset.i+3).map(x=>x.text).join('\n');
         if(a==='tr')window.__translateInApp?window.__translateInApp(l.text,around):Kotoba.translate(l.text);
         if(a==='card')await saveSentence({text:l.text,back:l.tr||'',note:`♪ ${now.title} — ${now.artist}${l.t>=0?' · '+fmt(l.t):''}`});
-        if(a==='seek'){await api('music.control',{action:'seek',t:Math.max(0,l.t-offset)});setTimeout(refresh,300);}
         if(a==='copy'){Kotoba.copy(l.text);toast('Copied');}
         return;
       }
       const w=e.target.closest('.mu-w');
-      if(!w){line.classList.toggle('open');return;}
+      // A tap beside the words: the song jumps to this line (unsynced lyrics just show the line's buttons).
+      if(!w){
+        if(l.t>=0&&now&&now.control){
+          await api('music.control',{action:'seek',t:Math.max(0,l.t-offset)});
+          if(now){now.position=Math.max(0,l.t-offset);nowAt=Date.now();}
+          userScrolled=0;active=-2;setTimeout(refresh,400);
+        }else line.classList.toggle('open');
+        return;
+      }
       const word=wordAt(l.text,w);if(!word)return;
       line.querySelectorAll('.mu-w.on').forEach(x=>x.classList.remove('on'));
       if(w.dataset.end!=null)line.querySelectorAll('.mu-w').forEach(x=>{if(x.dataset.end===w.dataset.end&&+x.dataset.o>=+w.dataset.o)x.classList.add('on');});else w.classList.add('on');
@@ -164,14 +171,5 @@
   }
   window.openMusic=openMusic;
 
-  // Entry points: a chip in Explore (both), and a Music tab in the Mac's sidebar.
-  const original=renderSearchEmpty;
-  window.renderSearchEmpty=renderSearchEmpty=async function(){
-    await original();
-    const row=$('search-empty').querySelector('#go-lists');
-    if(!row||row.parentElement.querySelector('#go-music'))return;
-    const b=document.createElement('button');b.className='chip';b.id='go-music';b.innerHTML='♪ Lyrics for what’s playing';
-    b.onclick=()=>openMusic();
-    row.parentElement.insertBefore(b,row.parentElement.firstChild);
-  };
+  // Entry points: the Lyrics tile on the Dictionary home screen, and the Mac's Music tab (desktop-after.js).
 })();
