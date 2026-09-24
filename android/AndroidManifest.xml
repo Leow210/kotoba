@@ -8,6 +8,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- The one thing that goes online: synced lyrics (LRCLIB, NetEase) for the song that's playing. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <queries><package android:name="com.google.android.apps.translate"/><intent><action android:name="android.intent.action.PROCESS_TEXT"/><data android:mimeType="text/plain"/></intent></queries>
     <application android:label="Kotoba" android:theme="@android:style/Theme.Material.Light.NoActionBar" android:allowBackup="false" android:usesCleartextTraffic="false" android:icon="@drawable/icon" android:largeHeap="true" android:extractNativeLibs="true" android:debuggable="true">
         <!-- The GPU (OpenCL) for PaddleOCR-VL through LiteRT-LM; optional, so phones without it still install. -->
@@ -21,6 +23,10 @@
             <intent-filter android:label="Look up in Kotoba"><action android:name="android.intent.action.SEND"/><category android:name="android.intent.category.DEFAULT"/><data android:mimeType="text/plain"/></intent-filter>
             <intent-filter android:label="Scan text in Kotoba"><action android:name="android.intent.action.SEND"/><category android:name="android.intent.category.DEFAULT"/><data android:mimeType="image/*"/></intent-filter>
         </activity>
+        <!-- Reads which song is playing (title, position) from media apps' sessions, for lyrics. -->
+        <service android:name=".NowPlaying" android:label="Kotoba lyrics" android:exported="true" android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter><action android:name="android.service.notification.NotificationListenerService"/></intent-filter>
+        </service>
         <service android:name=".ScreenText" android:exported="false" android:foregroundServiceType="mediaProjection"/>
     </application>
 </manifest>

@@ -130,11 +130,16 @@
       const b=document.getElementById('go-import');if(b)b.onclick=()=>{showTab('library');pickFolder();};
     };
   }
+  // Music: lyrics for what's playing (a page, like the phone's Explore chip).
+  const musicBtn=document.createElement('button');musicBtn.dataset.tab='music';
+  musicBtn.innerHTML=`<svg class="i" viewBox="0 0 24 24"><path d="M9 18V6l11-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></svg>Music`;
+  musicBtn.onclick=()=>{if(tab!=='search')showTab('search');window.openMusic&&openMusic();};
   // The Reader tab keeps books and comics (the comics come from the phone's Mihon folder); videos get a tab of their own.
   const readerBtn=document.querySelector('.tabbar [data-tab="reader"]');
   const videoBtn=document.createElement('button');videoBtn.dataset.tab='video';
   videoBtn.innerHTML=`<svg class="i" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M10 9.5v5l4.5-2.5z"/></svg>Video`;
   readerBtn.after(videoBtn);
+  videoBtn.after(musicBtn);
   videoBtn.onclick=()=>showTab('video');
   const screen=document.createElement('section');screen.className='screen';screen.id='screen-video';screen.hidden=true;
   document.getElementById('screen-reader').after(screen);

@@ -1159,7 +1159,8 @@ public class Library {
         return out;
     }
 
-    static final String THESAURUS_FILTER=" AND d.grp NOT LIKE 'Japanese/類語%' AND d.title NOT LIKE '%日本語シソーラス%'";
+    static final String THESAURUS_FILTER=" AND coalesce(d.grp,'') NOT LIKE 'Japanese/類語%' AND coalesce(d.title,'') NOT LIKE '%日本語シソーラス%'";
+    static final String THESAURUS_MATCH=" AND (d.grp LIKE 'Japanese/類語%' OR d.title LIKE '%日本語シソーラス%')";
 
     public JSONObject search(String query,String mode,String dict,int offset,boolean hideThesaurus) throws Exception {
         String term=HtmlText.normalize(query);
@@ -1236,7 +1237,7 @@ public class Library {
     }
 
     boolean isThesaurusDict(long id) throws Exception {
-        return Store.rows(db,"SELECT 1 FROM dicts d WHERE d.id=?"+THESAURUS_FILTER.replace(" AND d.grp NOT LIKE 'Japanese/類語%' AND d.title NOT LIKE '%日本語シソーラス%'"," AND (d.grp LIKE 'Japanese/類語%' OR d.title LIKE '%日本語シソーラス%')")+" LIMIT 1",Long.toString(id)).length()>0;
+        return Store.rows(db,"SELECT 1 FROM dicts d WHERE d.id=?"+THESAURUS_MATCH+" LIMIT 1",Long.toString(id)).length()>0;
     }
 
     /** Each result's rank in the first enabled frequency list of the result's language (JPDB for Japanese, CC100 for Korean…). */

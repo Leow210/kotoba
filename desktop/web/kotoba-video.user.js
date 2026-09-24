@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         Kotoba Video Text
 // @namespace    app.kotoba.desktop
-// @version      0.7.0
-// @description  Look up YouTube and GagaOOLala subtitles in Kotoba for Mac: hold Shift over a word. Works in Firefox and Chrome (Tampermonkey).
+// @version      0.8.0
+// @description  Look up YouTube and GagaOOLala subtitles in Kotoba for Mac: hold Shift over a word; YouTube Music's song goes to Kotoba's lyrics. Works in Firefox and Chrome (Tampermonkey).
 // @match        https://www.youtube.com/watch*
 // @match        https://www.gagaoolala.com/*/videos/*
+// @match        https://music.youtube.com/*
 // @run-at       document-idle
 // @noframes
 // @grant        GM_xmlhttpRequest
@@ -24,6 +25,27 @@
   if (document.getElementById('kotoba-video-ui')) return;
   const KEY = '__KOTOBA_KEY__', PORT = '__KOTOBA_PORT__';
 
+  // YouTube Music: nothing to hover; the song and its position go to Kotoba (Music), which shows synced lyrics and can
+  // pause, play or seek it back through the answer.
+  if (location.hostname === 'music.youtube.com') {
+    const report = () => {
+      const v = document.querySelector('video');
+      const md = navigator.mediaSession && navigator.mediaSession.metadata;
+      const title = (md && md.title) || (document.querySelector('ytmusic-player-bar .title') || {}).textContent || '';
+      if (!v || !title) return;
+      const byline = ((document.querySelector('ytmusic-player-bar .byline') || {}).textContent || '').split('•').map(x => x.trim());
+      kotoba('music.report', { app: 'YouTube Music', title: title.trim(), artist: (md && md.artist) || byline[0] || '', album: (md && md.album) || byline[1] || '',
+        duration: isFinite(v.duration) ? v.duration : 0, position: v.currentTime, playing: !v.paused }).then(r => {
+        const c = r && r.command; if (!c) return;
+        if (c.action === 'pause') v.pause();
+        else if (c.action === 'play') v.play();
+        else if (c.action === 'seek' && c.t >= 0) v.currentTime = c.t;
+        else if (c.action === 'toggle') v.paused ? v.play() : v.pause();
+      }).catch(() => {});
+    };
+    setInterval(report, 1000);
+    return;
+  }
   const youtube = location.hostname === 'www.youtube.com';
   const sourceSelector = youtube ? '.ytp-caption-window-container' : '.bmpui-ui-subtitle-overlay';
   const store = { get: (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} } };

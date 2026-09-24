@@ -1,6 +1,6 @@
 # Kotoba 詞
 
-Kotoba is a personal Android dictionary and flashcard app that I built around my own MDict (`.mdx`/`.mdd`) files, including Monokakido exports. It keeps the dictionaries' original typography, images and audio, and makes it easy to save a lookup as a spaced-repetition card. It does not need an account or an internet connection.
+Kotoba is a personal Android dictionary and flashcard app that I built around my own MDict (`.mdx`/`.mdd`) files, including Monokakido exports. It keeps the dictionaries' original typography, images and audio, and makes it easy to save a lookup as a spaced-repetition card. It does not need an account, and works offline except for song lyrics.
 
 I mainly use it for **Japanese, Korean, Chinese, Thai and Russian**. The [project page](https://leow210.github.io/kotoba/) has short videos of the main features.
 
@@ -116,6 +116,12 @@ Tap a preview to play the video. Each one is silent and about 15–25 seconds lo
   - Each one lists the most frequent new words to look up or tick before you start. Words are counted by dictionary form (conjugations are folded; Korean uses its own analysis). It is an estimate: names and OCR slips count as unknown.
 - Cards export to Anki (TSV with HTML and folder tags) or CSV, and Chinese cards export to **Pleco** (flashcard text file; each folder becomes a `//Kotoba/<folder>` category).
 - **Already a card:** an entry notes when the same word is already a card saved from another dictionary (e.g. 言葉 from 大辞林 while reading 明鏡), and so does the save sheet. The word and, when both have one, the reading must match, so homophones (橋/箸) and other readings (人気 にんき/ひとけ) aren't confused. JSON backups merge with existing data and skip duplicates when restored.
+
+### Lyrics for what's playing
+- Play a song in Spotify, YouTube Music, NetEase… and **♪ Lyrics** (Explore; the Mac's Music tab) shows its time-synced lyrics, the current line highlighted and followed. The phone reads the song and its position from Android's media sessions (Notification access, allowed once); the Mac asks the Spotify and Music apps and gets YouTube Music from the browser helper.
+- Tap a word for its entry (the music pauses meanwhile and plays on after); each line can be translated, kept as a sentence card (with the song and time), copied, or played from. NetEase's translations show under the lines.
+- Lyrics come from [LRCLIB](https://lrclib.net) (open, synced .lrc) and NetEase Cloud Music's lyric service, matched by title, artist, length and script (so a Vietnamese version of a Japanese song isn't taken), cached per song. Earlier / Later nudge the timing (kept per song); 🔍 searches by hand.
+- This is the one feature that goes online: the phone app has internet access for lyrics only.
 
 ### Kanji, word lists, furoku
 - **Kanji grid:** every kanji in 漢辞海 and 漢検 as a grid you can filter by Kanken level, stroke count, radical and 常用/教育/人名. Old and variant forms (舊 → 旧) find their main entry.

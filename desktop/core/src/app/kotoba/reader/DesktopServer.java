@@ -101,6 +101,9 @@ public class DesktopServer {
             case "translate.config":return translator.config();
             case "translate.set":translator.set(d);return translator.config();
             case "translate":return translator.translate(d.getString("text"),d.optString("from",""),d.optString("to",""),d.optString("engine",""),d.optString("context",""));
+            case "music.now":return musicNow();
+            case "music.control":return musicControl(d.getString("action"),d.optDouble("t",-1));
+            case "music.report":return musicReport(d);
             case "doc.list":return writing.list();
             case "doc.get":return writing.get(d.getString("id"));
             case "doc.save":return writing.save(d);
@@ -345,7 +348,65 @@ public class DesktopServer {
     /** The helper's fixed address (the main server's port changes every launch). 127.0.0.1 only. */
     static final int HELPER_PORT=47823;
     /** Requests the helper may make: looking words up and saving cards, nothing else. */
-    static final java.util.Set<String> HELPER_ROUTES=java.util.Set.of("lookup","gloss.rec","freq","item.similar","item.save","folders","folder.save","dicts","known.get","known.set");
+    static final java.util.Set<String> HELPER_ROUTES=java.util.Set.of("lookup","gloss.rec","freq","item.similar","item.save","folders","folder.save","dicts","known.get","known.set","music.report");
+
+    // ---------- now playing (for synced lyrics) ----------
+
+    /** The browser helper's report from YouTube Music, and a command waiting for it (pause, play, seek). */
+    volatile JSONObject browserMusic;volatile long browserMusicAt;volatile JSONObject browserCommand;
+
+    JSONObject musicReport(JSONObject d) throws Exception {
+        browserMusic=d;browserMusicAt=System.currentTimeMillis();
+        JSONObject cmd=browserCommand;browserCommand=null;
+        return new JSONObject().put("command",cmd==null?JSONObject.NULL:cmd);
+    }
+
+    static final String[] MUSIC_APPS={"Spotify","Music"};
+    /** The song playing in the Spotify or Music app (asked only if the app is already open), or in YouTube Music in the browser. */
+    JSONObject musicNow() throws Exception {
+        JSONObject best=null;
+        for(String app:MUSIC_APPS){
+            String out=osa("if application \""+app+"\" is running then\ntell application \""+app+"\"\n"
+                +"if player state is stopped then return \"\"\n"
+                +"return (name of current track) & (ASCII character 9) & (artist of current track) & (ASCII character 9) & (album of current track) & (ASCII character 9) & (duration of current track) & (ASCII character 9) & (player position) & (ASCII character 9) & (player state as string)\n"
+                +"end tell\nend if\nreturn \"\"");
+            String[] f=out.split("\t",-1);
+            if(f.length<6||f[0].isEmpty())continue;
+            double duration=num(f[3]);
+            if(app.equals("Spotify"))duration/=1000;// milliseconds there, seconds in Music
+            JSONObject o=new JSONObject().put("app",app.equals("Music")?"Apple Music":"Spotify").put("title",f[0]).put("artist",f[1]).put("album",f[2])
+                .put("duration",duration).put("position",num(f[4])).put("playing",f[5].trim().equals("playing")).put("control",true);
+            if(best==null||o.getBoolean("playing")&&!best.getBoolean("playing"))best=o;
+        }
+        JSONObject b=browserMusic;
+        if(b!=null&&System.currentTimeMillis()-browserMusicAt<4000){
+            double pos=b.optDouble("position",0)+(b.optBoolean("playing")?(System.currentTimeMillis()-browserMusicAt)/1000.0:0);
+            JSONObject o=new JSONObject(b.toString()).put("position",pos).put("control",true);
+            if(best==null||o.optBoolean("playing")&&!best.getBoolean("playing"))best=o;
+        }
+        return best==null?new JSONObject().put("playing",false).put("title",""):best;
+    }
+
+    JSONObject musicControl(String action,double t) throws Exception {
+        JSONObject now=musicNow();
+        String app=now.optString("app");
+        if(app.equals("YouTube Music")){browserCommand=new JSONObject().put("action",action).put("t",t);return now;}
+        String target=app.equals("Apple Music")?"Music":app.equals("Spotify")?"Spotify":null;
+        if(target==null)return now;
+        String verb=action.equals("pause")?"pause":action.equals("play")?"play":action.equals("seek")?"set player position to "+t:"playpause";
+        osa("tell application \""+target+"\" to "+verb);
+        return musicNow();
+    }
+
+    static double num(String s){try{return Double.parseDouble(s.trim().replace(',','.'));}catch(Exception e){return 0;}}
+    static String osa(String script){
+        try{
+            Process p=new ProcessBuilder("/usr/bin/osascript","-e",script).redirectError(ProcessBuilder.Redirect.DISCARD).start();
+            String out=new String(p.getInputStream().readAllBytes(),StandardCharsets.UTF_8).trim();
+            p.waitFor(3,java.util.concurrent.TimeUnit.SECONDS);
+            return out;
+        }catch(Exception e){return "";}
+    }
 
     String helperKey(){
         String k=routes.store.setting("helper_key","");

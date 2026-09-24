@@ -340,6 +340,10 @@ public class MainActivity extends Activity {
 
     Object route(String route,JSONObject d) throws Exception {
         switch(route){
+            // What's playing in Spotify, YouTube Music, NetEase… (a notification listener the user allows), for synced lyrics.
+            case "music.now":return NowPlaying.now(this);
+            case "music.control":return NowPlaying.control(this,d.getString("action"),d.optDouble("t",-1));
+            case "music.access":runOnUiThread(()->startActivity(new Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)));return null;
             case "sync.status":return syncStatus();
             case "sync.now":return syncNow();
             case "library.scan":return scan(Uri.parse(d.getString("tree")));

@@ -29,6 +29,8 @@ public class Routes {
     public Books books;// set by the platform (both apps have the book reader)
     public Comics comics;// and the comic reader
     public Ocr ocr;// with its text layer
+    Lyrics lyrics;// synced lyrics for the song that's playing (the one online feature)
+    Lyrics lyrics(){if(lyrics==null)lyrics=new Lyrics(store);return lyrics;}
     final Host host;
     final ExecutorService importer=Executors.newSingleThreadExecutor();
     public final AtomicBoolean cancelImport=new AtomicBoolean(false);
@@ -54,6 +56,10 @@ public class Routes {
                 }
                 return result;
             }
+            // ---------- lyrics (the song playing in Spotify, YouTube Music, NetEase…) ----------
+            case "lyrics.get":return lyrics().get(d.optString("title"),d.optString("artist"),d.optString("album",""),d.optDouble("duration",0),d.optBoolean("refresh",false));
+            case "lyrics.search":return lyrics().search(d.getString("q"));
+            case "lyrics.pick":return lyrics().pick(d.optString("title"),d.optString("artist"),d.getString("source"),d.getLong("id"));
             case "the2.index":return library.the2Index(d.optString("q",""));
             case "the2.matches":return library.the2Matches(d.getLong("rec"),d.optString("q",""));
             case "forms":return library.forms(d.getString("q"));

@@ -571,3 +571,25 @@ svg.i.sm{width:16px;height:16px}
 .ke-word b{font:500 19px var(--serif)}.ke-word small{color:var(--muted);font-size:13px}
 .ke-n{color:var(--muted);font-size:13px}
 .ke-ok{color:var(--muted)}
+/* Lyrics for what's playing */
+.music-page{display:flex;flex-direction:column}
+.mu-tools{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 14px 10px;border-bottom:1px solid var(--line)}
+.mu-offset{font-size:12px;color:var(--muted);min-width:34px;text-align:center}
+.mu-scroll{flex:1;overflow:auto;padding:10px 0 45vh}
+.mu-lines{max-width:760px;margin:0 auto}
+.mu-empty{padding:30px 22px;text-align:center}
+.mu-source{text-align:center;margin:0 0 8px}
+.mu-line{padding:9px 20px;border-radius:14px;margin:0 8px;transition:background .2s,opacity .2s;cursor:pointer}
+.mu-line.past{opacity:.55}
+.mu-line.now{background:var(--accent-soft)}
+.mu-line.now .mu-text{color:var(--accent);font-weight:600}
+.mu-text{font:21px/1.6 var(--serif);color:var(--ink)}
+.mu-w{border-radius:4px;cursor:pointer}
+.mu-w:hover{background:rgba(124,194,160,.25)}
+.mu-w.on{background:rgba(246,227,161,.8);color:var(--ink)}
+.mu-tr{font-size:14px;color:var(--muted);margin-top:2px}
+.music-page.mu-hide-tr .mu-tr{display:none}
+.mu-acts{display:none;gap:6px;flex-wrap:wrap;margin-top:6px}
+.mu-line.open .mu-acts,.mu-line.now .mu-acts{display:flex}
+.mu-acts button{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;font-weight:600;padding:5px 10px;border-radius:9px;background:var(--surface);border:1px solid var(--line);color:var(--ink2)}
+.mu-acts button svg{width:14px;height:14px}

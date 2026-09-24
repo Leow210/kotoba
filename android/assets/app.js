@@ -767,6 +767,23 @@ function fitVertical(doc){
 function frameSetup(frame,opts){
   // Wires a dictionary-page iframe: sizing, zoom, links, audio, selection.
   const doc=frame.contentDocument;if(!doc||!doc.body)return null;
+  // THE2's category pages use custom <child href="01866"> elements. Give the
+  // entire row a real link so the existing entry navigation also works here.
+  const subcategories=doc.querySelectorAll('children > child.link[href]');
+  if(subcategories.length){
+    const style=doc.createElement('style');
+    style.textContent='a.the2-child-link{display:block;color:inherit;text-decoration:none;cursor:pointer}a.the2-child-link:hover child,a.the2-child-link:focus-visible child{background:rgba(80,120,160,.1)}';
+    doc.head.appendChild(style);
+    subcategories.forEach(child=>{
+      const id=child.getAttribute('href')||'';
+      if(!/^\d{1,6}$/.test(id))return;
+      const link=doc.createElement('a');
+      link.className='the2-child-link';
+      link.setAttribute('href','entry://'+id.padStart(5,'0'));
+      child.replaceWith(link);
+      link.appendChild(child);
+    });
+  }
   doc.documentElement.style.zoom=String(opts.zoom||settings.zoom);
   // Dictionaries that are vertical by design (無礼語) get the vertical layout whatever the setting.
   opts.nativeVertical=/^vertical/.test(getComputedStyle(doc.body).writingMode||'');
