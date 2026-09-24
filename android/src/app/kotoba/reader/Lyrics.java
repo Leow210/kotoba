@@ -166,7 +166,9 @@ public class Lyrics {
 
     // ---------- NetEase Cloud Music ----------
 
-    static final String NE_HEADERS="Referer: https://music.163.com/";
+    // NetEase answers its web clients: a browser's agent and referrer. (Its older /api/search/get/web now returns an
+    // encrypted blob; /api/cloudsearch/pc still answers in plain JSON.)
+    static final String NE_HEADERS="Referer: https://music.163.com/\nUser-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15";
     JSONObject netease(String title,String artist,double duration) throws Exception {
         List<JSONObject> found=neteaseSearch(clean(title)+" "+artist);
         if(found.isEmpty())found=neteaseSearch(clean(title));
@@ -180,17 +182,17 @@ public class Lyrics {
         return best==null||bd>8?null:best;
     }
     List<JSONObject> neteaseSearch(String q) throws Exception {
-        JSONObject r=new JSONObject(http("https://music.163.com/api/search/get/web?type=1&limit=8&s="+enc(q),NE_HEADERS));
+        JSONObject r=new JSONObject(http("https://music.163.com/api/cloudsearch/pc?type=1&limit=8&s="+enc(q),NE_HEADERS));
         List<JSONObject> out=new ArrayList<>();
         JSONArray songs=r.optJSONObject("result")==null?null:r.getJSONObject("result").optJSONArray("songs");
         if(songs==null)return out;
         for(int i=0;i<songs.length();i++){
             JSONObject s=songs.getJSONObject(i);
             StringBuilder artists=new StringBuilder();
-            JSONArray ar=s.optJSONArray("artists");
+            JSONArray ar=s.optJSONArray("ar");if(ar==null)ar=s.optJSONArray("artists");
             if(ar!=null)for(int j=0;j<ar.length();j++){if(j>0)artists.append(", ");artists.append(ar.getJSONObject(j).optString("name"));}
             out.add(new JSONObject().put("source","netease").put("id",s.getLong("id")).put("title",s.optString("name")).put("artist",artists.toString())
-                .put("duration",s.optDouble("duration",0)/1000.0).put("synced",true));
+                .put("duration",s.optDouble("dt",s.optDouble("duration",0))/1000.0).put("synced",true));
         }
         return out;
     }
@@ -246,7 +248,7 @@ public class Lyrics {
         HttpURLConnection c=(HttpURLConnection)new URL(url).openConnection();
         c.setConnectTimeout(8000);c.setReadTimeout(12000);
         c.setRequestProperty("User-Agent",AGENT);
-        if(header!=null){int i=header.indexOf(':');c.setRequestProperty(header.substring(0,i).trim(),header.substring(i+1).trim());}
+        if(header!=null)for(String h:header.split("\n")){int i=h.indexOf(':');if(i>0)c.setRequestProperty(h.substring(0,i).trim(),h.substring(i+1).trim());}
         int code=c.getResponseCode();
         if(code>=400)throw new Exception("Lyrics service answered "+code);
         try(InputStream in=c.getInputStream()){
