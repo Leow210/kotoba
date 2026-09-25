@@ -364,6 +364,28 @@ public class Store {
         }finally{db.endTransaction();}
     }
 
+    /**
+     * Everything the Stats screen draws, raw (the page groups it by local day, 4am rollover): every review as
+     * [time s, rating, state before, days since the previous review, folder], and every card as [state, due,
+     * last review, stability, difficulty, reps, lapses, in review, folder]. Folder 0 = all decks.
+     */
+    public JSONObject statsRaw(long folder)throws Exception{
+        String scope=folder>0?" AND i.folder_id="+folder:"";
+        JSONArray reviews=new JSONArray();
+        try(android.database.Cursor c=db.rawQuery("SELECT r.reviewed,r.rating,r.before,i.folder_id FROM reviews r JOIN items i ON i.id=r.item_id WHERE 1=1"+scope+" ORDER BY r.reviewed",null)){
+            while(c.moveToNext()){
+                int state=0;double elapsed=-1;
+                try{JSONObject b=new JSONObject(c.getString(2));state=b.optInt("state");long last=b.optLong("last_review");if(last>0)elapsed=Math.round((c.getLong(0)-last)/8640.0)/10.0;}catch(Exception ignored){}
+                reviews.put(new JSONArray().put(c.getLong(0)).put(c.getInt(1)).put(state).put(elapsed).put(c.getLong(3)));
+            }
+        }
+        JSONArray cards=new JSONArray();
+        try(android.database.Cursor c=db.rawQuery("SELECT state,due,last_review,stability,difficulty,reps,lapses,review,folder_id FROM items i WHERE 1=1"+scope,null)){
+            while(c.moveToNext())cards.put(new JSONArray().put(c.getInt(0)).put(c.getLong(1)).put(c.getLong(2)).put(Math.round(c.getDouble(3)*10)/10.0).put(Math.round(c.getDouble(4)*100)/100.0).put(c.getInt(5)).put(c.getInt(6)).put(c.getInt(7)).put(c.getLong(8)));
+        }
+        return new JSONObject().put("reviews",reviews).put("cards",cards).put("now",now()).put("retention",scheduler().retention);
+    }
+
     public JSONObject stats()throws Exception{
         long t=now(),day=dayStart();
         JSONObject s=rows(db,"SELECT count(*) items,coalesce(sum(review),0) cards,coalesce(sum(CASE WHEN review=1 AND state=2 AND stability>=21 THEN 1 ELSE 0 END),0) mature FROM items").getJSONObject(0);

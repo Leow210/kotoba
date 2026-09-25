@@ -680,3 +680,47 @@ svg.i.sm{width:16px;height:16px}
 .sheet-foot #lk-card{flex:1 0 auto}
 .sheet.floating .sheet-foot{gap:8px;padding:8px 12px 10px}
 .sheet.floating .sheet-foot .btn{height:40px;font-size:14px;padding:0 12px}
+
+/* Statistics (Anki-style) */
+:root{--st-new:#6a9fd4;--st-learn:#e0a44a;--st-relearn:#d06a5a;--st-young:#7cc2a0;--st-mature:#2e6b50;--st-susp:#b9b3a6;--st-h0:rgba(125,125,125,.14);--st-h1:#c7e6d5;--st-h2:#8fcaa9;--st-h3:#4f9e78;--st-h4:#2e6b50}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--st-h1:#29473a;--st-h2:#34684f;--st-h3:#4f9e78;--st-h4:#8fd3b1}}
+:root[data-theme="dark"]{--st-h1:#29473a;--st-h2:#34684f;--st-h3:#4f9e78;--st-h4:#8fd3b1}
+.st-strip{display:block;width:calc(100% - 32px);text-align:left;font:inherit;color:inherit;cursor:pointer}
+.st-strip .section-label{display:flex;justify-content:space-between}.st-strip .section-label span{text-transform:none;letter-spacing:0;color:var(--accent);font-weight:600}
+.st-strip-sum{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:8px;font-size:12.5px;color:var(--muted)}.st-strip-sum b{color:var(--ink);font-weight:600}
+.st-hm{display:flex;gap:3px}.st-hm>div{display:flex;flex-direction:column;gap:3px}
+.st-hm i{display:block;width:12px;height:12px;border-radius:3px;background:var(--st-h0)}
+.st-hm.small i{width:20px;height:20px;border-radius:5px}
+.st-hm i.st-hm-x{background:transparent}.st-hm i.st-hm-1{background:var(--st-h1)}.st-hm i.st-hm-2{background:var(--st-h2)}.st-hm i.st-hm-3{background:var(--st-h3)}.st-hm i.st-hm-4{background:var(--st-h4)}
+.st-hm i.st-hm-today{box-shadow:0 0 0 1.5px var(--ink)}
+.st-hm-wrap{overflow-x:auto;padding:4px 0 8px}
+.st-hm-legend{align-items:center}.st-hm-legend i{display:inline-block;width:12px;height:12px;border-radius:3px;background:var(--st-h0)}
+.st-hm-legend i.st-hm-1{background:var(--st-h1)}.st-hm-legend i.st-hm-2{background:var(--st-h2)}.st-hm-legend i.st-hm-3{background:var(--st-h3)}.st-hm-legend i.st-hm-4{background:var(--st-h4)}
+.st-page{display:flex;flex-direction:column}
+.st-deck{font:inherit;font-size:13px;padding:5px 8px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--ink);max-width:40%}
+.st-tabs{display:flex;gap:6px;padding:6px 14px 8px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--line);flex:none}.st-tabs .chip{flex:none}
+.st-scroll{flex:1;overflow:auto}
+.st-body{max-width:820px;margin:0 auto;padding:12px 16px 40px}
+.st-body h3{font:600 14px var(--sans,inherit);color:var(--ink2);margin:14px 0 8px}
+.st-range{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.st-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin:14px 0}
+.st-tiles>div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.st-tiles b{display:block;font:600 22px var(--serif)}.st-tiles small{color:var(--muted);font-size:12px}
+.st-bars{display:flex;align-items:flex-end;gap:2px;height:180px;padding-top:16px}
+.st-bars>div{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:stretch;position:relative}
+.st-stack{display:flex;flex-direction:column-reverse;border-radius:3px 3px 0 0;overflow:hidden;min-height:0}
+.st-stack i{display:block;min-height:1px}
+.st-bars small{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--muted);white-space:nowrap}
+.st-bars{margin-bottom:22px}
+.st-hours em{position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:9px;font-style:normal;color:var(--muted)}
+.st-legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted);margin:4px 0}
+.st-legend span{display:inline-flex;align-items:center;gap:5px}.st-legend i{display:inline-block;width:10px;height:10px;border-radius:3px}
+.st-table{width:100%;border-collapse:collapse;font-size:14px;margin:8px 0}
+.st-table th{text-align:left;font-weight:500;color:var(--ink2);padding:7px 6px;border-bottom:1px solid var(--line)}
+.st-table td{text-align:right;padding:7px 6px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+.st-table td small{color:var(--muted)}
+.st-table tr.st-head td{color:var(--muted);font-size:12px}
+.st-cards{display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+.st-pie{width:150px;height:150px;border-radius:50%;flex:none}
+.st-cards .st-table{flex:1;min-width:220px}
+.st-dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:middle}

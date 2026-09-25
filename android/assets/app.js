@@ -1863,7 +1863,8 @@ async function renderReviewHome(){
     <div class="settings" style="margin-top:4px">
       <div class="switch-row"><div><b>New cards per day</b><small>For each deck without its own limit · ${c.new_total} new waiting</small></div><div class="stepper"><button data-np="-5">−</button><span id="np">${c.new_limit}</span><button data-np="5">+</button></div></div>
       <div class="switch-row"><div><b>Target recall</b><small>Higher means more frequent reviews</small></div><div class="stepper"><button data-rt="-0.01">−</button><span id="rt">${Math.round(Number(settings.retention)*100)}%</span><button data-rt="0.01">+</button></div></div>
-    </div><div style="height:20px"></div>`;
+    </div><div id="review-strip"></div><div style="height:20px"></div>`;
+  if(window.reviewStrip)reviewStrip($('review-strip'));
   $('review-home').querySelectorAll('[data-deck]').forEach(c=>c.onchange=handle(async()=>{await api('folder.study',{id:+c.dataset.deck,study:c.checked});renderReviewHome();refreshBadge();}));
   $('review-home').querySelectorAll('[data-deck-limit]').forEach(b=>b.onclick=handle(()=>deckLimitSheet(folders.find(f=>f.id===+b.dataset.deckLimit),c.new_limit)));
   $('review-home').querySelectorAll('[data-deck-start]').forEach(b=>b.onclick=handle(()=>startReview(+b.dataset.deckStart)));

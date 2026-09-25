@@ -203,6 +203,7 @@ public class Routes {
             case "answer":return store.answer(d.getLong("id"),d.getInt("rating"));
             case "undo":return store.undo();
             case "stats":return store.stats().put("library",library.stats());
+            case "stats.raw":return store.statsRaw(d.optLong("folder",0));
             case "settings":return store.settings();
             case "setting":store.setSetting(d.getString("key"),d.getString("value"));return null;
             default:throw new Exception("Unknown request: "+route);
