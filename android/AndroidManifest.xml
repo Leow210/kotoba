@@ -10,7 +10,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <!-- The one thing that goes online: synced lyrics (LRCLIB, NetEase) for the song that's playing. -->
     <uses-permission android:name="android.permission.INTERNET"/>
-    <queries><package android:name="com.google.android.apps.translate"/><intent><action android:name="android.intent.action.PROCESS_TEXT"/><data android:mimeType="text/plain"/></intent></queries>
+    <queries><package android:name="com.google.android.apps.translate"/><package android:name="com.pleco.chinesesystem"/><intent><action android:name="android.intent.action.PROCESS_TEXT"/><data android:mimeType="text/plain"/></intent></queries>
     <application android:label="Kotoba" android:theme="@android:style/Theme.Material.Light.NoActionBar" android:allowBackup="false" android:usesCleartextTraffic="false" android:icon="@drawable/icon" android:largeHeap="true" android:extractNativeLibs="true" android:debuggable="true">
         <!-- The GPU (OpenCL) for PaddleOCR-VL through LiteRT-LM; optional, so phones without it still install. -->
         <uses-native-library android:name="libOpenCL.so" android:required="false"/>

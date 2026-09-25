@@ -46,6 +46,8 @@ Tap a preview to play the video. Each one is silent and about 15–25 seconds lo
 
 ### Dictionaries
 - Import a folder of `.mdx` files and their `.mdd` media from the phone. The files stay where they are; Kotoba builds its index locally. My 13-dictionary Monokakido set takes about three minutes to import and uses roughly 350 MB for the index.
+- **Pleco handoff (phone):** a lookup in Chinese text (books, comics, scans, lyrics, Listening) has a **Pleco** button that opens the sentence in Pleco's reader. Pleco's purchased definitions stay in Pleco.
+- **Place dictionaries** (built with the scripts in `tools/`): 全市区町村辞典 with each municipality's latest population (Wikipedia's 自治体人口 templates), the 2025 census and a Japanese Wikipedia link (`build_city_dict.py`), and a Chinese prefecture-level dictionary with a locator map, 2020 census figures, pinyin and short names (`build_china_dict.py`).
 - MDict versions 1 and 2 are supported, including zlib/LZO compression and encrypted key indexes. Images, audio, CSS and cross-references are read from the `.mdd` files.
 - **Yomitan dictionaries** (`.zip`, e.g. from [MarvNC's collection](https://github.com/MarvNC/yomitan-dictionaries)) import natively rather than through MDX. Entries keep the dictionary's own `styles.css`, structured content and images, which are read from the ZIP in place. Frequency dictionaries (JPDB, CC100) become frequency ranks, and pitch data becomes pitch notes. A frequency dictionary can also be browsed as a ranked word list (search screen › Frequency lists, or its ⋯ menu), with jump to rank and "only words in my dictionaries"; tapping a word opens it.
   - The Yomitan format has no appendix (付録) pages, so those dictionaries have no furoku.
@@ -64,7 +66,8 @@ Tap a preview to play the video. Each one is silent and about 15–25 seconds lo
   - with some kanji written in kana (相まみえる finds 大辞林's 相▽見える, as long as it fits the reading あいまみえる).
 - **One row per word.** Results from different dictionaries join into one row with a tag per dictionary, even when one writes the reading おちあう and another 落ち合う. Yomitan dictionaries that list the same entry once per spelling (明鏡 落ち合う, 落合う, あからさま/明白) show it once.
 - **Homophones stay apart.** A kana search gives each written word its own row (けんのう → 権能, 献納, 賢能, 検納), with only that word's dictionaries as tabs. A dictionary page that holds several homophones (大辞林's けんのう) appears under each, and opens at the matching one.
-- **類語 in search:** the **類語 ON/OFF** chip beside the search box leaves thesauruses (日本語シソーラス, 類語例解) out of regular results; they stay available under More 日本語 › 類語. With it on, a headword search also shows the シソーラス index (the word's numbered meaning groups).
+- **類語 in search:** the **類語 ON/OFF** chip beside the search box leaves thesauruses (日本語シソーラス, 類語例解) out of regular results; they stay available under More 日本語 › 類語. With it on, a headword search also shows the シソーラス index (the word's numbered meaning groups). Off also keeps them out of every lookup pop-up, and out of finding the word (a phrase only a thesaurus lists, like 軌跡を辿る, falls back to 軌跡). Browsing 日本語シソーラス from the home screen opens its classification (分類体系表).
+- **The plain word too:** when one dictionary lists a phrase or a conjugated form as its own entry (気取った, 綺麗な, 変な, 一緒に), the pop-up also brings the plain word from every dictionary (気取る, 綺麗, 変, 一緒), first when more dictionaries have it.
 - **Frequency on kana searches:** each written word gets its own rank (けんのう → 権能 25,553, 献納 78,367); the kana rank only shows for words written in kana.
 - **Ambiguous Korean forms keep both readings.** 걸었다고 can be 걷다 ("walk") or 걸다 ("bet"); the popups show the first with **or 걸다** to switch. Context decides where it can: 비운 right before another word (비운 자리) is 비우다's modifier form first, while 비운의 is the noun 비운 (否運) + 의.
 - **Lookups are fast** even on a whole speech bubble: a lookup stops at the longest start of the text that begins any headword, and verb stems and kana-for-kanji spellings are cached, so tapping a word takes a few milliseconds (at most ~0.1 s for Korean) on the phone.
@@ -104,7 +107,11 @@ Tap a preview to play the video. Each one is silent and about 15–25 seconds lo
 - Definitions and audio can come from different dictionaries. I often pair a Daijirin definition with NHK pronunciation; NHK audio also includes its pitch-accent display and conjugated forms.
 - Every field is editable, with room for a note and an example sentence.
 - Cards live in folders that can be filtered, sorted and reviewed separately. Multi-select actions cover moving, copying and deleting.
-- Reviews use FSRS-5, with learning steps, interval previews, undo, daily new-card limits, target recall, a seven-day forecast and a streak.
+- Reviews use FSRS-5, with learning steps, interval previews, undo, target recall, a seven-day forecast and a streak.
+  - Good on a new card: 10 min → 1 day → 4 days → 14 → 43…; Easy: 4 days, then about 17. Forgetting a card relearns it (10 min) with lower stability rather than starting it over.
+  - **New cards per day per deck:** each deck has its own limit or the default (tap "20 new/day" under a deck). The Learning count includes cards seen once today that are coming back in a minute or ten.
+  - **Remove from review** (the crossed-out eye while reviewing): the card stays in its deck, under Vocabulary › Suspended, and doesn't use up the day's new cards.
+  - **Stats:** a 30-day heatmap at the foot of the Review tab opens a Stats screen (all decks or one) with the full calendar and Today, Reviews, Forecast, Cards, Intervals, Hours, Buttons, Difficulty and Retention tabs, as in Anki.
 - **Sentence cards:** keep the sentence where you met a word, with the sentence on the front and a translation or notes on the back.
   - Books: **Sentence** in the selection bar, or in a word's pop-up (the whole sentence around it).
   - Comics: **Save** in a speech bubble's sheet, or **Sentence** in a word's pop-up; the card gets a crop of the bubble.
@@ -122,6 +129,13 @@ Tap a preview to play the video. Each one is silent and about 15–25 seconds lo
 - Tap a word for its entry (the music pauses meanwhile and plays on after); each line can be translated, kept as a sentence card (with the song and time), copied, or played from. NetEase's translations show under the lines.
 - Lyrics come from [LRCLIB](https://lrclib.net) (open, synced .lrc) and NetEase Cloud Music's lyric service, matched by title, artist, length and script (so a Vietnamese version of a Japanese song isn't taken), cached per song. Earlier / Later nudge the timing (kept per song); 🔍 searches by hand.
 - This is the one feature that goes online: the phone app has internet access for lyrics only.
+
+### Listening (Glossika-style)
+- **聴 Listening** (home screen; the Mac sidebar): sets of spoken lines, each heard ×1–3 with a pause to repeat it (none, brief, short, long), at 0.8–2× speed. The text shows after the first hearing (or always, or never), the English underneath if wanted, and every word can be tapped (Mac: Shift-hover) for its entry, whose Save makes the card; ☆ keeps the whole line as a sentence card with its voice.
+- Sets are split into groups under headings: characters by region or faction. Play a character, everything in turn (▶), a region's characters (▶ on its heading), or shuffle; a player option stops after each character instead. The player shows which character of how many and which of its lines.
+- **Sets so far** (built by `tools/build_genshin_voice.py` and `tools/build_hsr_voice.py` from [yatta.moe](https://gi.yatta.moe), profile voice-overs only, no combat): Genshin Impact in Chinese and Japanese (120 characters, ~5,700 lines each) and Honkai: Star Rail in Chinese and Japanese (~87 characters, ~1,700 lines each). The Fate collaboration's Japanese lines, missing on yatta, can be added from the Star Rail wiki (`tools/add_hsr_wiki_voices.py`). Each character also has its **stories** in Chinese, Japanese, Korean and English, with a jump bar to each entry.
+- **Pitch accent (アクセント)** for Japanese lines and stories: NHK's notation over each word like furigana, from the NHK 日本語発音アクセント新辞典. Conjugated words take the form from NHK's conjugation tables (食べました → たべま＼した, 楽しかった → たの＼しかった, 〜たい), and particles are high after a flat word and low after a drop. Worked out once per set on the Mac (`accents.json`), so the phone shows them at once.
+- A set is a folder in Kotoba's `listening/` folder (on the phone: `Android/data/app.kotoba.reader/files/listening`) with a `set.json`, its audio (AAC) and icons.
 
 ### Kanji, word lists, furoku
 - **Kanji grid:** every kanji in 漢辞海 and 漢検 as a grid you can filter by Kanken level, stroke count, radical and 常用/教育/人名. Old and variant forms (舊 → 旧) find their main entry.
@@ -185,6 +199,9 @@ Tap a preview to play the video. Each one is silent and about 15–25 seconds lo
 | ![けんのう: 権能, 献納, 賢能, 検納](docs/images/mac-search.png) | ![権能 in 日本国語大辞典](docs/images/mac-entry.png) |
 
 ### Subtitles for any video
+- **Live subs** (browser helper, e.g. Viki shows without Korean subtitles): Kotoba captures the browser's sound (a Core Audio tap, so DRM video keeps playing) and Qwen3-ASR (MLX, from Subtitle Generator's environment) turns each line into subtitles on the video's own timeline, kept per episode for rewatching. Pausing and seeking are fine.
+- **Picture subs** (the same button, pressed again): subtitles burned into the video are read from its frames by Apple Vision, about twice a second while the picture changes, and become lookup-able captions. Protected video can't be read this way.
+
 Most shows don't come with subtitles in the language being spoken. My other project, [Subtitle Generator](https://github.com/Leow210/Subtitle_Generator), transcribes a video's audio into native-language subtitles. Save the `.srt` next to the video with the same name (`Episode.srt`, or `Episode.ko.srt`) and Kotoba for Mac loads it, so every line can be looked up and turned into cards.
 
 ## Sync
