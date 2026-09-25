@@ -2034,7 +2034,8 @@ public class Library {
             String n=HtmlText.normalize(c.base);
             if(n.equals(qn)||seen.contains(n))continue;
             // When the typed word is itself a headword, ignore weak one-character guesses (e.g. imperative 書け, adverb 〜く).
-            if(exactExists&&c.strength<2)continue;
+            // (Short words only: 張り詰めた being some dictionary's headword doesn't make 張り詰める a guess.)
+            if(exactExists&&c.strength<2&&q.codePointCount(0,q.length())<=2)continue;
             String base=c.base;
             JSONArray rows=wordEntries(exact(base,null,false));
             if(rows.length()==0&&base.endsWith("する")&&base.length()>2){
@@ -2263,6 +2264,24 @@ public class Library {
             for(int i=0;i<sr.length();i++)if(seen.add(sr.getJSONObject(i).getLong("rec"))){plain.put(sr.get(i));if(plainKey==null)plainKey=sr.getJSONObject(i).optString("key",shorter);}
             break;
         }
+        // A phrase only one or two dictionaries list (張り詰めた空気): the word it starts with, from all of them.
+        java.util.Set<Long> phraseDicts=new java.util.HashSet<>();
+        for(int i=0;i<rows.length();i++)phraseDicts.add(rows.getJSONObject(i).getLong("dict"));
+        String shorterMatch=null;
+        if(plain.length()==0&&phraseDicts.size()<=2){
+            // At least half the phrase (so an idiom like 目から鱗が落ちる doesn't shrink to 目).
+            for(int l=len-1;l>=Math.max(2,(len+1)/2)&&plain.length()==0;l--){
+                String sub=new String(cps,0,l);
+                JSONArray sr=exact(sub,null);JSONArray sf=forms(sub);
+                java.util.Set<Long> d=new java.util.HashSet<>();
+                for(int i=0;i<sr.length();i++)d.add(sr.getJSONObject(i).getLong("dict"));
+                for(int f=0;f<sf.length();f++){JSONArray fi=sf.getJSONObject(f).optJSONArray("items");for(int i=0;fi!=null&&i<fi.length();i++)d.add(fi.getJSONObject(i).getLong("dict"));}
+                if(d.size()<=phraseDicts.size())continue;
+                for(int f=0;f<sf.length();f++){JSONArray fi=sf.getJSONObject(f).optJSONArray("items");for(int i=0;fi!=null&&i<fi.length();i++)if(seen.add(fi.getJSONObject(i).getLong("rec"))){plain.put(fi.get(i));if(plainKey==null)plainKey=sf.getJSONObject(f).optString("base",sub);}}
+                for(int i=0;i<sr.length();i++)if(seen.add(sr.getJSONObject(i).getLong("rec"))){plain.put(sr.get(i));if(plainKey==null)plainKey=sr.getJSONObject(i).optString("key",sub);}
+                shorterMatch=sub;
+            }
+        }
         String key=rows.getJSONObject(0).getString("key");
         JSONArray items=rows;
         if(plain.length()>0){
@@ -2274,6 +2293,8 @@ public class Library {
             for(int i=0;i<first.length();i++)items.put(first.get(i));
             for(int i=0;i<second.length();i++)items.put(second.get(i));
             if(first==plain&&plainKey!=null)key=plainKey;
+            // The shorter word wins: only it is the match, so what follows (空気) is its own word.
+            if(first==plain&&shorterMatch!=null)prefix=shorterMatch;
         }
         return new JSONObject().put("matched",prefix).put("key",key).put("items",items).put("forms",forms).put("kanji",kanji(prefix));
     }
