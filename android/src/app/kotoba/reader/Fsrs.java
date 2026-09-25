@@ -9,6 +9,8 @@ public final class Fsrs {
     static final double DECAY=-0.5, FACTOR=19.0/81.0;
     static final long[] LEARN_STEPS={60,600};
     static final long[] RELEARN_STEPS={600};
+    static final long FIRST_DAYS=1;
+    static final double FIRST_STABILITY=1.0;  // what a day's interval means for recall, so the next Good is about four days
 
     public static final class Card {
         public int state, step, reps, lapses;
@@ -98,8 +100,9 @@ public final class Fsrs {
             c.interval=delay;return;
         }
         if(g==3&&c.step+1<steps.length){c.step++;c.interval=steps[c.step];return;}
-        // Graduate.
+        // Graduate. A new card's first interval with Good is a day (then about four), not the several days FSRS would give.
         long days=intervalDays(c.stability);
+        if(g!=4&&c.state==1){days=FIRST_DAYS;c.stability=Math.min(c.stability,FIRST_STABILITY);}
         if(g==4)days=Math.max(days,Math.max(2,intervalDays(c.stability)));
         c.state=2;c.step=0;c.interval=days*86400;
     }
