@@ -28,6 +28,7 @@ const icons={
   edit:'<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
   undo:'<path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/>',
   check:'<path d="M5 12.5l4.5 4.5L19 7"/>',
+  skip:'<path d="M3 3l18 18"/><path d="M10.6 5.1A10 10 0 0 1 12 5c6 0 9.5 7 9.5 7a17 17 0 0 1-2.9 3.8M6.6 6.6C3.9 8.3 2.5 12 2.5 12S6 19 12 19a9.5 9.5 0 0 0 4.4-1.1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
   up:'<path d="M12 19V5M6 11l6-6 6 6"/>',
   down:'<path d="M12 5v14M6 13l6 6 6-6"/>',
   play:'<path d="M8 5v14l11-7z"/>',
@@ -420,7 +421,7 @@ async function renderSearchEmpty(){
     return;
   }
   const history=await api('history').catch(()=>[]);
-  const browse=`<div class="section-label">Browse a dictionary</div><div class="history">${dicts.filter(d=>d.enabled&&searchable(d)).map(d=>`<button class="chip" data-browse="${d.id}">${esc(shortName(d.name))}</button>`).join('')}</div>`+
+  const browse=`<div class="section-label">Browse a dictionary</div><div class="history">${dicts.filter(d=>d.enabled&&searchable(d)).map(d=>`<button class="chip" data-browse="${d.id}">${isThesaurus(d)?'類語シソーラス（分類）':esc(shortName(d.name))}</button>`).join('')}</div>`+
     (dicts.some(d=>d.enabled&&!searchable(d))?`<div class="section-label">Frequency lists</div><div class="history">${dicts.filter(d=>d.enabled&&!searchable(d)).map(d=>`<button class="chip" data-freqlist="${d.id}">${freqBars(1)} ${esc(shortName(d.name))}</button>`).join('')}</div>`:'');
   // Tools first: the features that aren't a search (lyrics, scanning, screen text…), as tiles anyone can find.
   const phone=!document.documentElement.classList.contains('desktop');
@@ -437,7 +438,7 @@ async function renderSearchEmpty(){
   const recent=settings.show_recent&&history.length?`<div class="section-label">Recent<button id="clear-history">Clear</button></div><div class="history">${history.map(h=>`<button class="chip" data-h="${esc(h.query)}">${esc(h.query)}</button>`).join('')}</div>`:'';
   box.innerHTML=toolGrid+recent+browse;
   box.querySelectorAll('[data-tool]').forEach(b=>b.onclick=handle(()=>tools.find(t=>t.id===b.dataset.tool).run()));
-  box.querySelectorAll('[data-browse]').forEach(b=>b.onclick=handle(()=>openBrowse(+b.dataset.browse)));
+  box.querySelectorAll('[data-browse]').forEach(b=>b.onclick=handle(()=>browseDict(+b.dataset.browse)));
   box.querySelectorAll('[data-freqlist]').forEach(b=>b.onclick=handle(()=>openFreqList(+b.dataset.freqlist)));
   box.querySelectorAll('[data-h]').forEach(b=>b.onclick=()=>{$('q').value=b.dataset.h;$('q-clear').hidden=false;runSearch();});
   const clear=$('clear-history');if(clear)clear.onclick=handle(async()=>{await api('history.clear');renderSearchEmpty();});
@@ -1116,6 +1117,16 @@ async function openFreqList(dictId){
     openEntry({...rows[0],key:w,alternatives:rows});
   }));
   await more();
+}
+/** Browse a dictionary from its start: the thesaurus from its category tree (分類体系表), others from A to Z. */
+const isThesaurus=d=>!!d&&/シソーラス/.test(d.name);
+async function browseDict(dictId){
+  const d=dicts.find(x=>x.id===dictId);
+  if(isThesaurus(d)){
+    const r=await api('resolve',{dict:dictId,page:'分類体系表'}).catch(()=>null);
+    if(r&&r.rec)return openEntry({rec:r.rec,dict:dictId,key:'分類体系表'});
+  }
+  return openBrowse(dictId);
 }
 async function openBrowse(dictId,start={}){
   const d=dictById(dictId);if(!d){toast('Dictionary not found');return;}
@@ -1815,20 +1826,28 @@ async function renderReviewHome(){
 
 async function startReview(folder){
   const el=document.createElement('div');el.className='review-page';
-  el.innerHTML=`<div class="bar"><button class="icon-btn" data-a="close">${icon('close')}</button><div class="title"><div class="counts" data-f="counts"></div></div><button class="icon-btn" data-a="undo" aria-label="Undo">${icon('undo')}</button><button class="icon-btn" data-a="more">${icon('more')}</button></div>
+  el.innerHTML=`<div class="bar"><button class="icon-btn" data-a="close">${icon('close')}</button><div class="title"><div class="counts" data-f="counts"></div></div><button class="icon-btn" data-a="undo" aria-label="Undo">${icon('undo')}</button><button class="icon-btn" data-a="skip" aria-label="Remove from review" title="Remove from review (stays in its deck)">${icon('skip')}</button><button class="icon-btn" data-a="more">${icon('more')}</button></div>
     <div class="review-card" data-f="card"></div><div data-f="actions"></div>`;
   pushPage(el,{modal:true,onClose:()=>{refreshBadge();if(tab==='review')renderReviewHome();}});
   const f=(n)=>el.querySelector(`[data-f="${n}"]`);
   let current=null,revealed=false,answered=0;
   el.querySelector('[data-a="close"]').onclick=()=>popPage();
   el.querySelector('[data-a="undo"]').onclick=handle(async()=>{await api('undo');toast('Undone',1200);await next();});
+  // Out of review for good (known well by now, say): the card stays in its folder, under Vocabulary › Suspended.
+  const skipCard=handle(async()=>{
+    if(!current||!current.item)return;
+    const it=current.item;
+    await api('item.review',{ids:[it.id],review:false});
+    toast(`${it.headword} removed from review · Vocabulary › Suspended brings it back`);await next();
+  });
+  el.querySelector('[data-a="skip"]').onclick=skipCard;
   el.querySelector('[data-a="more"]').onclick=handle(()=>{
     if(!current||!current.item)return;
     const it=current.item;
     return menuSheet(it.headword,[
       {label:'Edit card',icon:'edit',run:()=>openSaveSheet({item:it,review:true,headword:it.headword,reading:it.reading,back:it.back,note:it.note,context:it.context,dict:it.dict,dict_name:it.dict_name,page:it.page,anchor:it.anchor,kind:it.kind,onSaved:next})},
       ...(it.dict?[{label:'Open in dictionary',icon:'book',run:async()=>{const r=await api('resolve',{dict:it.dict,page:it.page});if(r.rec)openEntry({rec:r.rec,dict:it.dict,key:it.headword,anchor:it.anchor});else toast('Source dictionary not installed');}}]:[]),
-      {label:'Suspend this card',icon:'card',run:async()=>{await api('item.review',{ids:[it.id],review:false});toast('Suspended');await next();}},
+      {label:'Remove from review (keep in deck)',icon:'skip',run:skipCard},
     ]);
   });
   function renderCounts(c){
@@ -2181,7 +2200,7 @@ async function dictMenu(id){
       await api('dict.update',{id:d.id,grp:g});await loadDicts();await placeNew(dicts.map(x=>x.id).filter(x=>x!==d.id));toast('Moved to '+groupLabel(g));renderLibrary();}},
     {label:'Rename',icon:'edit',run:async()=>{const name=await prompt2('Rename dictionary',d.name);if(!name)return;await api('dict.update',{id:d.id,name});renderLibrary();}},
     ...(d.kind==='freq'?[{label:'Browse by rank',icon:'book',run:()=>openFreqList(d.id)}]:[{label:d.kind==='kanji'?'Treat as a word dictionary':'Treat as a kanji dictionary',icon:'text',run:async()=>{await api('dict.update',{id:d.id,kind:d.kind==='kanji'?'term':'kanji'});toast(d.kind==='kanji'?'Now a word dictionary':'Now shown in the kanji strip');renderLibrary();}},
-    {label:'Browse this dictionary',icon:'book',run:()=>openBrowse(d.id)},
+    {label:isThesaurus(d)?'Browse by category (分類体系表)':'Browse this dictionary',icon:'book',run:()=>browseDict(d.id)},
     {label:'Appendix / 付録',icon:'book',run:async()=>{const a=await api('appendix',{dict:d.id});if(!a.length){toast(d.format==='yomitan'?'Yomitan dictionaries have no appendix (付録) pages':'This dictionary has no appendix pages');return;}openAppendix(d.id);}}]),
     ...(d.kind==='kanji'?[{label:'Kanji grid',icon:'expand',run:()=>openKanjiGrid(d.id)}]:[]),
     {label:'Sort all by group and size',icon:'refresh',run:async()=>{try{localStorage.removeItem('manualOrder');}catch(e){}await autoOrder(true);renderLibrary();}},

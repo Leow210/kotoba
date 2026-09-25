@@ -304,7 +304,7 @@ public class Store {
         String scope=folder>0?" AND folder_id="+folder:" AND folder_id IN (SELECT id FROM folders WHERE study=1)";
         // New cards: each deck has its own daily limit (or the default), counted by the cards it introduced today.
         int fallback=newPerDay();long freshAvailable=0;StringBuilder open=new StringBuilder();
-        JSONArray decks=rows(db,"SELECT f.id,f.new_per_day lim,(SELECT count(*) FROM items i WHERE i.folder_id=f.id AND i.introduced>=?) intro,(SELECT count(*) FROM items i WHERE i.folder_id=f.id AND i.review=1 AND i.state=0) fresh FROM folders f WHERE "+(folder>0?"f.id="+folder:"f.study=1"),Long.toString(day));
+        JSONArray decks=rows(db,"SELECT f.id,f.new_per_day lim,(SELECT count(*) FROM items i WHERE i.folder_id=f.id AND i.review=1 AND i.introduced>=?) intro,(SELECT count(*) FROM items i WHERE i.folder_id=f.id AND i.review=1 AND i.state=0) fresh FROM folders f WHERE "+(folder>0?"f.id="+folder:"f.study=1"),Long.toString(day));
         for(int i=0;i<decks.length();i++){
             JSONObject f=decks.getJSONObject(i);
             long lim=f.getLong("lim")<0?fallback:f.getLong("lim");
