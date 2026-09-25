@@ -104,6 +104,7 @@ public class DesktopServer {
             case "captions.report":return captionsReport(d);
             case "captions.add":return captionsAdd(d);
             case "captions.want":return captionsWant();
+            case "frame.ocr":return frameOcr(d);
             case "music.now":return musicNow();
             case "music.control":return musicControl(d.getString("action"),d.optDouble("t",-1));
             case "music.report":return musicReport(d);
@@ -351,7 +352,7 @@ public class DesktopServer {
     /** The helper's fixed address (the main server's port changes every launch). 127.0.0.1 only. */
     static final int HELPER_PORT=47823;
     /** Requests the helper may make: looking words up and saving cards, nothing else. */
-    static final java.util.Set<String> HELPER_ROUTES=java.util.Set.of("lookup","gloss.rec","freq","item.similar","item.save","folders","folder.save","dicts","known.get","known.set","music.report","captions.report");
+    static final java.util.Set<String> HELPER_ROUTES=java.util.Set.of("lookup","gloss.rec","freq","item.similar","item.save","folders","folder.save","dicts","known.get","known.set","music.report","captions.report","frame.ocr");
 
     // ---------- live subtitles (a show in the browser with no subtitles in its language) ----------
     // The browser helper reports the episode and the video's time several times a second while its Live subs button is
@@ -640,30 +641,44 @@ public class DesktopServer {
         return f==null?null:new Object[]{f[0],f[1]};
     }
 
+    /** From the helper: a still of the video (its lower part, as JPEG in base64); the text Apple Vision reads in it. */
+    JSONObject frameOcr(JSONObject d) throws Exception {
+        if(!(Ocr.external instanceof VisionOcr v))throw new Exception("Text recognition isn’t available.");
+        String b64=d.getString("image");int comma=b64.indexOf(',');if(b64.startsWith("data:")&&comma>0)b64=b64.substring(comma+1);
+        String lang=d.optString("lang","auto");if(!lang.matches("[a-z]{2,4}"))lang="auto";
+        JSONObject r=v.ask(lang+"\tb64:"+b64);
+        return new JSONObject().put("w",r.getDouble("w")).put("h",r.getDouble("h")).put("lines",r.getJSONArray("lines"));
+    }
+
     /** Apple Vision through the kotoba-ocr helper, kept running between pages (one request per line). */
     static final class VisionOcr implements Ocr.LineReader {
         final File exe;final Store store;
         Process process;java.io.BufferedWriter toHelper;java.io.BufferedReader fromHelper;
         VisionOcr(File exe,Store store){this.exe=exe;this.store=store;}
         public boolean handles(String lang){return "ko".equals(lang)&&!"paddle".equals(store.setting("ocr_engine",""));}
+        /** One request line to the helper; its JSON answer. */
+        synchronized JSONObject ask(String request) throws Exception {
+            String reply=null;
+            for(int attempt=0;attempt<2&&reply==null;attempt++){
+                if(process==null||!process.isAlive()){
+                    process=new ProcessBuilder(exe.getPath()).redirectError(ProcessBuilder.Redirect.DISCARD).start();
+                    toHelper=new java.io.BufferedWriter(new java.io.OutputStreamWriter(process.getOutputStream(),StandardCharsets.UTF_8));
+                    fromHelper=new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream(),StandardCharsets.UTF_8));
+                }
+                try{toHelper.write(request+"\n");toHelper.flush();reply=fromHelper.readLine();}
+                catch(IOException e){process.destroy();process=null;}
+                if(reply==null&&process!=null){process.destroy();process=null;}
+            }
+            if(reply==null)throw new Exception("Text recognition stopped.");
+            JSONObject r=new JSONObject(reply);
+            if(r.has("error"))throw new Exception(r.getString("error"));
+            return r;
+        }
         public synchronized List<Ocr.Line> read(byte[] image,String lang,int[] size) throws Exception {
             File tmp=File.createTempFile("kotoba-ocr",".img");
             try{
                 Files.write(tmp.toPath(),image);
-                String reply=null;
-                for(int attempt=0;attempt<2&&reply==null;attempt++){
-                    if(process==null||!process.isAlive()){
-                        process=new ProcessBuilder(exe.getPath()).redirectError(ProcessBuilder.Redirect.DISCARD).start();
-                        toHelper=new java.io.BufferedWriter(new java.io.OutputStreamWriter(process.getOutputStream(),StandardCharsets.UTF_8));
-                        fromHelper=new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream(),StandardCharsets.UTF_8));
-                    }
-                    try{toHelper.write(lang+"\t"+tmp.getPath()+"\n");toHelper.flush();reply=fromHelper.readLine();}
-                    catch(IOException e){process.destroy();process=null;}
-                    if(reply==null&&process!=null){process.destroy();process=null;}
-                }
-                if(reply==null)throw new Exception("Text recognition stopped.");
-                JSONObject r=new JSONObject(reply);
-                if(r.has("error"))throw new Exception(r.getString("error"));
+                JSONObject r=ask(lang+"\t"+tmp.getPath());
                 size[0]=(int)Math.round(r.getDouble("w"));size[1]=(int)Math.round(r.getDouble("h"));
                 List<Ocr.Line> lines=new java.util.ArrayList<>();
                 JSONArray ls=r.getJSONArray("lines");

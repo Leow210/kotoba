@@ -16,12 +16,14 @@ func answer(_ object: Any) {
 while let request = readLine() {
     let parts = request.split(separator: "\t", maxSplits: 1).map(String.init)
     guard parts.count == 2 else { answer(["error": "bad request"]); continue }
-    guard let image = NSImage(contentsOfFile: parts[1]),
-          let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { answer(["error": "unreadable image"]); continue }
+    // "b64:<data>" is the image itself (a video frame from the browser, never written to disk); otherwise a file path.
+    let image = parts[1].hasPrefix("b64:") ? Data(base64Encoded: String(parts[1].dropFirst(4))).flatMap { NSImage(data: $0) } : NSImage(contentsOfFile: parts[1])
+    guard let image, let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { answer(["error": "unreadable image"]); continue }
     let w = CGFloat(cg.width), h = CGFloat(cg.height)
     let req = VNRecognizeTextRequest()
     req.recognitionLevel = .accurate
-    req.recognitionLanguages = languages[parts[0]] ?? ["ko-KR"]
+    if parts[0] == "auto", #available(macOS 13.0, *) { req.automaticallyDetectsLanguage = true }
+    else { req.recognitionLanguages = languages[parts[0]] ?? ["ko-KR"] }
     req.usesLanguageCorrection = true
     // Tall webtoon strips: Vision shrinks the whole image, so read it in overlapping bands about as tall as wide × 2.5.
     let band = h > w * 3 ? max(w * 2.5, 64) : h, overlap = h > w * 3 ? w / 4 : 0

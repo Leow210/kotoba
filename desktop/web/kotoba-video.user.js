@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kotoba Video Text
 // @namespace    app.kotoba.desktop
-// @version      0.9.3
+// @version      0.10.0
 // @description  Look up YouTube and GagaOOLala subtitles in Kotoba for Mac: hold Shift over a word; YouTube Music's song goes to Kotoba's lyrics. Works in Firefox and Chrome (Tampermonkey).
 // @match        https://www.youtube.com/watch*
 // @match        https://www.gagaoolala.com/*/videos/*
@@ -144,7 +144,7 @@
   ui.innerHTML = H(`<div id="kotoba-video-toolbar">
       <button type="button" id="kotoba-video-toggle" aria-pressed="true" title="Show the caption as text you can look up (hold Shift over a word)">文 Kotoba</button>
       <button type="button" id="kotoba-video-pause" aria-pressed="true" title="Pause the video while a word is shown">⏸ on lookup</button>
-      <button type="button" id="kotoba-video-live" aria-pressed="false" title="Subtitles from the show's audio, made on your Mac (Qwen3-ASR on the T7) and kept for rewatching">🎙 Live subs</button>
+      <button type="button" id="kotoba-video-live" aria-pressed="false" title="Click to switch: the site's subtitles → 🎙 Live subs (heard from the audio on your Mac, kept for rewatching) → 🔍 Picture subs (subtitles burned into the video, read from the picture)">🎙 Live subs</button>
       <select id="kotoba-video-lang" aria-label="Subtitle language"><option value="auto">Auto language</option><option value="ja">日本語</option><option value="zh">中文</option><option value="ko">한국어</option><option value="th">ไทย</option><option value="ru">Русский</option></select>
     </div><div id="kotoba-video-line"><span id="kotoba-video-text"></span></div>`);
   document.body.appendChild(ui);
@@ -158,7 +158,9 @@
   // While on, the video's time goes to Kotoba several times a second; Kotoba captures the browser's sound, turns each
   // spoken line into text and places it on this episode's timeline. The lines come back here and show at their time,
   // like a subtitle track; an episode heard before shows its lines at once.
-  let live = store.get('kotoba.live.' + location.hostname, 'false') === 'true';
+  // One button, three modes: the site's subtitles, live (from the audio), picture (read from the video's frames).
+  let subsMode = store.get('kotoba.subs.' + location.hostname, store.get('kotoba.live.' + location.hostname, 'false') === 'true' ? 'live' : 'site');
+  let live = subsMode === 'live';
   let liveLines = [], liveRev = -1, liveKey = '';
   const episodeKey = () => location.hostname + location.pathname.replace(/\/$/, '');
   function liveTick() {
@@ -183,6 +185,64 @@
     return best && t <= best.t1 + 3.5 ? best.text : '';
   }
   setInterval(liveTick, 250);
+
+  // ---------- picture subtitles (burned into the video, read by Apple Vision on the Mac) ----------
+  // The lower part of the current frame goes to Kotoba about twice a second while the picture changes; the text read
+  // there shows as the caption. Frames stay in memory; nothing is saved.
+  let ocrText = '', ocrBusy = false, ocrSig = '', ocrError = '', ocrAt = 0;
+  const ocrCanvas = document.createElement('canvas'), sigCanvas = document.createElement('canvas');
+  sigCanvas.width = 48; sigCanvas.height = 12;
+  function frameSignature(v, sy, sh) {
+    const g = sigCanvas.getContext('2d', { willReadFrequently: true });
+    g.drawImage(v, 0, sy, v.videoWidth, sh, 0, 0, 48, 12);
+    const d = g.getImageData(0, 0, 48, 12).data;
+    let out = '';
+    for (let i = 0; i < d.length; i += 4) out += String.fromCharCode(65 + ((d[i] + d[i + 1] + d[i + 2]) / 3 >> 4));
+    return out;
+  }
+  function sameFrame(a, b) {
+    if (!a || a.length !== b.length) return false;
+    let diff = 0;
+    for (let i = 0; i < a.length; i++) if (Math.abs(a.charCodeAt(i) - b.charCodeAt(i)) > 1) diff++;
+    return diff < 6;
+  }
+  function ocrTick() {
+    if (subsMode !== 'picture' || !enabled || ocrBusy || pinned) return;
+    const v = largestVideo();
+    if (!v || !v.videoWidth || v.readyState < 2) return;
+    // Burned-in subtitles sit in the lower part of the picture.
+    const sy = Math.round(v.videoHeight * 0.62), sh = v.videoHeight - sy;
+    let sig;
+    try { sig = frameSignature(v, sy, sh); } catch (e) { ocrError = 'This video’s picture can’t be read (it’s protected).'; return; }
+    if (sameFrame(ocrSig, sig) && Date.now() - ocrAt < 4000) return;
+    ocrSig = sig; ocrAt = Date.now();
+    const scale = Math.min(1, 1280 / v.videoWidth);
+    ocrCanvas.width = Math.round(v.videoWidth * scale); ocrCanvas.height = Math.round(sh * scale);
+    ocrCanvas.getContext('2d').drawImage(v, 0, sy, v.videoWidth, sh, 0, 0, ocrCanvas.width, ocrCanvas.height);
+    let image;
+    try { image = ocrCanvas.toDataURL('image/jpeg', 0.85); } catch (e) { ocrError = 'This video’s picture can’t be read (it’s protected).'; return; }
+    ocrBusy = true;
+    const lang = language === 'auto' ? (guessLanguage(ocrText) || 'auto') : language;
+    kotoba('frame.ocr', { image, lang }).then(r => {
+      ocrError = '';
+      ocrText = pictureText(r, ocrCanvas.height);
+    }).catch(err => { ocrError = err.message; }).finally(() => { ocrBusy = false; });
+  }
+  // Lines read in the frame → the caption: small or doubtful text is left out, lines in reading order.
+  function pictureText(r, height) {
+    const lines = (r && r.lines || []).filter(l => l.conf >= 0.4 && l.h >= height * 0.06 && l.text.trim());
+    lines.sort((a, b) => a.y - b.y);
+    const rows = [];
+    for (const l of lines) {
+      const row = rows.find(rw => Math.abs(rw.y + rw.h / 2 - (l.y + l.h / 2)) < Math.max(rw.h, l.h) * 0.5);
+      if (row) row.parts.push(l); else rows.push({ y: l.y, h: l.h, parts: [l] });
+    }
+    return rows.map(rw => {
+      rw.parts.sort((a, b) => a.x - b.x);
+      return rw.parts.map(p => p.text.trim()).join(/[\u3040-\u30ff\u4e00-\u9fff]$/.test(rw.parts[0].text) ? '' : ' ');
+    }).join('\n');
+  }
+  setInterval(ocrTick, 450);
   select.value = language;
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -258,6 +318,12 @@
     ui.style.width = `${width}px`;
     ui.style.height = `${Math.max(80, Math.min(130, rect.height * .16))}px`;
     text.style.fontSize = `${Math.max(18, Math.min(34, rect.width / 32))}px`;
+    // Subtitles read from the picture take the place of the site's own.
+    if (enabled && subsMode === 'picture') {
+      if (ocrError && !ocrText) { if (!pinned && text.textContent !== ocrError) { lastText = ''; text.textContent = ocrError; } return; }
+      if (ocrText !== lastText && !pinned) { lastText = ocrText; drawCaption(ocrText); hidePop(); }
+      return;
+    }
     // Live subtitles (or lines saved from an earlier watch) take the place of the site's own.
     if (enabled && (live || liveLines.length)) {
       const current = liveLineAt(video.currentTime);
@@ -589,11 +655,15 @@
   toggle.addEventListener('click', () => { enabled = !enabled; store.set('kotoba.videoText.enabled', String(enabled)); toggle.setAttribute('aria-pressed', String(enabled)); if (!enabled) hidePop(); update(); });
   pauseBtn.addEventListener('click', () => { pauseOnLookup = !pauseOnLookup; store.set('kotoba.videoText.pause', String(pauseOnLookup)); pauseBtn.setAttribute('aria-pressed', String(pauseOnLookup)); });
   select.addEventListener('change', () => { language = select.value; store.set('kotoba.videoText.language', language); text.lang = guessLanguage(lastText); });
+  const MODES = { site: ['🎙 Live subs', false], live: ['🎙 Live subs', true], picture: ['🔍 Picture subs', true] };
+  function showMode() { liveBtn.textContent = MODES[subsMode][0]; liveBtn.setAttribute('aria-pressed', String(MODES[subsMode][1])); }
   liveBtn.addEventListener('click', () => {
-    live = !live; store.set('kotoba.live.' + location.hostname, String(live)); liveBtn.setAttribute('aria-pressed', String(live));
-    liveTick(); if (!live) { lastText = ''; text.textContent = ''; }
+    subsMode = { site: 'live', live: 'picture', picture: 'site' }[subsMode] || 'site';
+    store.set('kotoba.subs.' + location.hostname, subsMode); store.set('kotoba.live.' + location.hostname, String(subsMode === 'live'));
+    live = subsMode === 'live'; ocrText = ''; ocrSig = ''; ocrError = '';
+    showMode(); liveTick(); lastText = ''; text.textContent = '';
   });
-  liveBtn.setAttribute('aria-pressed', String(live));
+  showMode();
   toggle.setAttribute('aria-pressed', String(enabled));
   pauseBtn.setAttribute('aria-pressed', String(pauseOnLookup));
   addEventListener('pagehide', showNative);
