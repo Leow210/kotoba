@@ -82,6 +82,7 @@
       </div>
       <div class="ls-progress"><i data-f="bar"></i></div>
       <div class="ls-controls"><button class="icon-btn" data-a="prev" aria-label="Previous line">${icon('prev')}</button><button class="ls-play" data-a="toggle" aria-label="Play or pause"></button><button class="icon-btn" data-a="next" aria-label="Next line">${icon('next')}</button></div>
+      <button class="ls-opts-toggle" data-a="opts"></button>
       <div class="ls-opts" data-f="opts"></div>`;
     let i=Math.max(0,Math.min(start,queue.length-1)),rep=0,playing=true,heard=false,timer=0,pausedByLookup=false,closed=false;
     const audio=new Audio();audio.preload='auto';
@@ -89,16 +90,20 @@
     pushPage(el,{onClose:()=>{closed=true;clearTimeout(timer);audio.pause();audio.src='';}});
     el.querySelector('[data-a="back"]').onclick=()=>popPage();
 
+    // The options fold away (shown as a one-line summary) so the line has the room.
+    const showOpts=()=>{f('opts').hidden=!opts.open;el.querySelector('[data-a="opts"]').textContent=(opts.open?'▾ ':'▸ ')+`×${opts.repeats} · pause ${({0:'none',1.2:'short',2:'long'})[opts.gap]||opts.gap} · speed ${opts.speed} · text ${opts.text==='after'?'after hearing':opts.text} · English ${opts.tr?'on':'off'}`;};
+    el.querySelector('[data-a="opts"]').onclick=()=>{opts.open=!opts.open;saveOpts();showOpts();};
     function paintOpts(){
       const chip=(key,val,label)=>`<button class="chip small ${opts[key]===val?'on':''}" data-o="${key}" data-v="${val}">${label}</button>`;
       f('opts').innerHTML=`<div><span>Hear each</span>${chip('repeats',1,'×1')}${chip('repeats',2,'×2')}${chip('repeats',3,'×3')}</div>
         <div><span>Pause to repeat</span>${chip('gap',0,'none')}${chip('gap',1.2,'short')}${chip('gap',2,'long')}</div>
         <div><span>Speed</span>${chip('speed',0.8,'0.8')}${chip('speed',0.9,'0.9')}${chip('speed',1,'1')}</div>
         <div><span>Text</span>${chip('text','show','show')}${chip('text','after','after hearing')}${chip('text','hide','hide')}</div>
-        <div><span>English</span>${chip('tr',true,'show')}${chip('tr',false,'hide')}<span>Pause on lookup</span>${chip('pause',true,'on')}${chip('pause',false,'off')}</div>`;
+        <div><span>English</span>${chip('tr',true,'show')}${chip('tr',false,'hide')}</div>
+        <div><span>Pause on lookup</span>${chip('pause',true,'on')}${chip('pause',false,'off')}</div>`;
       f('opts').querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>{
         const k=b.dataset.o,raw=b.dataset.v;opts[k]=raw==='true'?true:raw==='false'?false:isNaN(+raw)?raw:+raw;
-        saveOpts();paintOpts();paintText();audio.playbackRate=opts.speed;
+        saveOpts();paintOpts();paintText();showOpts();audio.playbackRate=opts.speed;
       });
     }
     function paintText(){
@@ -132,7 +137,8 @@
       rep++;heard=true;paintText();
       const {g,it}=queue[i];
       const done=store.get('listen.done.'+set.id,{});(done[g.id]=done[g.id]||{})[it.id]=1;store.set('listen.done.'+set.id,done);
-      const wait=(opts.gap?((it.dur||audio.duration||2)*opts.gap/opts.speed+0.6):0.7)*1000;
+      // Room to repeat it: as long as the line (times the setting), but a long speech doesn't need its whole length.
+      const wait=(opts.gap?Math.min((it.dur||audio.duration||2)*opts.gap/opts.speed,opts.gap>1.5?14:9)+0.6:0.7)*1000;
       timer=setTimeout(()=>{
         if(!playing||closed)return;
         if(rep<opts.repeats){audio.currentTime=0;audio.play().catch(()=>{});}
@@ -174,7 +180,7 @@
       else if(e.key==='r'||e.key==='R'){clearTimeout(timer);rep=Math.max(0,rep-1);audio.currentTime=0;playing=true;paintPlay();audio.play().catch(()=>{});}
     };
     addEventListener('keydown',onKey);
-    paintOpts();paintPlay();load(i,true);
+    paintOpts();showOpts();paintPlay();load(i,true);
   }
 
   window.openListening=openListening;

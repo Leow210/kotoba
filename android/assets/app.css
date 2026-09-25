@@ -650,3 +650,5 @@ svg.i.sm{width:16px;height:16px}
 .ls-opts{display:flex;flex-direction:column;gap:6px;padding:4px 14px calc(14px + env(safe-area-inset-bottom));max-width:760px;width:100%;margin:0 auto}
 .ls-opts>div{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .ls-opts span{font-size:12.5px;color:var(--muted);min-width:96px}
+.ls-opts-toggle{display:block;margin:0 auto 6px;padding:6px 12px;font-size:12.5px;color:var(--muted);background:none;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ls-opts[hidden]{display:none}
