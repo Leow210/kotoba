@@ -66,7 +66,16 @@
     el.querySelector('[data-a="shuffle"]').onclick=()=>openPlayer(set,shuffle(queue),0,g.name+' · shuffled');
     el.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>openPlayer(set,queue,+b.dataset.i,g.name));
     // The character's stories, when the set has them (stories.json beside it).
-    loadStories(set).then(st=>{const sg=st&&st.groups&&st.groups[g.id];if(!sg)return;const b=el.querySelector('[data-a="story"]');b.hidden=false;b.onclick=()=>openStory(set,g,sg);});
+    loadStories(set).then(st=>{
+      const sg=st&&st.groups&&st.groups[g.id];if(!sg)return;
+      const b=el.querySelector('[data-a="story"]');b.hidden=false;b.onclick=()=>openStory(set,g,sg,0);
+      // Every entry one tap away: its chip opens the story right there.
+      const lang=storyLang(set,sg),secs=sg.sections[lang];
+      const row=document.createElement('div');row.className='ls-toc ls-toc-group';
+      row.innerHTML=`<span>${lang==='ja'?'ストーリー':lang==='ko'?'스토리':lang==='en'?'Stories':'故事'}</span>`+secs.map((s,k)=>`<button class="chip small" data-k="${k}">${esc(shortTitle(s.title))}</button>`).join('');
+      el.querySelector('.ls-actions').after(row);
+      row.querySelectorAll('[data-k]').forEach(c=>c.onclick=()=>openStory(set,g,sg,+c.dataset.k));
+    });
   }
 
   // ---------- a character's stories, in Chinese, Japanese, Korean or English ----------
@@ -76,12 +85,20 @@
     return storyCache[set.id];
   }
   const LANG_LABEL={zh:'中文',ja:'日本語',ko:'한국어',en:'English'};
-  function openStory(set,g,sg){
+  function storyLang(set,sg){
     const langs=Object.keys(LANG_LABEL).filter(l=>sg.sections[l]);
-    let lang=store.get('listen.storyLang','');if(!langs.includes(lang))lang=langs.includes(set.lang)?set.lang:langs[0];
+    const lang=store.get('listen.storyLang','');
+    return langs.includes(lang)?lang:langs.includes(set.lang)?set.lang:langs[0];
+  }
+  // Chip labels: 角色故事3 → 故事3, Character Story 3 → Story 3…
+  const shortTitle=t=>String(t).replace(/^角色(故事|詳細|详细)/,'$1').replace(/^キャラクター(ストーリー|詳細)/,'$1').replace(/^캐릭터\s*(스토리|상세)/,'$1').replace(/^Character\s+(Story|Details)/i,'$1').trim();
+  function openStory(set,g,sg,startAt=0){
+    const langs=Object.keys(LANG_LABEL).filter(l=>sg.sections[l]);
+    let lang=storyLang(set,sg);
     const el=document.createElement('div');el.className='ls-page ls-story';
     el.innerHTML=`<div class="bar"><button class="icon-btn" data-a="back" aria-label="Back">${icon('back')}</button>${g.icon?`<img class="ls-bar-icon" src="${url(set.id,g.icon)}" alt="">`:''}<div class="title"><b data-f="name"></b><small>Character stories</small></div></div>
       <div class="ls-langs" data-f="langs"></div>
+      <div class="ls-toc" data-f="toc"></div>
       <div class="ls-scroll" data-f="scroll"><div class="ls-story-body" data-f="body"></div></div>`;
     pushPage(el);
     el.querySelector('[data-a="back"]').onclick=()=>popPage();
@@ -90,7 +107,10 @@
     function render(){
       f('name').textContent=sg.names[lang]||g.name;
       f('langs').innerHTML=langs.map(l=>`<button class="chip small ${l===lang?'on':''}" data-l="${l}">${LANG_LABEL[l]}</button>`).join('');
-      f('langs').querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>{lang=b.dataset.l;store.set('listen.storyLang',lang);render();f('scroll').scrollTop=0;});
+      // Another language: the same entry stays in view.
+      f('langs').querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>{const k=current();lang=b.dataset.l;store.set('listen.storyLang',lang);render();jump(k,true);});
+      f('toc').innerHTML=sg.sections[lang].map((s,k)=>`<button class="chip small" data-k="${k}">${esc(shortTitle(s.title))}</button>`).join('');
+      f('toc').querySelectorAll('[data-k]').forEach(c=>c.onclick=()=>jump(+c.dataset.k));
       paras=[];
       f('body').lang=lang==='zh'?'zh-CN':lang;
       f('body').innerHTML=sg.sections[lang].map(sec=>`<section><h3>${esc(sec.title)}</h3>${sec.note?`<p class="ls-story-note">${esc(sec.note)}</p>`:''}${sec.text.split(/\n+/).filter(Boolean).map(p=>{paras.push(p);return `<p class="ls-para" data-p="${paras.length-1}">${window.tappableText?tappableText(p):esc(p)}</p>`;}).join('')}</section>`).join('');
@@ -103,7 +123,23 @@
       if(w.dataset.end!=null)p.querySelectorAll('.mu-w').forEach(x=>{if(x.dataset.end===w.dataset.end&&+x.dataset.o>=+w.dataset.o)x.classList.add('on');});else w.classList.add('on');
       await lookupSheet(word,{context:text},{lang,book:`${set.title} · ${sg.names[lang]||g.name}`,onClose:()=>f('body').querySelectorAll('.mu-w.on').forEach(x=>x.classList.remove('on'))});
     });
+    const sections=()=>[...f('body').querySelectorAll('section')];
+    function jump(k,instant){
+      const sec=sections()[Math.min(k,sections().length-1)];if(!sec)return;
+      f('scroll').scrollTo({top:sec.offsetTop-8,behavior:instant?'auto':'smooth'});mark(k);
+    }
+    // Which entry is in view (the last one whose heading has passed the top).
+    function current(){
+      const top=f('scroll').scrollTop+40;let k=0;
+      sections().forEach((s,n)=>{if(s.offsetTop<=top)k=n;});return k;
+    }
+    function mark(k){
+      f('toc').querySelectorAll('[data-k]').forEach(c=>c.classList.toggle('on',+c.dataset.k===k));
+      const on=f('toc').querySelector('.on');if(on)on.scrollIntoView({block:'nearest',inline:'nearest'});
+    }
+    f('scroll').addEventListener('scroll',()=>mark(current()),{passive:true});
     render();
+    requestAnimationFrame(()=>jump(startAt,true));
   }
 
   function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
