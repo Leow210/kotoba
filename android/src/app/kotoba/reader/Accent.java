@@ -64,7 +64,8 @@ public final class Accent {
         }
         if(storyFile.isFile()){
             JSONObject gs=new JSONObject(java.nio.file.Files.readString(storyFile.toPath())).getJSONObject("groups");
-            for(String id:gs.keySet()){
+            for(java.util.Iterator<String> ids=gs.keys();ids.hasNext();){// keys(): Android's JSONObject has no keySet()
+                String id=ids.next();
                 JSONArray secs=gs.getJSONObject(id).getJSONObject("sections").optJSONArray("ja");
                 for(int k=0;secs!=null&&k<secs.length();k++)for(String p:secs.getJSONObject(k).getString("text").split("\n+"))if(!p.isEmpty())texts.add(p);
             }
