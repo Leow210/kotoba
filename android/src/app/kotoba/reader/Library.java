@@ -2161,13 +2161,55 @@ public class Library {
             JSONArray rows=len<=reach?exact(prefix,null):len<=8?exact(prefix,null):new JSONArray();
             boolean hangulPart=prefix.codePoints().anyMatch(c->c>=0xAC00&&c<=0xD7A3)&&len<cps.length;
             JSONArray forms=len>=2&&len<=reach+10&&!hangulPart?forms(prefix):new JSONArray();
-            if(rows.length()>0)return new JSONObject().put("matched",prefix).put("key",rows.getJSONObject(0).getString("key")).put("items",rows).put("forms",forms).put("kanji",kanji(prefix));
+            if(rows.length()>0)return withPlainWord(prefix,cps,len,rows,forms);
             if(forms.length()>0){
                 JSONObject f=forms.getJSONObject(0);
                 return new JSONObject().put("matched",prefix).put("key",f.getString("base")).put("items",f.getJSONArray("items")).put("explain",f.getString("explain")).put("forms",forms).put("kanji",kanji(prefix));
             }
         }
         return new JSONObject().put("matched","").put("key",clean).put("items",new JSONArray()).put("forms",new JSONArray()).put("kanji",kanji(clean));
+    }
+
+    /** A particle or the copula right after a word: 静かな, 日本の, 穏やかに, 元気だ. */
+    // (not か, さ, も… which also end words: 静か, 高さ, 最も)
+    static final java.util.Set<String> JA_TAILS=new java.util.HashSet<>(java.util.Arrays.asList("な","の","に","で","だ","って","だった","です","でした","じゃ","では","には"));
+
+    /**
+     * A match some dictionary lists as a phrase (気取った, 綺麗な) also brings the plain word: the dictionary form of a
+     * conjugation (気取る), or the word without the particle or copula after it (綺麗). When the plain word is in more
+     * dictionaries, it comes first, as the page most people want.
+     */
+    JSONObject withPlainWord(String prefix,int[] cps,int len,JSONArray rows,JSONArray forms) throws Exception {
+        JSONArray plain=new JSONArray();String plainKey=null;
+        java.util.Set<Long> seen=new java.util.HashSet<>();
+        for(int i=0;i<rows.length();i++)seen.add(rows.getJSONObject(i).getLong("rec"));
+        for(int f=0;f<forms.length();f++){
+            JSONArray fi=forms.getJSONObject(f).optJSONArray("items");
+            for(int i=0;fi!=null&&i<fi.length();i++)if(seen.add(fi.getJSONObject(i).getLong("rec"))){plain.put(fi.get(i));if(plainKey==null)plainKey=forms.getJSONObject(f).optString("base",null);}
+        }
+        for(int cut=1;cut<=3&&cut<len;cut++){
+            String tail=new String(cps,len-cut,cut);
+            if(!JA_TAILS.contains(tail))continue;
+            String shorter=new String(cps,0,len-cut);
+            if(!han(cps[len-cut-1]))continue;// after a kanji word only (綺麗な), not inside kana words (この, その)
+            JSONArray sr=exact(shorter,null);
+            if(sr.length()==0){JSONArray sf=forms(shorter);if(sf.length()>0)sr=sf.getJSONObject(0).getJSONArray("items");}
+            for(int i=0;i<sr.length();i++)if(seen.add(sr.getJSONObject(i).getLong("rec"))){plain.put(sr.get(i));if(plainKey==null)plainKey=sr.getJSONObject(i).optString("key",shorter);}
+            break;
+        }
+        String key=rows.getJSONObject(0).getString("key");
+        JSONArray items=rows;
+        if(plain.length()>0){
+            java.util.Set<Long> a=new java.util.HashSet<>(),b=new java.util.HashSet<>();
+            for(int i=0;i<rows.length();i++)a.add(rows.getJSONObject(i).getLong("dict"));
+            for(int i=0;i<plain.length();i++)b.add(plain.getJSONObject(i).getLong("dict"));
+            items=new JSONArray();
+            JSONArray first=b.size()>a.size()?plain:rows,second=first==plain?rows:plain;
+            for(int i=0;i<first.length();i++)items.put(first.get(i));
+            for(int i=0;i<second.length();i++)items.put(second.get(i));
+            if(first==plain&&plainKey!=null)key=plainKey;
+        }
+        return new JSONObject().put("matched",prefix).put("key",key).put("items",items).put("forms",forms).put("kanji",kanji(prefix));
     }
 
     static final Pattern AUDIO_LINK=Pattern.compile("href=[\"']((?:sound://)?[^\"']+?\\.(?:aac|mp3|m4a|ogg|oga|opus|wav|spx)(?:#[^\"']*)?)[\"']",Pattern.CASE_INSENSITIVE);
