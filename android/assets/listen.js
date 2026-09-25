@@ -69,12 +69,6 @@
     loadStories(set).then(st=>{
       const sg=st&&st.groups&&st.groups[g.id];if(!sg)return;
       const b=el.querySelector('[data-a="story"]');b.hidden=false;b.onclick=()=>openStory(set,g,sg,0);
-      // Every entry one tap away: its chip opens the story right there.
-      const lang=storyLang(set,sg),secs=sg.sections[lang];
-      const row=document.createElement('div');row.className='ls-toc ls-toc-group';
-      row.innerHTML=`<span>${lang==='ja'?'ストーリー':lang==='ko'?'스토리':lang==='en'?'Stories':'故事'}</span>`+secs.map((s,k)=>`<button class="chip small" data-k="${k}">${esc(shortTitle(s.title))}</button>`).join('');
-      el.querySelector('.ls-actions').after(row);
-      row.querySelectorAll('[data-k]').forEach(c=>c.onclick=()=>openStory(set,g,sg,+c.dataset.k));
     });
   }
 
