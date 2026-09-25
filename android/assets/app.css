@@ -634,7 +634,9 @@ svg.i.sm{width:16px;height:16px}
 .ls-line-title small{margin-left:8px;font-weight:500;color:var(--muted)}
 .ls-line-text{display:block;font:17px/1.6 var(--serif);color:var(--ink);margin-top:2px}
 .ls-line-tr{display:block;font-size:13px;color:var(--muted);margin-top:2px}
-.ls-player .ls-stage{flex:1;overflow:auto;display:flex;flex-direction:column;justify-content:center;gap:14px;padding:18px 22px;max-width:760px;width:100%;margin:0 auto}
+.ls-player .ls-stage{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;justify-content:flex-start;gap:14px;padding:18px 22px;max-width:760px;width:100%;margin:0 auto}
+/* Centred when there's room, scrollable from the top when there isn't (justify-content:center would cut the top off). */
+.ls-player .ls-stage>:first-child{margin-top:auto}.ls-player .ls-stage>:last-child{margin-bottom:auto}
 .ls-who{display:flex;gap:10px;align-items:center;font-size:14px;color:var(--ink2)}
 .ls-who img{width:44px;height:44px;border-radius:50%;object-fit:cover;background:var(--accent-soft);flex:none}
 .ls-who small{display:block;color:var(--muted);font-size:12px}
