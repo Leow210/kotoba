@@ -311,7 +311,9 @@ public class Store {
             long avail=Math.min(Math.max(0,lim-f.getLong("intro")),f.getLong("fresh"));
             if(avail>0){freshAvailable+=avail;open.append(open.length()>0?",":"").append(f.getLong("id"));}
         }
-        JSONObject counts=rows(db,"SELECT coalesce(sum(CASE WHEN state IN(1,3) AND due<=? THEN 1 ELSE 0 END),0) learning,coalesce(sum(CASE WHEN state=2 AND due<=? THEN 1 ELSE 0 END),0) review,coalesce(sum(CASE WHEN state=0 THEN 1 ELSE 0 END),0) fresh FROM items WHERE review=1"+scope,Long.toString(t),Long.toString(t)).getJSONObject(0);
+        // Learning counts every card still in its steps today (seen once, back in a minute or ten), not only those due
+        // this second: otherwise ten new cards seen once would read "0" while they keep coming back.
+        JSONObject counts=rows(db,"SELECT coalesce(sum(CASE WHEN state IN(1,3) AND due<? THEN 1 ELSE 0 END),0) learning,coalesce(sum(CASE WHEN state=2 AND due<=? THEN 1 ELSE 0 END),0) review,coalesce(sum(CASE WHEN state=0 THEN 1 ELSE 0 END),0) fresh FROM items WHERE review=1"+scope,Long.toString(day+86400),Long.toString(t)).getJSONObject(0);
         counts.put("new",freshAvailable).put("new_total",counts.getLong("fresh")).put("new_limit",fallback);
         JSONArray next=rows(db,"SELECT i.*,f.name folder FROM items i JOIN folders f ON f.id=i.folder_id WHERE review=1 AND state>0 AND due<=?"+scope+" ORDER BY state=2,due LIMIT 1",Long.toString(t));
         if(next.length()==0&&freshAvailable>0)next=rows(db,"SELECT i.*,f.name folder FROM items i JOIN folders f ON f.id=i.folder_id WHERE review=1 AND state=0 AND folder_id IN("+open+") ORDER BY created,id LIMIT 1");
