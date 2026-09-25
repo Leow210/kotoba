@@ -7,11 +7,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import build_genshin_voice as v  # noqa: E402
 
 out = v.DATA / (sys.argv[1] if len(sys.argv) > 1 else 'genshin-zh')
-avatars = v.api('chs/avatar')['data']['items']
+avatars = v.api('chs/avatar')['data']['items']  # region codes are the same in every language
 s = json.loads((out / 'set.json').read_text())
 for g in s['groups']:
     region = v.region_of(avatars.get(g['id'], {}).get('region'))
-    g['section'], g['sectionEn'] = v.REGIONS[region]
+    g['section'], g['sectionEn'] = v.region_name(region, s.get('lang', 'zh'))
     g['order'] = list(v.REGIONS).index(region)
 s['groups'].sort(key=lambda g: (g.get('order', 0), g['id']))
 (out / 'set.json').write_text(json.dumps(s, ensure_ascii=False, indent=0))

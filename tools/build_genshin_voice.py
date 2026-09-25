@@ -28,6 +28,19 @@ LANGS = {'chs': ('zh', '原神 · 角色语音', 'CHS'), 'jp': ('ja', '原神 ·
 REGIONS = {'MONDSTADT': ('蒙德', 'Mondstadt'), 'LIYUE': ('璃月', 'Liyue'), 'INAZUMA': ('稻妻', 'Inazuma'), 'SUMERU': ('须弥', 'Sumeru'),
            'FONTAINE': ('枫丹', 'Fontaine'), 'NATLAN': ('纳塔', 'Natlan'), 'NODKRAI': ('挪德卡莱', 'Nod-Krai'),
            'SNEZHNAYA': ('至冬', 'Snezhnaya'), 'MAINACTOR': ('旅行者', 'Traveler'), 'RANGER': ('其他', 'Other')}
+# Region headings in the set's own language (Chinese names above).
+REGION_NAMES = {'ja': {'MONDSTADT': 'モンド', 'LIYUE': '璃月', 'INAZUMA': '稲妻', 'SUMERU': 'スメール', 'FONTAINE': 'フォンテーヌ', 'NATLAN': 'ナタ',
+                       'NODKRAI': 'ナド・クライ', 'SNEZHNAYA': 'スネージナヤ', 'MAINACTOR': '旅人', 'RANGER': 'その他'},
+                'ko': {'MONDSTADT': '몬드', 'LIYUE': '리월', 'INAZUMA': '이나즈마', 'SUMERU': '수메르', 'FONTAINE': '폰타인', 'NATLAN': '나타',
+                       'NODKRAI': '노드크라이', 'SNEZHNAYA': '스네즈나야', 'MAINACTOR': '여행자', 'RANGER': '기타'}}
+NICKNAME = {'zh': '旅行者', 'ja': '旅人', 'ko': '여행자'}
+
+
+def region_name(code, lang):
+    zh, en = REGIONS[code]
+    return REGION_NAMES.get(lang, {}).get(code, zh), en
+
+
 # yatta's other codes: the Fatui are Snezhnayan; Skirk (OMNI_SCOURGE) and Aloy (RANGER) come from outside Teyvat.
 REGION_ALIAS = {'FATUI': 'SNEZHNAYA', 'SNEZHNAYA_STAR': 'SNEZHNAYA', 'NODKRAI_ZIBAI': 'NODKRAI', 'OMNI_SCOURGE': 'RANGER', 'HVISION': 'RANGER'}
 
@@ -100,6 +113,7 @@ def clean(text, traveler='M', nickname='旅行者'):
     t = re.sub(r'\{M#([^}]*)\}\{F#([^}]*)\}', lambda m: m.group(1 if traveler == 'M' else 2), t)
     t = re.sub(r'\{LAYOUT_MOBILE#[^}]*\}\{LAYOUT_PC#([^}]*)\}\{LAYOUT_PS#[^}]*\}', r'\1', t)
     t = t.replace('{NICKNAME}', nickname)
+    t = re.sub(r'\{RUBY#\[[A-Z]\][^}]*\}', '', t)  # Japanese furigana markup: the reading goes, the kanji stay
     t = re.sub(r'</?color[^>]*>|</?i>|</?b>', '', t)
     t = t.replace('\\n', '\n')
     return t.strip()
@@ -189,9 +203,10 @@ def main():
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', str(raw), '-ac', '1', '-c:a', 'aac', '-b:a', '64k', str(dest)], check=True)
             en = en_by_audio.get(q['audio']) or {}
-            items.append({'id': vid, 'title': clean(q.get('title')), 'titleEn': clean(en.get('title'), args.traveler, 'Traveler'),
-                          'text': clean(q['text'], args.traveler), 'translation': clean(en.get('text'), args.traveler, 'Traveler'),
-                          'audio': f'audio/{aid}/{vid}.m4a', 'dur': duration(dest), 'note': clean(q.get('tips'))})
+            nick = NICKNAME.get(lang, '旅行者')
+            items.append({'id': vid, 'title': clean(q.get('title'), args.traveler, nick), 'titleEn': clean(en.get('title'), args.traveler, 'Traveler'),
+                          'text': clean(q['text'], args.traveler, nick), 'translation': clean(en.get('text'), args.traveler, 'Traveler'),
+                          'audio': f'audio/{aid}/{vid}.m4a', 'dur': duration(dest), 'note': clean(q.get('tips'), args.traveler, nick)})
         if not items:
             continue
         icon = out / 'icons' / f'{aid}.png'
@@ -201,7 +216,7 @@ def main():
                 icon.parent.mkdir(parents=True, exist_ok=True)
                 icon.write_bytes(b)
         region = region_of(a.get('region'))
-        rz, ren = REGIONS.get(region, (region.title(), region.title()))
+        rz, ren = region_name(region, lang)
         groups.append({'id': aid, 'name': a.get('name', aid), 'nameEn': a_en.get('name', ''), 'icon': f'icons/{aid}.png' if icon.exists() else '',
                        'section': rz, 'sectionEn': ren, 'order': list(REGIONS).index(region) if region in REGIONS else 99,
                        'rank': a.get('rank'), 'element': a.get('element'), 'items': items})
