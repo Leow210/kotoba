@@ -1350,9 +1350,24 @@ public class Library {
         String norm=HtmlText.normalize(key);
         JSONArray rows=Store.rows(db,"SELECT group_concat(k.key,char(1)) keys,k.rec,k.dict,coalesce(nullif((SELECT y.reading FROM ytext y WHERE y.rec=k.rec),''),r.key) page,d.name dictionary,d.kind,r.len size,(SELECT 1 FROM kanji j WHERE j.rec=k.rec AND j.char=?) head FROM keys k JOIN records r ON r.id=k.rec JOIN dicts d ON d.id=k.dict WHERE k.norm=? AND d.enabled=1 AND d.status='ready' GROUP BY k.dict,k.rec ORDER BY d.position,head IS NULL,r.len DESC LIMIT 60",key.trim(),norm);
         if(mixed)rows=withMixedSpellings(rows,norm);
+        // 類語 off: thesaurus pages don't match at all, so a phrase only they list (軌跡を辿る) falls back to 軌跡.
+        if(Boolean.TRUE.equals(skipThesaurus.get())){
+            java.util.Set<Long> the=thesaurusIds();
+            JSONArray kept=new JSONArray();
+            for(int i=0;i<rows.length();i++)if(!the.contains(rows.getJSONObject(i).optLong("dict")))kept.put(rows.get(i));
+            rows=kept;
+        }
         displayKeys(rows,key);
         addSpellings(rows,norm);
         return rows;
+    }
+    /** Set around a lookup while 類語 is switched off (per request thread). */
+    public final ThreadLocal<Boolean> skipThesaurus=new ThreadLocal<>();
+    java.util.Set<Long> thesaurusIds() throws Exception {
+        java.util.Set<Long> the=new java.util.HashSet<>();
+        JSONArray t=Store.rows(db,"SELECT id FROM dicts d WHERE NOT (1=1"+THESAURUS_FILTER+")");
+        for(int i=0;i<t.length();i++)the.add(t.getJSONObject(i).getLong("id"));
+        return the;
     }
 
     static boolean kana(int c){return c>=0x3041&&c<=0x3096||c==0x30fc;}

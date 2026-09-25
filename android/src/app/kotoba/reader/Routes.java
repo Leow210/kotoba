@@ -75,10 +75,15 @@ public class Routes {
             case "freq":return library.frequencies(d.getString("key"),d.optString("reading",""));
             case "freq.list":return library.freqList(d.getLong("dict"),d.optLong("from",0),d.optInt("offset",0),d.optInt("limit",150));
             case "lookup":{
-                JSONObject r=library.lookup(d.getString("text"),d.optString("lang",""));
-                // 類語 OFF (the search chip): thesaurus pages are left out of every popup too.
-                if("1".equals(store.setting("hide_thesaurus","")))library.dropThesaurus(r);
-                return r;
+                // 類語 OFF (the search chip): thesaurus pages are left out of every popup too, and don't take part in
+                // finding the word (so the text isn't matched to a phrase only a thesaurus lists).
+                boolean hide="1".equals(store.setting("hide_thesaurus",""));
+                library.skipThesaurus.set(hide);
+                try{
+                    JSONObject r=library.lookup(d.getString("text"),d.optString("lang",""));
+                    if(hide)library.dropThesaurus(r);
+                    return r;
+                }finally{library.skipThesaurus.remove();}
             }
             case "record":{
                 JSONObject r=library.record(d.getLong("rec"));
