@@ -58,6 +58,43 @@ public class Library {
         return b.toString();
     }
 
+    Map<Integer,Integer> toJapanese;
+    /**
+     * Japanese text that came through a simplified-Chinese conversion (NetEase lyrics: 気→气, 変→变, 楽→乐) with its
+     * kanji put back: a character that isn't a Japanese kanji (漢検's list) goes to its traditional form (OpenCC) and
+     * from there to the Japanese kanji that has it as an old form (氣 → 気), 常用 first. Kanji dictionaries needed.
+     */
+    public synchronized String japaneseKanji(String text) throws Exception {
+        if(toJapanese==null){
+            toJapanese=new HashMap<>();
+            simplified("");// loads t2s
+            java.util.Set<Integer> jp=new java.util.HashSet<>();
+            Map<Integer,Integer> fromOld=new HashMap<>();
+            // Japanese kanji: 漢検's list. Old forms: 漢辞海's variant characters (変: 變); 漢検 only labels them 旧字.
+            JSONArray rows=Store.rows(db,"SELECT char FROM kanji WHERE level!=''");
+            for(int i=0;i<rows.length();i++)jp.add(rows.getJSONObject(i).getString("char").codePointAt(0));
+            rows=Store.rows(db,"SELECT char,variants FROM kanji WHERE level='' AND variants!='' ORDER BY flags NOT LIKE '%常%'");
+            for(int i=0;i<rows.length();i++){
+                JSONObject r=rows.getJSONObject(i);
+                int c=r.getString("char").codePointAt(0);
+                if(!jp.contains(c))continue;
+                r.getString("variants").codePoints().filter(Library::han).forEach(v->fromOld.putIfAbsent(v,c));
+            }
+            if(jp.isEmpty())return text;
+            Map<Integer,java.util.List<Integer>> fromSimp=new HashMap<>();
+            for(Map.Entry<Integer,Integer> e:t2s.entrySet())fromSimp.computeIfAbsent(e.getValue(),k->new ArrayList<>()).add(e.getKey());
+            for(Map.Entry<Integer,java.util.List<Integer>> e:fromSimp.entrySet()){
+                if(jp.contains(e.getKey()))continue;// also a Japanese kanji: leave it
+                Integer best=null;
+                for(int t:e.getValue()){Integer j=jp.contains(t)?Integer.valueOf(t):fromOld.get(t);if(j!=null){best=j;break;}}
+                if(best!=null)toJapanese.put(e.getKey(),best);
+            }
+        }
+        StringBuilder b=new StringBuilder(text.length());
+        text.codePoints().forEach(c->b.appendCodePoint(toJapanese.getOrDefault(c,c)));
+        return b.toString();
+    }
+
     public Library(Context context,Opener opener){
         this.opener=opener;
         this.assets=context.getAssets();

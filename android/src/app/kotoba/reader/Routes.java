@@ -32,6 +32,19 @@ public class Routes {
     Accent accent;
     public Ocr ocr;// with its text layer
     Lyrics lyrics;// synced lyrics for the song that's playing (the one online feature)
+    /** Japanese lyrics with simplified-Chinese kanji (NetEase converts some): their Japanese kanji put back. */
+    JSONObject japaneseLyrics(JSONObject r) throws Exception {
+        JSONArray lines=r==null?null:r.optJSONArray("lines");
+        if(lines==null)return r;
+        int kana=0;
+        for(int i=0;i<lines.length();i++){String t=lines.getJSONObject(i).optString("text");for(char c:t.toCharArray())if(c>=0x3041&&c<=0x30FF)kana++;}
+        if(kana<8)return r;// not Japanese
+        for(int i=0;i<lines.length();i++){
+            JSONObject l=lines.getJSONObject(i);
+            l.put("text",library.japaneseKanji(l.optString("text")));
+        }
+        return r;
+    }
     Lyrics lyrics(){if(lyrics==null)lyrics=new Lyrics(store);return lyrics;}
     final Host host;
     final ExecutorService importer=Executors.newSingleThreadExecutor();
@@ -64,9 +77,10 @@ public class Routes {
             case "accent.status":return accent==null?new JSONObject().put("running",false):accent.status();
             case "listen.sets":return listening==null?new JSONArray():listening.sets();
             case "listen.set":return listening.set(d.getString("id"));
-            case "lyrics.get":return lyrics().get(d.optString("title"),d.optString("artist"),d.optString("album",""),d.optDouble("duration",0),d.optBoolean("refresh",false));
+            case "lyrics.get":return japaneseLyrics(lyrics().get(d.optString("title"),d.optString("artist"),d.optString("album",""),d.optDouble("duration",0),d.optBoolean("refresh",false)));
+            case "ja.kanji":return new JSONObject().put("text",library.japaneseKanji(d.getString("text")));// simplified → Japanese kanji
             case "lyrics.search":return lyrics().search(d.getString("q"));
-            case "lyrics.pick":return lyrics().pick(d.optString("title"),d.optString("artist"),d.getString("source"),d.getLong("id"));
+            case "lyrics.pick":return japaneseLyrics(lyrics().pick(d.optString("title"),d.optString("artist"),d.getString("source"),d.getLong("id")));
             case "the2.index":return library.the2Index(d.optString("q",""));
             case "the2.matches":return library.the2Matches(d.getLong("rec"),d.optString("q",""));
             case "forms":return library.forms(d.getString("q"));
