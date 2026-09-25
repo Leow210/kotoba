@@ -98,17 +98,37 @@
     pushPage(el);
     el.querySelector('[data-a="back"]').onclick=()=>popPage();
     const f=n=>el.querySelector(`[data-f="${n}"]`);
-    let paras=[];
+    let paras=[],accentRun=null;
     function render(){
       f('name').textContent=sg.names[lang]||g.name;
-      f('langs').innerHTML=langs.map(l=>`<button class="chip small ${l===lang?'on':''}" data-l="${l}">${LANG_LABEL[l]}</button>`).join('');
+      f('langs').innerHTML=langs.map(l=>`<button class="chip small ${l===lang?'on':''}" data-l="${l}">${LANG_LABEL[l]}</button>`).join('')+
+        (lang==='ja'?`<button class="chip small ls-acc-chip ${store.get('listen.accent',false)?'on':''}" data-acc title="Pitch accent over each word, from the NHK accent dictionary">アクセント</button>`:'');
+      const accChip=f('langs').querySelector('[data-acc]');
+      if(accChip)accChip.onclick=()=>{store.set('listen.accent',!store.get('listen.accent',false));const k=current();render();jump(k,true);};
       // Another language: the same entry stays in view.
       f('langs').querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>{const k=current();lang=b.dataset.l;store.set('listen.storyLang',lang);render();jump(k,true);});
       f('toc').innerHTML=sg.sections[lang].map((s,k)=>`<button class="chip small" data-k="${k}">${esc(shortTitle(s.title))}</button>`).join('');
       f('toc').querySelectorAll('[data-k]').forEach(c=>c.onclick=()=>jump(+c.dataset.k));
       paras=[];
       f('body').lang=lang==='zh'?'zh-CN':lang;
+      const withAccent=lang==='ja'&&store.get('listen.accent',false);
+      f('body').classList.toggle('acc',withAccent);
       f('body').innerHTML=sg.sections[lang].map(sec=>`<section><h3>${esc(sec.title)}</h3>${sec.note?`<p class="ls-story-note">${esc(sec.note)}</p>`:''}${sec.text.split(/\n+/).filter(Boolean).map(p=>{paras.push(p);return `<p class="ls-para" data-p="${paras.length-1}">${window.tappableText?tappableText(p):esc(p)}</p>`;}).join('')}</section>`).join('');
+      if(withAccent){
+        // A few paragraphs at a time, from the entry in view onward (then the ones before it), each shown as it's ready.
+        const ps=[...paras],shown=lang,token={};accentRun=token;
+        const firstPara=()=>{const sec=sections()[current()];const p=sec&&sec.querySelector('.ls-para');return p?+p.dataset.p:0;};
+        const start=firstPara(),order=[...ps.keys()].slice(start).concat([...ps.keys()].slice(0,start));
+        (async()=>{
+          for(let b=0;b<order.length;b+=4){
+            if(accentRun!==token||lang!==shown||!el.isConnected)return;
+            const idx=order.slice(b,b+4);
+            const res=await accents(idx.map(n=>ps[n]),set.id);
+            if(accentRun!==token||lang!==shown)return;
+            idx.forEach((n,j)=>{const p=f('body').querySelector(`.ls-para[data-p="${n}"]`);if(p)p.innerHTML=accentHtml(ps[n],res[j]);});
+          }
+        })().catch(e=>{toast(e.message);store.set('listen.accent',false);});
+      }
     }
     // Tap a word to look it up, in the language shown.
     f('body').addEventListener('click',e=>{const w=e.target.closest('.mu-w');if(w)lookWord(w);});
@@ -137,6 +157,43 @@
     f('scroll').addEventListener('scroll',()=>mark(current()),{passive:true});
     render();
     requestAnimationFrame(()=>jump(startAt,true));
+  }
+
+  // ---------- pitch accent (Japanese): NHK's notation over each word, like furigana ----------
+  const accentCache=new Map(),accentFiles={};
+  /** Words with their accent for each text: from the set's accents.json when it has them (worked out on the Mac),
+   *  otherwise one request for all that aren't known yet. */
+  async function accents(texts,setId){
+    if(setId){
+      if(!(setId in accentFiles))accentFiles[setId]=fetch(url(setId,'accents.json')).then(r=>r.ok?r.json():{}).catch(()=>({}));
+      const file=await accentFiles[setId];
+      for(const t of texts)if(!accentCache.has(t)&&file[t])accentCache.set(t,file[t]);
+    }
+    const need=[...new Set(texts.filter(t=>!accentCache.has(t)))];
+    if(need.length){const r=await api('accent.text',{texts:need});need.forEach((t,i)=>accentCache.set(t,r.results[i]));}
+    return texts.map(t=>accentCache.get(t));
+  }
+  /** The text as tappable characters (as tappableText does), each word under its accent; a particle shows high after a
+   *  flat word and low after a drop. */
+  function accentHtml(text,words){
+    const cps=[...text],off=[];let o=0;for(const c of cps){off.push(o);o+=c.length;}
+    const span=k=>cps[k]===' '?' ':`<span class="mu-w" data-o="${off[k]}">${esc(cps[k])}</span>`;
+    let html='',k=0,prev=null;
+    for(const w of words||[]){
+      if(w.s<k)continue;
+      while(k<w.s){html+=span(k);k++;}
+      const inner=cps.slice(w.s,w.e).map((_,j)=>span(w.s+j)).join('');
+      let rt='';
+      if(w.accent)rt=pitchHtml(w.accent);
+      else if(w.particle&&prev&&prev.accent&&prev.e===w.s){
+        const high=!prev.accent.includes('＼');
+        rt=`<span class="pitch">${[...w.kana].map(ch=>`<span class="${high?'hi':''}">${esc(ch)}</span>`).join('')}</span>`;
+      }
+      html+=rt?`<ruby>${inner}<rt>${rt}</rt></ruby>`:inner;
+      k=w.e;prev=w;
+    }
+    while(k<cps.length){html+=span(k);k++;}
+    return html;
   }
 
   /** Mac: holding the hover key (Shift) over a word looks it up, as in books and videos; the last popup gives way. */
@@ -184,10 +241,12 @@
         <div><span>Speed</span>${chip('speed',0.8,'0.8')}${chip('speed',1,'1')}${chip('speed',1.25,'1.25')}${chip('speed',1.5,'1.5')}${chip('speed',2,'2')}</div>
         <div><span>Text</span>${chip('text','show','show')}${chip('text','after','after hearing')}${chip('text','hide','hide')}</div>
         <div><span>English</span>${chip('tr',true,'show')}${chip('tr',false,'hide')}</div>
-        <div><span>Pause on lookup</span>${chip('pause',true,'on')}${chip('pause',false,'off')}</div>`;
+        <div><span>Pause on lookup</span>${chip('pause',true,'on')}${chip('pause',false,'off')}</div>
+        ${set.lang==='ja'?`<div><span>Pitch accent</span>${chip('accent',true,'show')}${chip('accent',false,'hide')}</div>`:''}`;
       f('opts').querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>{
         const k=b.dataset.o,raw=b.dataset.v;opts[k]=raw==='true'?true:raw==='false'?false:isNaN(+raw)?raw:+raw;
         saveOpts();paintOpts();paintText();showOpts();audio.playbackRate=opts.speed;
+        if(k==='accent')paint();
       });
     }
     function paintText(){
@@ -201,6 +260,8 @@
       f('pos').textContent=`${i+1} / ${queue.length}`;
       f('who').innerHTML=`${g.icon?`<img src="${url(set.id,g.icon)}" alt="">`:''}<span><b>${esc(g.name)}</b> · ${esc(it.title)}${it.titleEn?`<small>${esc(g.nameEn||'')} · ${esc(it.titleEn)}</small>`:''}</span>`;
       f('text').innerHTML=window.tappableText?tappableText(it.text):esc(it.text);
+      f('text').classList.toggle('acc',set.lang==='ja'&&!!opts.accent);
+      if(set.lang==='ja'&&opts.accent){const at=i;accents([it.text],set.id).then(r=>{if(at===i&&el.isConnected)f('text').innerHTML=accentHtml(it.text,r[0]);}).catch(e=>toast(e.message));}
       f('tr').textContent=it.translation||'';
       f('note').textContent=it.note||'';
       f('bar').style.width=`${(i+1)/queue.length*100}%`;

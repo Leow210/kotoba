@@ -726,3 +726,12 @@ svg.i.sm{width:16px;height:16px}
 .st-pie{width:150px;height:150px;border-radius:50%;flex:none}
 .st-cards .st-table{flex:1;min-width:220px}
 .st-dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:middle}
+/* Pitch accent over words (Listening, stories) */
+.acc ruby{ruby-position:over}
+.acc rt{font-size:.55em;line-height:1.1;text-align:center}
+.acc rt .pitch{font:inherit;font-size:1em;letter-spacing:0}
+.acc rt .pitch span{padding:1px 0 0;border-top-width:1.5px}
+.acc rt .pitch span.dn{border-right-width:1.5px}
+.acc rt .pitch .flat{display:none}
+.ls-story-body.acc .ls-para{line-height:2.5}
+.ls-text.acc{line-height:2.3}

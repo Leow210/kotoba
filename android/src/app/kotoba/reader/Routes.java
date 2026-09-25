@@ -29,6 +29,7 @@ public class Routes {
     public Books books;// set by the platform (both apps have the book reader)
     public Comics comics;// and the comic reader
     public Listening listening;// listening sets (Glossika-style)
+    Accent accent;
     public Ocr ocr;// with its text layer
     Lyrics lyrics;// synced lyrics for the song that's playing (the one online feature)
     Lyrics lyrics(){if(lyrics==null)lyrics=new Lyrics(store);return lyrics;}
@@ -58,6 +59,9 @@ public class Routes {
                 return result;
             }
             // ---------- lyrics (the song playing in Spotify, YouTube Music, NetEase…) ----------
+            case "accent.text":{if(accent==null)accent=new Accent(library);return accent.annotate(d.getJSONArray("texts"));}
+            case "accent.export":{if(accent==null)accent=new Accent(library);return accent.export(new java.io.File(listening.root,d.getString("set")));}
+            case "accent.status":return accent==null?new JSONObject().put("running",false):accent.status();
             case "listen.sets":return listening==null?new JSONArray():listening.sets();
             case "listen.set":return listening.set(d.getString("id"));
             case "lyrics.get":return lyrics().get(d.optString("title"),d.optString("artist"),d.optString("album",""),d.optDouble("duration",0),d.optBoolean("refresh",false));
