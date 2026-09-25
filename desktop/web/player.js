@@ -249,7 +249,7 @@ async function showPop(res,cue,r1,r2,P=pop){
       ${res.explain||alts(res).length?`<div class="p-explain">${esc(res.explain||'')}${alts(res).map((f,j)=>`<button class="p-alt" data-p="alt" data-j="${j}" title="${esc(f.explain||'')}">or ${esc(f.base)}</button>`).join('')}</div>`:''}
       <div class="p-tabs">${items.map((it,n)=>`<button class="p-tab${n?'':' on'}" data-p="tab" data-n="${n}">${esc(shortName(it.dictionary))}</button>`).join('')}</div>
       <div class="p-entry"></div>
-      <div class="p-actions"><button data-p="card">＋ Card</button><select class="p-folder" title="Folder for new cards"></select><button data-p="main">Open in Kotoba</button><button data-p="copy">Copy</button></div>`;
+      <div class="p-actions"><button data-p="card">＋ Card</button><select class="p-folder" title="Folder for new cards"></select><button data-p="main">Open in Kotoba</button>${(P.level?P.lang:st.lang)==='zh'?'':''}<button data-p="copy">Copy</button></div>`;
     P.items=items;
     fillFolders(P.el.querySelector('.p-folder'));
     const kb=P.el.querySelector('.p-known');

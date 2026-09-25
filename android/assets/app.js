@@ -133,11 +133,39 @@ function openSheet(html,opts={}){
   sheet.innerHTML=`<div class="grab"></div>${opts.title!==undefined?`<div class="sheet-head"><h2>${esc(opts.title)}</h2><button class="icon-btn" data-close aria-label="Close">${icon('close')}</button></div>`:''}${html}`;
   root.append(scrim,sheet);
   const entry={sheet,scrim,opts};sheetStack.push(entry);
+  // On the Mac a lookup from running text (Listening, stories) floats beside the word, like the video player's popup.
+  if(opts.anchor&&document.documentElement.classList.contains('desktop'))floatSheet(entry,opts.anchor);
   requestAnimationFrame(()=>requestAnimationFrame(()=>{scrim.classList.add('show');sheet.classList.add('show');}));
   scrim.onclick=()=>closeSheet(entry);
   sheet.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>closeSheet(entry));
   hideSelbar();
   return entry;
+}
+/** A sheet as a popup beside `rect` (below the word if there's room, else above), moved by its top bar. */
+function floatSheet(entry,rect){
+  const {sheet,scrim}=entry;
+  sheet.classList.add('floating');scrim.classList.add('clear');
+  const box=$('sheets').getBoundingClientRect();
+  const w=Math.min(480,box.width-24),h=Math.min(560,Math.round(box.height*0.62));
+  const below=rect.bottom+10+h<=box.bottom-8;
+  const x=Math.max(12,Math.min(box.width-w-12,rect.left-box.left-24));
+  const y=below?rect.bottom-box.top+10:Math.max(8,rect.top-box.top-h-10);
+  Object.assign(sheet.style,{width:w+'px',height:h+'px',left:x+'px',top:y+'px'});
+  // The text behind stays usable (hover or click another word); a click elsewhere closes the popup.
+  const outside=e=>{
+    if(!sheet.isConnected){document.removeEventListener('pointerdown',outside,true);return;}
+    if(!e.target.closest('.sheet,#selbar,#toast')){document.removeEventListener('pointerdown',outside,true);closeSheet(entry);}
+  };
+  document.addEventListener('pointerdown',outside,true);
+  sheet.addEventListener('pointerdown',e=>{
+    if(!e.target.closest('.grab,.sheet-head')||e.target.closest('button,input,select,a'))return;
+    e.preventDefault();
+    const r=sheet.getBoundingClientRect(),dx=e.clientX-r.left,dy=e.clientY-r.top;
+    try{sheet.setPointerCapture(e.pointerId);}catch(err){}
+    const move=ev=>{sheet.style.left=Math.max(0,Math.min(box.width-60,ev.clientX-box.left-dx))+'px';sheet.style.top=Math.max(0,Math.min(box.height-40,ev.clientY-box.top-dy))+'px';};
+    const up=()=>{sheet.removeEventListener('pointermove',move);sheet.removeEventListener('pointerup',up);};
+    sheet.addEventListener('pointermove',move);sheet.addEventListener('pointerup',up);
+  });
 }
 function closeSheet(entry){
   entry=entry||sheetStack[sheetStack.length-1];if(!entry)return;
@@ -1451,16 +1479,16 @@ window.selectionAction=(action)=>handle(async()=>{
 
 async function lookupSheet(text,sel,extra={}){
   const r=await api('lookup',{text,lang:extra.lang||''});
-  const pleco=window.Kotoba&&Kotoba.plecoLookup&&chineseHeadword(r.matched||text.trim())&&
+  // One Pleco button, on the phone: the sentence in Pleco's reader (Chinese only).
+  const pleco=window.Kotoba&&Kotoba.plecoRead&&chineseHeadword(r.matched||text.trim())&&
     (extra.lang==='zh'||(r.items||[]).some(it=>parentOf(dictById(it.dict)?.grp)==='Chinese'));
   if(!r.items.length){
-    const s=openSheet(`<div class="sheet-body"><p class="hint">No headword starts with “${esc(text.slice(0,40))}”.</p></div><div class="sheet-foot"><button class="btn wide" id="lk-search">${icon('search')} Search definitions</button>${pleco?`<button class="btn wide" id="lk-pleco">Pleco</button>`:''}<button class="btn primary wide" id="lk-card">${icon('star')} Save</button></div>`,{title:'Look up',onClose:extra.onClose});
+    const s=openSheet(`<div class="sheet-body"><p class="hint">No headword starts with “${esc(text.slice(0,40))}”.</p></div><div class="sheet-foot"><button class="btn wide" id="lk-search">${icon('search')} Search definitions</button><button class="btn primary wide" id="lk-card">${icon('star')} Save</button></div>`,{title:'Look up',onClose:extra.onClose,anchor:extra.anchor});
     s.sheet.querySelector('#lk-search').onclick=()=>{closeSheet(s);closeAllOverlays();showTab('search');$('q').value=text.slice(0,100);search.mode='definition';document.querySelectorAll('#modes [data-mode]').forEach(x=>x.classList.toggle('on',x.dataset.mode==='definition'));runSearch();};
-    if(s.sheet.querySelector('#lk-pleco'))s.sheet.querySelector('#lk-pleco').onclick=()=>Kotoba.plecoLookup(text.trim());
     const missingContext=sel&&sel.context&&sel.context.trim();
     if(missingContext&&missingContext!==text.trim()&&pleco&&Kotoba.plecoRead){
-      const read=document.createElement('button');read.className='btn wide';read.textContent='Read sentence in Pleco';
-      s.sheet.querySelector('#lk-pleco').after(read);read.onclick=()=>Kotoba.plecoRead(missingContext);
+      const read=document.createElement('button');read.className='btn wide';read.textContent='Pleco';read.title='Read the sentence in Pleco';
+      s.sheet.querySelector('#lk-search').after(read);read.onclick=()=>Kotoba.plecoRead(missingContext);
     }
     s.sheet.querySelector('#lk-card').onclick=()=>{closeSheet(s);openSaveSheet({review:true,kind:'selection',headword:text.slice(0,60),back:'',context:sel&&sel.context||''});};
     return;
@@ -1468,7 +1496,7 @@ async function lookupSheet(text,sel,extra={}){
   let index=0;
   const items=r.items;
   const formNote=r.explain?`<div class="form-note"><b>${esc(r.matched)}</b> → ${esc(r.key)} · ${esc(r.explain)}</div>`:'';
-  const s=openSheet(`${formNote}<div class="dict-tabs" id="lk-tabs" ${items.length<2?'hidden':''}></div><div class="lk-units" id="lk-units" hidden></div><div class="sheet-body" style="padding:0"><iframe class="lookup-frame" id="lk-frame"></iframe></div><div class="sheet-foot"><button class="btn wide" id="lk-open">${icon('book')} Open</button>${pleco?`<button class="btn wide" id="lk-pleco">Pleco</button>`:''}<button class="btn primary wide" id="lk-card">${icon('star')} Save</button></div>`,{title:r.key,tall:false,onClose:extra.onClose});
+  const s=openSheet(`${formNote}<div class="dict-tabs" id="lk-tabs" ${items.length<2?'hidden':''}></div><div class="lk-units" id="lk-units" hidden></div><div class="sheet-body" style="padding:0"><iframe class="lookup-frame" id="lk-frame"></iframe></div><div class="sheet-foot"><button class="btn wide" id="lk-open">${icon('book')} Open</button><button class="btn primary wide" id="lk-card">${icon('star')} Save</button></div>`,{title:r.key,tall:false,onClose:extra.onClose,anchor:extra.anchor});
   const frame=s.sheet.querySelector('#lk-frame');
   let wired=null,focusUnit=null;
   const show=async(i)=>{
@@ -1505,7 +1533,6 @@ async function lookupSheet(text,sel,extra={}){
     wireKnownButton(kb,r.key,items[0].dict,extra.lang||'');
   }
   s.sheet.querySelector('#lk-open').onclick=()=>{closeSheet(s);const it=items[index];openEntry({...it,key:r.key,alternatives:items});};
-  if(s.sheet.querySelector('#lk-pleco'))s.sheet.querySelector('#lk-pleco').onclick=()=>Kotoba.plecoLookup(r.matched||r.key);
   // The sentence the word was found in (a book line, a comic bubble) can be kept as a sentence card too.
   const context=sel&&sel.context&&sel.context.trim();
   if(context&&context!==text.trim()){
@@ -1513,7 +1540,7 @@ async function lookupSheet(text,sel,extra={}){
     s.sheet.querySelector('#lk-open').after(b);
     b.onclick=handle(async()=>{closeSheet(s);await saveSentence({text:context,image:extra.image?await extra.image():'',note:extra.book||readerSourceNote()});});
     if(pleco&&Kotoba.plecoRead){
-      const read=document.createElement('button');read.className='btn wide';read.textContent='Read sentence in Pleco';
+      const read=document.createElement('button');read.className='btn wide';read.textContent='Pleco';read.title='Read the sentence in Pleco';
       b.after(read);read.onclick=()=>Kotoba.plecoRead(context);
     }
   }

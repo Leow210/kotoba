@@ -668,3 +668,15 @@ svg.i.sm{width:16px;height:16px}
 .ls-toc-group span{font-size:12.5px;color:var(--muted);margin-right:2px}
 .ls-story-body section{position:relative}
 .ls-story .ls-scroll{position:relative}
+/* A lookup floating beside the word (Mac: Listening, stories) */
+.sheet.floating{right:auto;bottom:auto;max-height:none;border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.28);border:1px solid var(--line);transform:translateY(6px);opacity:0;transition:transform .16s ease,opacity .16s ease;padding-bottom:0}
+.sheet.floating.show{transform:none;opacity:1}
+.sheet.floating .grab,.sheet.floating .sheet-head{cursor:grab}
+.sheet.floating .grab{margin-top:6px}
+.scrim.clear{background:transparent;pointer-events:none}
+/* A lookup's buttons: they wrap onto a second row rather than push Save off the edge (narrow phones, floating popups). */
+.sheet-foot{flex-wrap:wrap}
+.sheet-foot .btn.wide{flex:1 1 auto;min-width:0;white-space:nowrap}
+.sheet-foot #lk-card{flex:1 0 auto}
+.sheet.floating .sheet-foot{gap:8px;padding:8px 12px 10px}
+.sheet.floating .sheet-foot .btn{height:40px;font-size:14px;padding:0 12px}

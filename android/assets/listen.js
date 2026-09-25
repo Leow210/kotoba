@@ -116,13 +116,15 @@
       f('body').innerHTML=sg.sections[lang].map(sec=>`<section><h3>${esc(sec.title)}</h3>${sec.note?`<p class="ls-story-note">${esc(sec.note)}</p>`:''}${sec.text.split(/\n+/).filter(Boolean).map(p=>{paras.push(p);return `<p class="ls-para" data-p="${paras.length-1}">${window.tappableText?tappableText(p):esc(p)}</p>`;}).join('')}</section>`).join('');
     }
     // Tap a word to look it up, in the language shown.
-    f('body').addEventListener('click',async e=>{
-      const w=e.target.closest('.mu-w'),p=e.target.closest('.ls-para');if(!w||!p||!window.tappableWord)return;
+    f('body').addEventListener('click',e=>{const w=e.target.closest('.mu-w');if(w)lookWord(w);});
+    hoverWords(f('body'),w=>lookWord(w));
+    async function lookWord(w){
+      const p=w.closest('.ls-para');if(!p||!window.tappableWord)return;
       const text=paras[+p.dataset.p],word=tappableWord(text,w);if(!word)return;
       f('body').querySelectorAll('.mu-w.on').forEach(x=>x.classList.remove('on'));
       if(w.dataset.end!=null)p.querySelectorAll('.mu-w').forEach(x=>{if(x.dataset.end===w.dataset.end&&+x.dataset.o>=+w.dataset.o)x.classList.add('on');});else w.classList.add('on');
-      await lookupSheet(word,{context:text},{lang,book:`${set.title} · ${sg.names[lang]||g.name}`,onClose:()=>f('body').querySelectorAll('.mu-w.on').forEach(x=>x.classList.remove('on'))});
-    });
+      await lookupSheet(word,{context:text},{lang,book:`${set.title} · ${sg.names[lang]||g.name}`,anchor:w.getBoundingClientRect(),onClose:()=>f('body').querySelectorAll('.mu-w.on').forEach(x=>x.classList.remove('on'))});
+    }
     const sections=()=>[...f('body').querySelectorAll('section')];
     function jump(k,instant){
       const sec=sections()[Math.min(k,sections().length-1)];if(!sec)return;
@@ -142,6 +144,18 @@
     requestAnimationFrame(()=>jump(startAt,true));
   }
 
+  /** Mac: holding the hover key (Shift) over a word looks it up, as in books and videos; the last popup gives way. */
+  function hoverWords(container,look){
+    if(!window.KotobaHover)return;
+    let last=null,timer=0;
+    container.addEventListener('mousemove',e=>{
+      if(!KotobaHover.matches(e)){last=null;clearTimeout(timer);return;}
+      const w=e.target.closest('.mu-w');if(!w||w===last)return;
+      last=w;clearTimeout(timer);
+      timer=setTimeout(()=>{sheetStack.filter(x=>x.sheet.classList.contains('floating')).forEach(x=>closeSheet(x));look(w);},150);
+    });
+  }
+
   function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 
   // ---------- the player: each line heard `repeats` times with room to repeat it, then the next ----------
@@ -157,10 +171,9 @@
       </div>
       <div class="ls-progress"><i data-f="bar"></i></div>
       <div class="ls-controls"><button class="icon-btn" data-a="prev" aria-label="Previous line">${icon('prev')}</button><button class="ls-play" data-a="toggle" aria-label="Play or pause"></button><button class="icon-btn" data-a="next" aria-label="Next line">${icon('next')}</button></div>
-      <div class="ls-card-row"><button class="btn small" data-a="word">${icon('plus')} Add word</button><span class="hint" data-f="wordhint">then tap the word in the line</span></div>
       <button class="ls-opts-toggle" data-a="opts"></button>
       <div class="ls-opts" data-f="opts"></div>`;
-    let i=Math.max(0,Math.min(start,queue.length-1)),rep=0,playing=true,heard=false,timer=0,pausedByLookup=false,closed=false,picking=false;
+    let i=Math.max(0,Math.min(start,queue.length-1)),rep=0,playing=true,heard=false,timer=0,pausedByLookup=false,closed=false;
     const audio=new Audio();audio.preload='auto';
     const f=n=>el.querySelector(`[data-f="${n}"]`);
     pushPage(el,{onClose:()=>{closed=true;clearTimeout(timer);audio.pause();audio.src='';}});
@@ -202,7 +215,7 @@
 
     function load(n,autoplay){
       clearTimeout(timer);
-      i=(n+queue.length)%queue.length;rep=0;heard=false;if(picking)setPicking(false);
+      i=(n+queue.length)%queue.length;rep=0;heard=false;
       audio.src=url(set.id,queue[i].it.audio);audio.playbackRate=opts.speed;
       paint();
       if(autoplay&&playing)audio.play().catch(()=>{playing=false;paintPlay();});
@@ -229,33 +242,23 @@
     el.querySelector('[data-a="prev"]').onclick=()=>load(i-1,true);
     el.querySelector('[data-a="next"]').onclick=()=>load(i+1,true);
     // Tap the text: hidden → shown; a word → looked up (the line waits meanwhile).
-    f('text').addEventListener('click',async e=>{
+    f('text').addEventListener('click',e=>{
       if(f('text').classList.contains('hidden')){heard=true;paintText();return;}
-      const w=e.target.closest('.mu-w');if(!w||!window.tappableWord)return;
+      const w=e.target.closest('.mu-w');if(w)lookWord(w);
+    });
+    hoverWords(f('text'),w=>{if(!f('text').classList.contains('hidden'))lookWord(w);});
+    async function lookWord(w){
+      if(!window.tappableWord)return;
       const {g,it}=queue[i];
       const word=tappableWord(it.text,w);if(!word)return;
-      const adding=picking;setPicking(false);
       f('text').querySelectorAll('.mu-w.on').forEach(x=>x.classList.remove('on'));
       if(w.dataset.end!=null)f('text').querySelectorAll('.mu-w').forEach(x=>{if(x.dataset.end===w.dataset.end&&+x.dataset.o>=+w.dataset.o)x.classList.add('on');});else w.classList.add('on');
       if(opts.pause&&playing){pausedByLookup=true;playing=false;clearTimeout(timer);audio.pause();paintPlay();}
-      await lookupSheet(word,{context:it.text},{lang:set.lang,book:`${set.title} · ${g.name} · ${it.title}`,onClose:()=>{
+      await lookupSheet(word,{context:it.text},{lang:set.lang,book:`${set.title} · ${g.name} · ${it.title}`,anchor:w.getBoundingClientRect(),onClose:()=>{
         f('text').querySelectorAll('.mu-w.on').forEach(x=>x.classList.remove('on'));
         if(pausedByLookup&&!sheetStack.length){pausedByLookup=false;playing=true;paintPlay();if(rep>=opts.repeats)load(i+1,true);else audio.play().catch(()=>{});}
       }});
-      // Adding a word: straight to its card (the dictionary's best match from there, the line as its context).
-      if(adding){const top=sheetStack[sheetStack.length-1];const save=top&&top.sheet.querySelector('#lk-card');if(save)save.click();}
-    });
-    // Add word: the line waits, its text shows, and the next word tapped becomes a card.
-    function setPicking(on){
-      picking=on;f('text').classList.toggle('picking',on);
-      el.querySelector('[data-a="word"]').classList.toggle('primary',on);
-      f('wordhint').textContent=on?'tap the word in the line (or Add word again to cancel)':'then tap the word in the line';
     }
-    el.querySelector('[data-a="word"]').onclick=()=>{
-      if(picking){setPicking(false);return;}
-      if(playing){playing=false;clearTimeout(timer);audio.pause();paintPlay();}
-      heard=true;paintText();setPicking(true);
-    };
     // A sentence card: the line, its English on the back, and the voice itself to play in review.
     const addCard=handle(async()=>{
       const {g,it}=queue[i];
