@@ -33,6 +33,8 @@ public class Store {
         try{db.execSQL("ALTER TABLE items ADD COLUMN image TEXT NOT NULL DEFAULT ''");}catch(Exception ignored){}
         // Folders are decks: everything saved is studied unless its folder is switched off.
         try{db.execSQL("ALTER TABLE folders ADD COLUMN study INTEGER NOT NULL DEFAULT 1");}catch(Exception ignored){}
+        // Each deck's own new cards per day; -1 means the default (Settings › New cards per day).
+        try{db.execSQL("ALTER TABLE folders ADD COLUMN new_per_day INTEGER NOT NULL DEFAULT -1");}catch(Exception ignored){}
         if(setting("unified_decks","").isEmpty()){db.execSQL("UPDATE items SET review=1");setSetting("unified_decks","1");}
         db.execSQL("CREATE INDEX IF NOT EXISTS items_folder ON items(folder_id,updated)");
         db.execSQL("CREATE INDEX IF NOT EXISTS items_due ON items(review,state,due)");
@@ -105,7 +107,7 @@ public class Store {
 
     public JSONArray folders()throws Exception{
         long t=now();
-        return rows(db,"SELECT f.id,f.name,f.position,f.study,count(i.id) count,coalesce(sum(i.review),0) cards,coalesce(sum(CASE WHEN i.review=1 AND i.state>0 AND i.due<=? THEN 1 ELSE 0 END),0) due,coalesce(sum(CASE WHEN i.review=1 AND i.state=0 THEN 1 ELSE 0 END),0) fresh FROM folders f LEFT JOIN items i ON i.folder_id=f.id GROUP BY f.id ORDER BY f.id!=1,f.position,f.name",Long.toString(t));
+        return rows(db,"SELECT f.id,f.name,f.position,f.study,f.new_per_day,count(i.id) count,coalesce(sum(i.review),0) cards,coalesce(sum(CASE WHEN i.review=1 AND i.state>0 AND i.due<=? THEN 1 ELSE 0 END),0) due,coalesce(sum(CASE WHEN i.review=1 AND i.state=0 THEN 1 ELSE 0 END),0) fresh FROM folders f LEFT JOIN items i ON i.folder_id=f.id GROUP BY f.id ORDER BY f.id!=1,f.position,f.name",Long.toString(t));
     }
 
     public JSONObject saveFolder(JSONObject data)throws Exception{
@@ -132,6 +134,7 @@ public class Store {
     }
 
     public void setStudy(long id,boolean study){db.execSQL("UPDATE folders SET study=? WHERE id=?",new Object[]{study?1:0,id});}
+    public void setNewPerDay(long id,int n){db.execSQL("UPDATE folders SET new_per_day=? WHERE id=?",new Object[]{Math.max(-1,Math.min(9999,n)),id});}
 
     public void reorderFolders(JSONArray ids){
         db.beginTransaction();
@@ -299,13 +302,19 @@ public class Store {
     public JSONObject queue(long folder)throws Exception{
         long t=now(),day=dayStart();
         String scope=folder>0?" AND folder_id="+folder:" AND folder_id IN (SELECT id FROM folders WHERE study=1)";
-        long introduced=rows(db,"SELECT count(*) n FROM items WHERE introduced>=?",Long.toString(day)).getJSONObject(0).getLong("n");
-        long newLeft=Math.max(0,newPerDay()-introduced);
+        // New cards: each deck has its own daily limit (or the default), counted by the cards it introduced today.
+        int fallback=newPerDay();long freshAvailable=0;StringBuilder open=new StringBuilder();
+        JSONArray decks=rows(db,"SELECT f.id,f.new_per_day lim,(SELECT count(*) FROM items i WHERE i.folder_id=f.id AND i.introduced>=?) intro,(SELECT count(*) FROM items i WHERE i.folder_id=f.id AND i.review=1 AND i.state=0) fresh FROM folders f WHERE "+(folder>0?"f.id="+folder:"f.study=1"),Long.toString(day));
+        for(int i=0;i<decks.length();i++){
+            JSONObject f=decks.getJSONObject(i);
+            long lim=f.getLong("lim")<0?fallback:f.getLong("lim");
+            long avail=Math.min(Math.max(0,lim-f.getLong("intro")),f.getLong("fresh"));
+            if(avail>0){freshAvailable+=avail;open.append(open.length()>0?",":"").append(f.getLong("id"));}
+        }
         JSONObject counts=rows(db,"SELECT coalesce(sum(CASE WHEN state IN(1,3) AND due<=? THEN 1 ELSE 0 END),0) learning,coalesce(sum(CASE WHEN state=2 AND due<=? THEN 1 ELSE 0 END),0) review,coalesce(sum(CASE WHEN state=0 THEN 1 ELSE 0 END),0) fresh FROM items WHERE review=1"+scope,Long.toString(t),Long.toString(t)).getJSONObject(0);
-        long freshAvailable=Math.min(newLeft,counts.getLong("fresh"));
-        counts.put("new",freshAvailable).put("new_total",counts.getLong("fresh")).put("new_limit",newPerDay());
+        counts.put("new",freshAvailable).put("new_total",counts.getLong("fresh")).put("new_limit",fallback);
         JSONArray next=rows(db,"SELECT i.*,f.name folder FROM items i JOIN folders f ON f.id=i.folder_id WHERE review=1 AND state>0 AND due<=?"+scope+" ORDER BY state=2,due LIMIT 1",Long.toString(t));
-        if(next.length()==0&&freshAvailable>0)next=rows(db,"SELECT i.*,f.name folder FROM items i JOIN folders f ON f.id=i.folder_id WHERE review=1 AND state=0"+scope+" ORDER BY created,id LIMIT 1");
+        if(next.length()==0&&freshAvailable>0)next=rows(db,"SELECT i.*,f.name folder FROM items i JOIN folders f ON f.id=i.folder_id WHERE review=1 AND state=0 AND folder_id IN("+open+") ORDER BY created,id LIMIT 1");
         // Learn ahead: a learning card due within 20 minutes is shown rather than leaving the session empty.
         if(next.length()==0)next=rows(db,"SELECT i.*,f.name folder FROM items i JOIN folders f ON f.id=i.folder_id WHERE review=1 AND state IN(1,3) AND due<=?"+scope+" ORDER BY due LIMIT 1",Long.toString(t+1200));
         JSONObject out=new JSONObject().put("counts",counts);

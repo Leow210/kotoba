@@ -388,6 +388,7 @@ svg.i.sm{width:16px;height:16px}
 .deck:last-child{border-bottom:0}
 .deck .db{flex:1;min-width:0}
 .deck .db b{display:block;font-weight:600}
+.deck .deck-limit{font:inherit;color:inherit;text-decoration:underline dotted;text-underline-offset:3px;padding:0;background:none;border:0;cursor:pointer}
 .deck .db small{color:var(--muted);font-size:12.5px}
 .deck.off .db{opacity:.5}
 

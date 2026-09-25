@@ -62,7 +62,7 @@ public class Sync {
     /** This device's sync file. */
     public JSONObject export(String deviceName,Dicts dicts) throws Exception {
         JSONObject out=new JSONObject().put("format","kotoba-sync-1").put("device",deviceId()).put("name",deviceName).put("exported",System.currentTimeMillis());
-        out.put("folders",Store.rows(db,"SELECT uid,name,position,study,created,changed FROM folders"));
+        out.put("folders",Store.rows(db,"SELECT uid,name,position,study,new_per_day,created,changed FROM folders"));
         JSONArray items=Store.rows(db,"SELECT i.*,f.uid folder_uid FROM items i JOIN folders f ON f.id=i.folder_id");
         HashMap<Long,String> titles=new HashMap<>();
         for(int i=0;i<items.length();i++){
@@ -110,7 +110,7 @@ public class Sync {
                 if(local.length()==0)local=Store.rows(db,"SELECT id,uid,changed FROM folders WHERE name=?",f.getString("name"));
                 if(local.length()==0){
                     ContentValues v=new ContentValues();
-                    v.put("uid",uid);v.put("name",uniqueFolderName(f.getString("name")));v.put("position",f.optLong("position"));v.put("study",f.optLong("study",1));
+                    v.put("uid",uid);v.put("name",uniqueFolderName(f.getString("name")));v.put("position",f.optLong("position"));v.put("study",f.optLong("study",1));v.put("new_per_day",f.optLong("new_per_day",-1));
                     v.put("created",f.optLong("created"));v.put("changed",f.getLong("changed"));
                     folderIds.put(uid,db.insertOrThrow("folders",null,v));
                     continue;
@@ -120,10 +120,13 @@ public class Sync {
                 // Same folder made on two devices: both converge on the smaller uid.
                 if(!l.getString("uid").equals(uid)&&uid.compareTo(l.getString("uid"))<0)
                     db.execSQL("UPDATE folders SET uid=?,changed=changed+1 WHERE id=?",new Object[]{uid,id});
+                // The Inbox keeps its name, but its deck settings follow the newer copy.
+                if(f.getLong("changed")>l.getLong("changed")&&id==1)
+                    db.execSQL("UPDATE folders SET study=?,new_per_day=?,changed=? WHERE id=1",new Object[]{f.optLong("study",1),f.optLong("new_per_day",-1),f.getLong("changed")});
                 if(f.getLong("changed")>l.getLong("changed")&&id!=1){
                     String name=f.getString("name");
                     if(Store.rows(db,"SELECT 1 FROM folders WHERE name=? AND id!=?",name,Long.toString(id)).length()>0)name=uniqueFolderName(name);
-                    db.execSQL("UPDATE folders SET name=?,position=?,study=?,changed=? WHERE id=?",new Object[]{name,f.optLong("position"),f.optLong("study",1),f.getLong("changed"),id});
+                    db.execSQL("UPDATE folders SET name=?,position=?,study=?,new_per_day=?,changed=? WHERE id=?",new Object[]{name,f.optLong("position"),f.optLong("study",1),f.optLong("new_per_day",-1),f.getLong("changed"),id});
                 }
             }
 

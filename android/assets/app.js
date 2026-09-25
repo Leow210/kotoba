@@ -1767,6 +1767,18 @@ let reviewFolder=0;
 async function refreshBadge(){
   try{const q=await api('queue',{folder:0});const n=q.counts.review+q.counts.learning+q.counts.new;$('due-badge').textContent=n?String(n>999?'999+':n):'';}catch(e){}
 }
+/** One deck's new cards per day: its own number, or the default for all decks. */
+function deckLimitSheet(f,fallback){
+  let n=f.new_per_day>=0?f.new_per_day:fallback,own=f.new_per_day>=0;
+  const s=openSheet(`<div class="settings">
+    <div class="switch-row"><div><b>Own limit</b><small>Off: the default, ${fallback} a day</small></div><label class="toggle"><input type="checkbox" id="dl-own" ${own?'checked':''}><span></span></label></div>
+    <div class="switch-row"><div><b>New cards per day</b><small>${f.fresh} new waiting in this deck</small></div><div class="stepper"><button data-dl="-5">−</button><span id="dl-n">${n}</span><button data-dl="5">+</button></div></div>
+  </div><div style="height:16px"></div>`,{title:f.name});
+  const save=handle(async()=>{await api('folder.newPerDay',{id:f.id,n:own?n:-1});renderReviewHome();refreshBadge();});
+  const show=()=>{s.sheet.querySelector('#dl-n').textContent=own?n:fallback;s.sheet.querySelector('#dl-own').checked=own;};
+  s.sheet.querySelector('#dl-own').onchange=e=>{own=e.target.checked;show();save();};
+  s.sheet.querySelectorAll('[data-dl]').forEach(b=>b.onclick=()=>{own=true;n=Math.max(0,Math.min(500,n+ +b.dataset.dl));show();save();});
+}
 async function renderReviewHome(){
   reviewFolder=0;
   const [q,stats,folders]=await Promise.all([api('queue',{folder:0}),api('stats'),api('folders')]);
@@ -1781,7 +1793,7 @@ async function renderReviewHome(){
     ${!total&&q.next_due?`<p class="hint" style="text-align:center">Next card ${fmtDue(q.next_due)}.</p>`:''}
     ${!stats.cards?`<p class="hint" style="text-align:center">Save words with ☆ on any dictionary entry — each folder becomes a deck.</p>`:''}</div>
     <div class="section-label">Decks<span style="text-transform:none;letter-spacing:0;font-weight:500">tick the ones you’re studying</span></div>
-    <div class="decks">${folders.map(f=>`<div class="deck ${f.study?'':'off'}"><label class="toggle"><input type="checkbox" data-deck="${f.id}" ${f.study?'checked':''}><span></span></label><div class="db"><b>${esc(f.name)}</b><small>${f.count} words · <span style="color:var(--easy)">${f.fresh} new</span> · <span style="color:var(--good)">${f.due} due</span></small></div><button class="btn small" data-deck-start="${f.id}" ${f.due+f.fresh?'':'disabled'}>Study</button></div>`).join('')}</div>
+    <div class="decks">${folders.map(f=>`<div class="deck ${f.study?'':'off'}"><label class="toggle"><input type="checkbox" data-deck="${f.id}" ${f.study?'checked':''}><span></span></label><div class="db"><b>${esc(f.name)}</b><small>${f.count} words · <span style="color:var(--easy)">${f.fresh} new</span> · <span style="color:var(--good)">${f.due} due</span> · <button class="deck-limit" data-deck-limit="${f.id}">${f.new_per_day>=0?f.new_per_day:c.new_limit} new/day${f.new_per_day>=0?'':' (default)'}</button></small></div><button class="btn small" data-deck-start="${f.id}" ${f.due+f.fresh?'':'disabled'}>Study</button></div>`).join('')}</div>
     <div class="cardbox"><div class="section-label" style="padding:0 0 4px">Next 7 days</div><div class="forecast">${stats.forecast.map((n,i)=>`<div><em>${n||''}</em><i style="height:${Math.round(n/max*60)}px"></i><span>${days[i]}</span></div>`).join('')}</div></div>
     <div class="cardbox" style="display:flex;justify-content:space-around;text-align:center">
       <div><b style="font:600 22px var(--serif)">${stats.cards}</b><br><small class="hint">cards</small></div>
@@ -1789,10 +1801,11 @@ async function renderReviewHome(){
       <div><b style="font:600 22px var(--serif)">${stats.items}</b><br><small class="hint">saved items</small></div>
     </div>
     <div class="settings" style="margin-top:4px">
-      <div class="switch-row"><div><b>New cards per day</b><small>${c.new_total} new waiting</small></div><div class="stepper"><button data-np="-5">−</button><span id="np">${c.new_limit}</span><button data-np="5">+</button></div></div>
+      <div class="switch-row"><div><b>New cards per day</b><small>For each deck without its own limit · ${c.new_total} new waiting</small></div><div class="stepper"><button data-np="-5">−</button><span id="np">${c.new_limit}</span><button data-np="5">+</button></div></div>
       <div class="switch-row"><div><b>Target recall</b><small>Higher means more frequent reviews</small></div><div class="stepper"><button data-rt="-0.01">−</button><span id="rt">${Math.round(Number(settings.retention)*100)}%</span><button data-rt="0.01">+</button></div></div>
     </div><div style="height:20px"></div>`;
   $('review-home').querySelectorAll('[data-deck]').forEach(c=>c.onchange=handle(async()=>{await api('folder.study',{id:+c.dataset.deck,study:c.checked});renderReviewHome();refreshBadge();}));
+  $('review-home').querySelectorAll('[data-deck-limit]').forEach(b=>b.onclick=handle(()=>deckLimitSheet(folders.find(f=>f.id===+b.dataset.deckLimit),c.new_limit)));
   $('review-home').querySelectorAll('[data-deck-start]').forEach(b=>b.onclick=handle(()=>startReview(+b.dataset.deckStart)));
   $('start-review').onclick=handle(()=>startReview(reviewFolder));
   $('review-home').querySelectorAll('[data-np]').forEach(b=>b.onclick=handle(async()=>{const v=Math.max(0,Math.min(500,c.new_limit+ +b.dataset.np));await setSetting('new_per_day',v);renderReviewHome();refreshBadge();}));

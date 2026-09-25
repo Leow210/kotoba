@@ -185,6 +185,7 @@ public class Routes {
             case "folders":return store.folders();
             case "folder.save":return store.saveFolder(d);
             case "folder.study":store.setStudy(d.getLong("id"),d.getBoolean("study"));return null;
+            case "folder.newPerDay":store.setNewPerDay(d.getLong("id"),d.getInt("n"));return null;
             case "folder.delete":store.deleteFolder(d.getLong("id"),d.optBoolean("items",false));return null;
             case "folder.reorder":store.reorderFolders(d.getJSONArray("ids"));return null;
             case "items":return store.items(d);
