@@ -113,7 +113,7 @@ def clean(text, traveler='M', nickname='旅行者'):
     t = re.sub(r'\{M#([^}]*)\}\{F#([^}]*)\}', lambda m: m.group(1 if traveler == 'M' else 2), t)
     t = re.sub(r'\{LAYOUT_MOBILE#[^}]*\}\{LAYOUT_PC#([^}]*)\}\{LAYOUT_PS#[^}]*\}', r'\1', t)
     t = t.replace('{NICKNAME}', nickname)
-    t = re.sub(r'\{RUBY#\[[A-Z]\][^}]*\}', '', t)  # Japanese furigana markup: the reading goes, the kanji stay
+    t = re.sub(r'\{RUBY#\[[A-Z]\][^}]*\}|\{RUBY_B#[^}]*\}|\{RUBY_E#\}', '', t)  # furigana markup (Genshin, Star Rail): the reading goes, the kanji stay
     t = re.sub(r'</?color[^>]*>|</?i>|</?b>', '', t)
     t = t.replace('\\n', '\n')
     return t.strip()
