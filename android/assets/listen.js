@@ -235,6 +235,15 @@
       <div class="ls-opts" data-f="opts"></div>`;
     let i=Math.max(0,Math.min(start,queue.length-1)),rep=0,playing=true,heard=false,timer=0,pausedByLookup=false,closed=false;
     const audio=new Audio();audio.preload='auto';
+    // Where each line sits: which character run (in order of play) and which of its lines. A shuffled queue mixes
+    // characters, so it only counts lines.
+    const runs=[];let runCount=0;
+    for(let x=0;x<queue.length;x++){
+      if(x===0||queue[x].g!==queue[x-1].g)runCount++;
+      runs.push({n:runCount-1,k:x&&queue[x].g===queue[x-1].g?runs[x-1].k+1:0});
+    }
+    for(let x=queue.length-1;x>=0;x--)runs[x].len=x+1<queue.length&&runs[x+1].n===runs[x].n?runs[x+1].len:runs[x].k+1;
+    const chained=runCount===new Set(queue.map(q=>q.g)).size;
     const f=n=>el.querySelector(`[data-f="${n}"]`);
     pushPage(el,{onClose:()=>{closed=true;clearTimeout(timer);audio.pause();audio.src='';}});
     el.querySelector('[data-a="back"]').onclick=()=>popPage();
@@ -266,7 +275,8 @@
     }
     function paint(){
       const {g,it}=queue[i];
-      f('pos').textContent=`${i+1} / ${queue.length}`;
+      const r=runs[i];
+      f('pos').textContent=r&&chained?`Character ${r.n+1} / ${runCount} · line ${r.k+1} / ${r.len} · ${i+1} / ${queue.length}`:`${i+1} / ${queue.length}`;
       f('who').innerHTML=`${g.icon?`<img src="${url(set.id,g.icon)}" alt="">`:''}<span><b>${esc(g.name)}</b> · ${esc(it.title)}${it.titleEn?`<small>${esc(g.nameEn||'')} · ${esc(it.titleEn)}</small>`:''}</span>`;
       f('text').innerHTML=window.tappableText?tappableText(it.text):esc(it.text);
       f('text').classList.toggle('acc',set.lang==='ja'&&!!opts.accent);
