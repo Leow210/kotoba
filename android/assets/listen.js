@@ -8,7 +8,7 @@
 (function(){
   const store={get(k,d){try{const v=localStorage.getItem(k);return v===null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
   const url=(set,p)=>`/listen/${encodeURIComponent(set)}/`+String(p).split('/').map(encodeURIComponent).join('/');
-  const defaults={repeats:2,gap:1.2,speed:1,text:'after',tr:false,pause:true,chain:'next'};
+  const defaults={repeats:2,gap:1.2,speed:1,text:'after',tr:false,pause:true,chain:'next',end:'loop'};
   const opts=Object.assign({},defaults,store.get('listen.opts',{}));
   if(opts.speed===0.9)opts.speed=1;// no longer offered
   const saveOpts=()=>store.set('listen.opts',opts);
@@ -230,7 +230,7 @@
         <div class="ls-note" data-f="note"></div>
       </div>
       <div class="ls-progress"><i data-f="bar"></i></div>
-      <div class="ls-controls"><button class="icon-btn" data-a="prev" aria-label="Previous line">${icon('prev')}</button><button class="ls-play" data-a="toggle" aria-label="Play or pause"></button><button class="icon-btn" data-a="next" aria-label="Next line">${icon('next')}</button></div>
+      <div class="ls-controls"><button class="icon-btn" data-a="prev" aria-label="Previous line">${icon('prev')}</button><button class="ls-play" data-a="toggle" aria-label="Play or pause"></button><button class="icon-btn" data-a="next" aria-label="Next line">${icon('next')}</button><button class="icon-btn ls-loop" data-a="loop" aria-label="Loop"></button></div>
       <button class="ls-opts-toggle" data-a="opts"></button>
       <div class="ls-opts" data-f="opts"></div>`;
     let i=Math.max(0,Math.min(start,queue.length-1)),rep=0,playing=true,heard=false,timer=0,pausedByLookup=false,closed=false;
@@ -249,6 +249,20 @@
     el.querySelector('[data-a="back"]').onclick=()=>popPage();
 
     // The options fold away (shown as a one-line summary) so the line has the room.
+    // Loop, as in a music player: 🔁 the whole queue (start over at the end), 🔂 this character, or off.
+    const loopMode=()=>opts.chain==='loop'?'one':opts.end!=='stop'?'all':'off';
+    function paintLoop(){
+      const m=loopMode(),b=el.querySelector('[data-a="loop"]');
+      b.textContent=m==='one'?'🔂':'🔁';b.classList.toggle('off',m==='off');
+      b.title=m==='one'?'Looping this character':m==='all'?'Looping: starts over at the end':'Not looping';
+    }
+    el.querySelector('[data-a="loop"]').onclick=()=>{
+      const m=loopMode();
+      if(m==='all'){opts.chain='loop';}
+      else if(m==='one'){opts.chain='next';opts.end='stop';}
+      else{opts.chain='next';opts.end='loop';}
+      saveOpts();paintOpts();showOpts();paintLoop();toast(el.querySelector('[data-a="loop"]').title,1200);
+    };
     const showOpts=()=>{f('opts').hidden=!opts.open;el.querySelector('[data-a="opts"]').textContent=(opts.open?'▾ ':'▸ ')+`×${opts.repeats} · pause ${({0:'none',0.5:'brief',1.2:'short',2:'long'})[opts.gap]||opts.gap} · speed ${opts.speed} · text ${opts.text==='after'?'after hearing':opts.text} · English ${opts.tr?'on':'off'}`;};
     el.querySelector('[data-a="opts"]').onclick=()=>{opts.open=!opts.open;saveOpts();showOpts();};
     function paintOpts(){
@@ -258,13 +272,15 @@
         <div><span>Speed</span>${chip('speed',0.8,'0.8')}${chip('speed',1,'1')}${chip('speed',1.25,'1.25')}${chip('speed',1.5,'1.5')}${chip('speed',2,'2')}</div>
         <div><span>Text</span>${chip('text','show','show')}${chip('text','after','after hearing')}${chip('text','hide','hide')}</div>
         <div><span>English</span>${chip('tr',true,'show')}${chip('tr',false,'hide')}</div>
-        <div><span>After a character</span>${chip('chain','next','next one')}${chip('chain','stop','stop')}</div>
+        <div><span>After a character</span>${chip('chain','next','next one')}${chip('chain','loop','again')}${chip('chain','stop','stop')}</div>
+        <div><span>At the end</span>${chip('end','loop','start over')}${chip('end','stop','stop')}</div>
         <div><span>Pause on lookup</span>${chip('pause',true,'on')}${chip('pause',false,'off')}</div>
         ${set.lang==='ja'?`<div><span>Pitch accent</span>${chip('accent',true,'show')}${chip('accent',false,'hide')}</div>`:''}`;
       f('opts').querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>{
         const k=b.dataset.o,raw=b.dataset.v;opts[k]=raw==='true'?true:raw==='false'?false:isNaN(+raw)?raw:+raw;
         saveOpts();paintOpts();paintText();showOpts();audio.playbackRate=opts.speed;
         if(k==='accent')paint();
+        paintLoop();
       });
     }
     function paintText(){
@@ -307,9 +323,15 @@
       timer=setTimeout(()=>{
         if(!playing||closed)return;
         if(rep<opts.repeats){audio.currentTime=0;audio.play().catch(()=>{});}
-        else if(i+1>=queue.length){playing=false;paintPlay();toast('That was the last line');}
-        else if(opts.chain==='stop'&&queue[i+1].g!==g){playing=false;paintPlay();load(i+1,false);toast(`End of ${g.name} · press play for ${queue[i].g.name}`);}
-        else load(i+1,true);
+        else{
+          const last=i+1>=queue.length,newChar=last||queue[i+1].g!==g;
+          // This character again: back to its first line in the queue.
+          if(newChar&&opts.chain==='loop'){let s0=i;while(s0>0&&queue[s0-1].g===g)s0--;load(s0,true);}
+          else if(last&&opts.end!=='stop')load(0,true);                        // start over from the top
+          else if(last){playing=false;paintPlay();toast('That was the last line');}
+          else if(newChar&&opts.chain==='stop'){playing=false;paintPlay();load(i+1,false);toast(`End of ${g.name} · press play for ${queue[i].g.name}`);}
+          else load(i+1,true);
+        }
       },wait);
     });
     el.querySelector('[data-a="toggle"]').onclick=()=>{
@@ -355,7 +377,7 @@
       else if(e.key==='r'||e.key==='R'){clearTimeout(timer);rep=Math.max(0,rep-1);audio.currentTime=0;playing=true;paintPlay();audio.play().catch(()=>{});}
     };
     addEventListener('keydown',onKey);
-    paintOpts();showOpts();paintPlay();load(i,true);
+    paintOpts();showOpts();paintPlay();paintLoop();load(i,true);
   }
 
   window.openListening=openListening;
