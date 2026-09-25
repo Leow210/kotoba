@@ -140,6 +140,11 @@
   videoBtn.innerHTML=`<svg class="i" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M10 9.5v5l4.5-2.5z"/></svg>Video`;
   readerBtn.after(videoBtn);
   videoBtn.after(musicBtn);
+  // Listening: sets of spoken lines to hear and repeat (Genshin voice-overs…), with the characters' stories.
+  const listenBtn=document.createElement('button');listenBtn.dataset.tab='listen';
+  listenBtn.innerHTML=`<svg class="i" viewBox="0 0 24 24"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="14" width="4.5" height="6.5" rx="1.8"/><rect x="16.5" y="14" width="4.5" height="6.5" rx="1.8"/></svg>Listening`;
+  listenBtn.onclick=()=>{if(tab!=='search')showTab('search');while(pageStack.length)popPage(true);window.openListening&&openListening();};
+  musicBtn.after(listenBtn);
   videoBtn.onclick=()=>showTab('video');
   const screen=document.createElement('section');screen.className='screen';screen.id='screen-video';screen.hidden=true;
   document.getElementById('screen-reader').after(screen);

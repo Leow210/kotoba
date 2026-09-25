@@ -57,7 +57,7 @@
   function openGroup(set,g){
     const el=document.createElement('div');el.className='ls-page';
     el.innerHTML=`<div class="bar"><button class="icon-btn" data-a="back" aria-label="Back">${icon('back')}</button>${g.icon?`<img class="ls-bar-icon" src="${url(set.id,g.icon)}" alt="">`:''}<div class="title"><b>${esc(g.name)}</b><small>${esc(g.nameEn||'')} · ${g.items.length} lines</small></div></div>
-      <div class="ls-actions"><button class="btn primary" data-a="play">${icon('play')} Play all</button><button class="btn" data-a="shuffle">${icon('shuffle')} Shuffle</button></div>
+      <div class="ls-actions"><button class="btn primary" data-a="play">${icon('play')} Play all</button><button class="btn" data-a="shuffle">${icon('shuffle')} Shuffle</button><button class="btn" data-a="story" hidden>${icon('book')} Story</button></div>
       <div class="ls-scroll"><div class="ls-lines">${g.items.map((it,i)=>`<button class="ls-line" data-i="${i}"><span class="ls-line-title">${esc(it.title)}${it.titleEn?`<small>${esc(it.titleEn)}</small>`:''}</span><span class="ls-line-text">${esc(it.text)}</span>${it.translation?`<span class="ls-line-tr">${esc(it.translation)}</span>`:''}</button>`).join('')}</div></div>`;
     pushPage(el);
     el.querySelector('[data-a="back"]').onclick=()=>popPage();
@@ -65,6 +65,45 @@
     el.querySelector('[data-a="play"]').onclick=()=>openPlayer(set,queue,0,g.name);
     el.querySelector('[data-a="shuffle"]').onclick=()=>openPlayer(set,shuffle(queue),0,g.name+' · shuffled');
     el.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>openPlayer(set,queue,+b.dataset.i,g.name));
+    // The character's stories, when the set has them (stories.json beside it).
+    loadStories(set).then(st=>{const sg=st&&st.groups&&st.groups[g.id];if(!sg)return;const b=el.querySelector('[data-a="story"]');b.hidden=false;b.onclick=()=>openStory(set,g,sg);});
+  }
+
+  // ---------- a character's stories, in Chinese, Japanese, Korean or English ----------
+  const storyCache={};
+  function loadStories(set){
+    if(!(set.id in storyCache))storyCache[set.id]=fetch(url(set.id,'stories.json')).then(r=>r.ok?r.json():null).catch(()=>null);
+    return storyCache[set.id];
+  }
+  const LANG_LABEL={zh:'中文',ja:'日本語',ko:'한국어',en:'English'};
+  function openStory(set,g,sg){
+    const langs=Object.keys(LANG_LABEL).filter(l=>sg.sections[l]);
+    let lang=store.get('listen.storyLang','');if(!langs.includes(lang))lang=langs.includes(set.lang)?set.lang:langs[0];
+    const el=document.createElement('div');el.className='ls-page ls-story';
+    el.innerHTML=`<div class="bar"><button class="icon-btn" data-a="back" aria-label="Back">${icon('back')}</button>${g.icon?`<img class="ls-bar-icon" src="${url(set.id,g.icon)}" alt="">`:''}<div class="title"><b data-f="name"></b><small>Character stories</small></div></div>
+      <div class="ls-langs" data-f="langs"></div>
+      <div class="ls-scroll" data-f="scroll"><div class="ls-story-body" data-f="body"></div></div>`;
+    pushPage(el);
+    el.querySelector('[data-a="back"]').onclick=()=>popPage();
+    const f=n=>el.querySelector(`[data-f="${n}"]`);
+    let paras=[];
+    function render(){
+      f('name').textContent=sg.names[lang]||g.name;
+      f('langs').innerHTML=langs.map(l=>`<button class="chip small ${l===lang?'on':''}" data-l="${l}">${LANG_LABEL[l]}</button>`).join('');
+      f('langs').querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>{lang=b.dataset.l;store.set('listen.storyLang',lang);render();f('scroll').scrollTop=0;});
+      paras=[];
+      f('body').lang=lang==='zh'?'zh-CN':lang;
+      f('body').innerHTML=sg.sections[lang].map(sec=>`<section><h3>${esc(sec.title)}</h3>${sec.note?`<p class="ls-story-note">${esc(sec.note)}</p>`:''}${sec.text.split(/\n+/).filter(Boolean).map(p=>{paras.push(p);return `<p class="ls-para" data-p="${paras.length-1}">${window.tappableText?tappableText(p):esc(p)}</p>`;}).join('')}</section>`).join('');
+    }
+    // Tap a word to look it up, in the language shown.
+    f('body').addEventListener('click',async e=>{
+      const w=e.target.closest('.mu-w'),p=e.target.closest('.ls-para');if(!w||!p||!window.tappableWord)return;
+      const text=paras[+p.dataset.p],word=tappableWord(text,w);if(!word)return;
+      f('body').querySelectorAll('.mu-w.on').forEach(x=>x.classList.remove('on'));
+      if(w.dataset.end!=null)p.querySelectorAll('.mu-w').forEach(x=>{if(x.dataset.end===w.dataset.end&&+x.dataset.o>=+w.dataset.o)x.classList.add('on');});else w.classList.add('on');
+      await lookupSheet(word,{context:text},{lang,book:`${set.title} · ${sg.names[lang]||g.name}`,onClose:()=>f('body').querySelectorAll('.mu-w.on').forEach(x=>x.classList.remove('on'))});
+    });
+    render();
   }
 
   function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
@@ -73,7 +112,7 @@
   function openPlayer(set,queue,start,label){
     const el=document.createElement('div');el.className='ls-page ls-player';
     el.innerHTML=`<div class="bar"><button class="icon-btn" data-a="back" aria-label="Back">${icon('back')}</button><div class="title"><b>${esc(label)}</b><small data-f="pos"></small></div>
-        <button class="icon-btn" data-a="card" aria-label="Keep as a sentence card" title="Keep as a sentence card">${icon('star')}</button></div>
+        <button class="icon-btn" data-a="card" aria-label="Keep the whole line as a sentence card" title="Keep the whole line as a sentence card">${icon('star')}</button></div>
       <div class="ls-stage">
         <div class="ls-who" data-f="who"></div>
         <div class="ls-text" data-f="text"></div>
@@ -82,10 +121,10 @@
       </div>
       <div class="ls-progress"><i data-f="bar"></i></div>
       <div class="ls-controls"><button class="icon-btn" data-a="prev" aria-label="Previous line">${icon('prev')}</button><button class="ls-play" data-a="toggle" aria-label="Play or pause"></button><button class="icon-btn" data-a="next" aria-label="Next line">${icon('next')}</button></div>
-      <div class="ls-card-row"><button class="btn small" data-a="card2">${icon('star')} Add card</button><span class="hint">or tap a word to look it up and save it</span></div>
+      <div class="ls-card-row"><button class="btn small" data-a="word">${icon('plus')} Add word</button><span class="hint" data-f="wordhint">then tap the word in the line</span></div>
       <button class="ls-opts-toggle" data-a="opts"></button>
       <div class="ls-opts" data-f="opts"></div>`;
-    let i=Math.max(0,Math.min(start,queue.length-1)),rep=0,playing=true,heard=false,timer=0,pausedByLookup=false,closed=false;
+    let i=Math.max(0,Math.min(start,queue.length-1)),rep=0,playing=true,heard=false,timer=0,pausedByLookup=false,closed=false,picking=false;
     const audio=new Audio();audio.preload='auto';
     const f=n=>el.querySelector(`[data-f="${n}"]`);
     pushPage(el,{onClose:()=>{closed=true;clearTimeout(timer);audio.pause();audio.src='';}});
@@ -127,7 +166,7 @@
 
     function load(n,autoplay){
       clearTimeout(timer);
-      i=(n+queue.length)%queue.length;rep=0;heard=false;
+      i=(n+queue.length)%queue.length;rep=0;heard=false;if(picking)setPicking(false);
       audio.src=url(set.id,queue[i].it.audio);audio.playbackRate=opts.speed;
       paint();
       if(autoplay&&playing)audio.play().catch(()=>{playing=false;paintPlay();});
@@ -159,6 +198,7 @@
       const w=e.target.closest('.mu-w');if(!w||!window.tappableWord)return;
       const {g,it}=queue[i];
       const word=tappableWord(it.text,w);if(!word)return;
+      const adding=picking;setPicking(false);
       f('text').querySelectorAll('.mu-w.on').forEach(x=>x.classList.remove('on'));
       if(w.dataset.end!=null)f('text').querySelectorAll('.mu-w').forEach(x=>{if(x.dataset.end===w.dataset.end&&+x.dataset.o>=+w.dataset.o)x.classList.add('on');});else w.classList.add('on');
       if(opts.pause&&playing){pausedByLookup=true;playing=false;clearTimeout(timer);audio.pause();paintPlay();}
@@ -166,7 +206,20 @@
         f('text').querySelectorAll('.mu-w.on').forEach(x=>x.classList.remove('on'));
         if(pausedByLookup&&!sheetStack.length){pausedByLookup=false;playing=true;paintPlay();if(rep>=opts.repeats)load(i+1,true);else audio.play().catch(()=>{});}
       }});
+      // Adding a word: straight to its card (the dictionary's best match from there, the line as its context).
+      if(adding){const top=sheetStack[sheetStack.length-1];const save=top&&top.sheet.querySelector('#lk-card');if(save)save.click();}
     });
+    // Add word: the line waits, its text shows, and the next word tapped becomes a card.
+    function setPicking(on){
+      picking=on;f('text').classList.toggle('picking',on);
+      el.querySelector('[data-a="word"]').classList.toggle('primary',on);
+      f('wordhint').textContent=on?'tap the word in the line (or Add word again to cancel)':'then tap the word in the line';
+    }
+    el.querySelector('[data-a="word"]').onclick=()=>{
+      if(picking){setPicking(false);return;}
+      if(playing){playing=false;clearTimeout(timer);audio.pause();paintPlay();}
+      heard=true;paintText();setPicking(true);
+    };
     // A sentence card: the line, its English on the back, and the voice itself to play in review.
     const addCard=handle(async()=>{
       const {g,it}=queue[i];
@@ -175,7 +228,6 @@
         clips:[{dict:0,path:`${set.id}/${it.audio}`,url:url(set.id,it.audio),dictionary:`${g.name} · ${it.title}`,label:g.nameEn||g.name}]});
     });
     el.querySelector('[data-a="card"]').onclick=addCard;
-    el.querySelector('[data-a="card2"]').onclick=addCard;
     // Keys on the Mac: space plays/pauses, ← → move between lines, R hears it again.
     const onKey=e=>{
       if(!el.isConnected){removeEventListener('keydown',onKey);return;}

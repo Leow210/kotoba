@@ -655,3 +655,9 @@ svg.i.sm{width:16px;height:16px}
 .ls-card-row{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;padding:0 14px 6px}
 .ls-card-row .btn{display:inline-flex;align-items:center;gap:6px}.ls-card-row svg{width:16px;height:16px}
 .ls-card-row .hint{margin:0;font-size:12px}
+.ls-text.picking .mu-w{background:rgba(124,194,160,.18);box-shadow:0 0 0 1px rgba(124,194,160,.35)}
+.ls-langs{display:flex;gap:6px;padding:6px 14px 8px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.ls-story-body{max-width:760px;margin:0 auto;padding:6px 20px 40px}
+.ls-story-body h3{font:600 17px var(--serif);margin:22px 0 4px;color:var(--accent)}
+.ls-story-note{font-size:12px;color:var(--muted);margin:0 0 6px}
+.ls-para{font:17px/1.85 var(--serif);color:var(--ink);margin:0 0 10px}

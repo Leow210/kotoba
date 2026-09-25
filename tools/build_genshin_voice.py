@@ -10,7 +10,7 @@ Profile lines have four-digit voice ids (chat, weather, about others, birthday, 
 Polite: one connection, a pause between requests, everything cached (CACHE) so a rerun only fetches what's new.
 set.json is rewritten after each character, so the set can be used while the rest downloads.
 """
-import argparse, json, os, re, ssl, subprocess, sys, time, urllib.error, urllib.request
+import argparse, json, os, re, ssl, subprocess, sys, threading, time, urllib.error, urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -55,11 +55,11 @@ def fetch(url, pause, binary=False):
 
 
 def get_asset(url):
-    """A static file (no shared pause: up to three of these run at once)."""
-    for attempt in range(4):
+    """A static file (no shared pause: a few of these run at once). One that keeps hanging is skipped; a rerun gets it."""
+    for attempt in range(2):
         try:
             req = urllib.request.Request(url, headers={'User-Agent': UA})
-            with urllib.request.urlopen(req, timeout=90, context=CTX) as r:
+            with urllib.request.urlopen(req, timeout=20, context=CTX) as r:
                 return r.read()
         except urllib.error.HTTPError as e:
             if e.code == 404:
@@ -132,28 +132,42 @@ def main():
         tmp.write_text(json.dumps(s, ensure_ascii=False, indent=0))
         tmp.replace(out / 'set.json')
 
+    # Downloads run ahead of the characters being put together: a feeder thread reads each character's lines and
+    # queues its clips (six at a time overall), so one slow clip doesn't hold up everyone after it.
+    pool = ThreadPoolExecutor(6)
+    prepared = {}
+    ready = threading.Condition()
+
+    def grab(aid, vid, raw):
+        b = get_asset(f'{BASE}/assets/Audio/{audio_lang}/{aid}/{vid}.ogg')
+        if b:
+            raw.parent.mkdir(parents=True, exist_ok=True)
+            raw.write_bytes(b)
+
+    def feed():
+        for aid in ids:
+            fet = (api(f'{args.lang}/avatarFetter/{aid}') or {}).get('data') or {}
+            fet_en = (api(f'en/avatarFetter/{aid}') or {}).get('data') or {}
+            quotes = [q for q in (fet.get('quotes') or {}).values() if q.get('audio') and q.get('text')]
+            futures = []
+            for q in quotes:
+                vid = str(q['audio']).split(',')[0].strip()
+                raw = CACHE / 'ogg' / audio_lang / aid / f'{vid}.ogg'
+                if re.fullmatch(r'\d{4}', vid) and not raw.exists() and not (out / 'audio' / aid / f'{vid}.m4a').exists():
+                    futures.append(pool.submit(grab, aid, vid, raw))
+            with ready:
+                prepared[aid] = (fet, fet_en, quotes, futures)
+                ready.notify_all()
+    threading.Thread(target=feed, daemon=True).start()
+
     for n, aid in enumerate(ids):
         a, a_en = avatars[aid], avatars_en.get(aid, {})
-        fet = (api(f'{args.lang}/avatarFetter/{aid}') or {}).get('data') or {}
-        fet_en = (api(f'en/avatarFetter/{aid}') or {}).get('data') or {}
-        quotes = [q for q in (fet.get('quotes') or {}).values() if q.get('audio') and q.get('text')]
+        with ready:
+            ready.wait_for(lambda: aid in prepared)
+            fet, fet_en, quotes, futures = prepared.pop(aid)
+        for fu in futures:
+            fu.result()
         en_by_audio = {q.get('audio'): q for q in (fet_en.get('quotes') or {}).values()}
-        # The clips not cached yet, three at a time (each can take seconds while yatta fetches it from its origin).
-        want = []
-        for q in quotes:
-            vid = str(q['audio']).split(',')[0].strip()
-            raw = CACHE / 'ogg' / audio_lang / aid / f'{vid}.ogg'
-            if re.fullmatch(r'\d{4}', vid) and not raw.exists() and not (out / 'audio' / aid / f'{vid}.m4a').exists():
-                want.append((vid, raw))
-
-        def grab(job):
-            vid, raw = job
-            b = get_asset(f'{BASE}/assets/Audio/{audio_lang}/{aid}/{vid}.ogg')
-            if b:
-                raw.parent.mkdir(parents=True, exist_ok=True)
-                raw.write_bytes(b)
-        with ThreadPoolExecutor(3) as pool:
-            list(pool.map(grab, want))
         items = []
         for q in quotes:
             vid = str(q['audio']).split(',')[0].strip()
