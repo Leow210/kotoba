@@ -70,7 +70,8 @@
     // Play all: this character, then the next ones in the set (the player can stop after each character instead).
     el.querySelector('[data-a="play"]').onclick=()=>{const k=set.groups.indexOf(g);openPlayer(set,chain(set.groups.slice(k).concat(set.groups.slice(0,k))),0,g.name+' onward');};
     el.querySelector('[data-a="shuffle"]').onclick=()=>openPlayer(set,shuffle(queue),0,g.name+' · shuffled');
-    el.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>openPlayer(set,queue,+b.dataset.i,g.name));
+    // A line: from there to the end of this character, then on through the next ones (or stop, per the player's option).
+    el.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{const k=set.groups.indexOf(g);openPlayer(set,chain(set.groups.slice(k).concat(set.groups.slice(0,k))),+b.dataset.i,g.name+' onward');});
     // The character's stories, when the set has them (stories.json beside it).
     loadStories(set).then(st=>{
       const sg=st&&st.groups&&st.groups[g.id];if(!sg)return;
