@@ -88,7 +88,7 @@ public final class Accent {
         return status();
     }
     Thread exporting;int[] progress={0,0};
-    public JSONObject status(){return new JSONObject().put("done",progress[0]).put("total",progress[1]).put("running",exporting!=null&&exporting.isAlive());}
+    public JSONObject status() throws Exception {return new JSONObject().put("done",progress[0]).put("total",progress[1]).put("running",exporting!=null&&exporting.isAlive());}
 
     JSONArray words(String text,long nhk) throws Exception {
         JSONArray out=new JSONArray();
