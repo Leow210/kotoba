@@ -8,7 +8,7 @@
 (function(){
   const store={get(k,d){try{const v=localStorage.getItem(k);return v===null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
   const url=(set,p)=>`/listen/${encodeURIComponent(set)}/`+String(p).split('/').map(encodeURIComponent).join('/');
-  const defaults={repeats:2,gap:1.2,speed:1,text:'after',tr:false,pause:true};
+  const defaults={repeats:2,gap:1.2,speed:1,text:'after',tr:false,pause:true,chain:'next'};
   const opts=Object.assign({},defaults,store.get('listen.opts',{}));
   if(opts.speed===0.9)opts.speed=1;// no longer offered
   const saveOpts=()=>store.set('listen.opts',opts);
@@ -32,12 +32,14 @@
     const el=document.createElement('div');el.className='ls-page';
     const total=set.groups.reduce((n,g)=>n+g.items.length,0);
     el.innerHTML=`<div class="bar"><button class="icon-btn" data-a="back" aria-label="Back">${icon('back')}</button><div class="title"><b>${esc(set.title)}</b><small>${set.groups.length} ${esc((set.groupLabel||'groups').toLowerCase())} · ${total.toLocaleString()} lines</small></div>
+        <button class="icon-btn" data-a="playall" aria-label="Play every character in turn" title="Play every character in turn">${icon('play')}</button>
         <button class="icon-btn" data-a="shuffle" aria-label="Play everything shuffled" title="Play everything, shuffled">${icon('shuffle')}</button></div>
       <div class="ls-find"><div class="field small">${icon('search')}<input type="search" placeholder="Find a character" data-f="q" autocomplete="off"></div></div>
       <div class="ls-scroll" data-f="list"></div>`;
     pushPage(el);
     el.querySelector('[data-a="back"]').onclick=()=>popPage();
     el.querySelector('[data-a="shuffle"]').onclick=()=>openPlayer(set,shuffle(set.groups.flatMap(g=>g.items.map(it=>({g,it})))),0,'Everything, shuffled');
+    el.querySelector('[data-a="playall"]').onclick=()=>openPlayer(set,chain(set.groups),0,'Every character');
     const list=el.querySelector('[data-f="list"]'),q=el.querySelector('[data-f="q"]');
     const done=store.get('listen.done.'+set.id,{});
     function render(){
@@ -45,10 +47,12 @@
       const groups=set.groups.filter(g=>!needle||(g.name+' '+(g.nameEn||'')).toLowerCase().includes(needle));
       const sections=[];
       for(const g of groups){let s=sections.find(x=>x.name===g.section);if(!s)sections.push(s={name:g.section||'',en:g.sectionEn||'',groups:[]});s.groups.push(g);}
-      list.innerHTML=sections.map(s=>`${s.name?`<div class="section-label">${esc(s.name)}${s.en?`<span>${esc(s.en)}</span>`:''}</div>`:''}<div class="ls-grid">${s.groups.map(g=>{
+      list.innerHTML=sections.map(s=>`${s.name?`<div class="section-label ls-sec">${esc(s.name)}${s.en?`<span>${esc(s.en)}</span>`:''}<button class="ls-sec-play" data-sec="${esc(s.name)}" title="Play these characters in turn">${icon('play')} Play</button></div>`:''}<div class="ls-grid">${s.groups.map(g=>{
         const heard=Object.keys(done[g.id]||{}).length;
         return `<button class="ls-group" data-g="${esc(g.id)}">${g.icon?`<img src="${url(set.id,g.icon)}" alt="" loading="lazy">`:'<span class="ls-glyph">声</span>'}<b>${esc(g.name)}</b><small>${esc(g.nameEn||'')}</small><small>${heard?`${heard}/`:''}${g.items.length} lines</small></button>`;}).join('')}</div>`).join('')||'<p class="hint ls-empty">No one by that name.</p>';
       list.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>openGroup(set,set.groups.find(g=>g.id===b.dataset.g)));
+      // A region or faction: its characters one after another.
+      list.querySelectorAll('[data-sec]').forEach(b=>b.onclick=()=>{const gs=set.groups.filter(g=>g.section===b.dataset.sec);openPlayer(set,chain(gs),0,b.dataset.sec);});
     }
     q.addEventListener('input',render);
     render();
@@ -63,7 +67,8 @@
     pushPage(el);
     el.querySelector('[data-a="back"]').onclick=()=>popPage();
     const queue=g.items.map(it=>({g,it}));
-    el.querySelector('[data-a="play"]').onclick=()=>openPlayer(set,queue,0,g.name);
+    // Play all: this character, then the next ones in the set (the player can stop after each character instead).
+    el.querySelector('[data-a="play"]').onclick=()=>{const k=set.groups.indexOf(g);openPlayer(set,chain(set.groups.slice(k).concat(set.groups.slice(0,k))),0,g.name+' onward');};
     el.querySelector('[data-a="shuffle"]').onclick=()=>openPlayer(set,shuffle(queue),0,g.name+' · shuffled');
     el.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>openPlayer(set,queue,+b.dataset.i,g.name));
     // The character's stories, when the set has them (stories.json beside it).
@@ -208,6 +213,8 @@
     });
   }
 
+  /** Characters' lines one character after another. */
+  const chain=gs=>gs.flatMap(g=>g.items.map(it=>({g,it})));
   function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 
   // ---------- the player: each line heard `repeats` times with room to repeat it, then the next ----------
@@ -241,6 +248,7 @@
         <div><span>Speed</span>${chip('speed',0.8,'0.8')}${chip('speed',1,'1')}${chip('speed',1.25,'1.25')}${chip('speed',1.5,'1.5')}${chip('speed',2,'2')}</div>
         <div><span>Text</span>${chip('text','show','show')}${chip('text','after','after hearing')}${chip('text','hide','hide')}</div>
         <div><span>English</span>${chip('tr',true,'show')}${chip('tr',false,'hide')}</div>
+        <div><span>After a character</span>${chip('chain','next','next one')}${chip('chain','stop','stop')}</div>
         <div><span>Pause on lookup</span>${chip('pause',true,'on')}${chip('pause',false,'off')}</div>
         ${set.lang==='ja'?`<div><span>Pitch accent</span>${chip('accent',true,'show')}${chip('accent',false,'hide')}</div>`:''}`;
       f('opts').querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>{
@@ -288,6 +296,8 @@
       timer=setTimeout(()=>{
         if(!playing||closed)return;
         if(rep<opts.repeats){audio.currentTime=0;audio.play().catch(()=>{});}
+        else if(i+1>=queue.length){playing=false;paintPlay();toast('That was the last line');}
+        else if(opts.chain==='stop'&&queue[i+1].g!==g){playing=false;paintPlay();load(i+1,false);toast(`End of ${g.name} · press play for ${queue[i].g.name}`);}
         else load(i+1,true);
       },wait);
     });
