@@ -62,7 +62,8 @@ def main():
 
     def write(lang):
         out = outs[lang]
-        gs = sorted(groups[lang].values(), key=lambda g: (g['order'], g['release'], int(g['id'])))
+        # A character without clips in this language (yatta has no Japanese audio for the Fate collab) is left out.
+        gs = sorted((g for g in groups[lang].values() if g['items']), key=lambda g: (g['order'], g['release'], int(g['id'])))
         s = {'id': out.name, 'title': LANGS[lang][2], 'subtitle': 'Honkai: Star Rail character voice-overs (profile lines) · sr.yatta.moe',
              'lang': lang, 'translationLang': 'en', 'groupLabel': 'Characters', 'groups': gs}
         (out / 'set.json.tmp').write_text(json.dumps(s, ensure_ascii=False, indent=0))
