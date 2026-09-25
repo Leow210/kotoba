@@ -726,7 +726,11 @@ function playAudio(dict,href){
   audioPlayer=new Audio(url);
   audioPlayer.play().catch(e=>toast('Couldn’t play this sound ('+e.message+')'));
 }
-function playClip(clip){playAudio(clip.dict,clip.path);}
+function playClip(clip){
+  // A clip kept from a listening set plays from there; dictionary clips from their dictionary.
+  if(clip.url){if(audioPlayer)audioPlayer.pause();audioPlayer=new Audio(clip.url);audioPlayer.play().catch(e=>toast('Couldn’t play this sound ('+e.message+')'));return;}
+  playAudio(clip.dict,clip.path);
+}
 /** NHK notation (タベ＼ル, ツメコム━) → kana with a line over high morae and a corner at the pitch drop. */
 function pitchHtml(accent){
   const text=String(accent||'').replace(/[○◯]/g,'');
@@ -1318,9 +1322,9 @@ function sentenceAround(sel){
   }catch(e){return '';}
 }
 /** A sentence card: the sentence where you met a word (book, comic bubble, subtitle), with an image when there is one. */
-async function saveSentence({text,image='',note='',back=''}){
+async function saveSentence({text,image='',note='',back='',clips=null}){
   if(!text||!text.trim()){toast('No sentence here');return;}
-  await openSaveSheet({review:true,kind:'sentence',headword:text.trim().slice(0,1000),image:image||'',note,back});
+  await openSaveSheet({review:true,kind:'sentence',headword:text.trim().slice(0,1000),image:image||'',note,back,clips});
 }
 // ---------- known words ----------
 // Words you mark known plus cards you've learned (3+ week intervals). Nothing is highlighted in texts: this only
@@ -1610,10 +1614,11 @@ async function openSaveSheet(o){
     }));
   };
   // Audio: clips from every dictionary with sound for this word (NHK first), chosen per card.
-  let clips=[],chosenClips=o.item?itemAudio(o.item):null;
-  const clipKey=(c)=>c.dict+':'+c.path;
-  const renderAudio=async(word)=>{
-    clips=word?await api('audio',{key:word,reading:q('sv-reading').value.trim(),dict:source.dict||0}).catch(()=>[]):[];
+  let clips=[],chosenClips=o.item?itemAudio(o.item):o.clips||null;
+  const clipKey=(c)=>c.url||c.dict+':'+c.path;
+  // A sentence brings its own clip (a listening line's voice); a word looks for clips in the dictionaries.
+  const renderAudio=async(word,own)=>{
+    clips=own?[]:word?await api('audio',{key:word,reading:q('sv-reading').value.trim(),dict:source.dict||0}).catch(()=>[]):[];
     for(const c of (chosenClips||[]))if(!clips.some(x=>clipKey(x)===clipKey(c)))clips.unshift(c);
     if(chosenClips===null)chosenClips=clips.length?[clips[0]]:[];
     q('sv-audio-wrap').hidden=!clips.length;
@@ -1622,6 +1627,7 @@ async function openSaveSheet(o){
     q('sv-audio').querySelectorAll('[data-clip]').forEach(b=>b.onclick=()=>{const c=clips[+b.dataset.clip];if(chosenClips.some(x=>clipKey(x)===clipKey(c)))chosenClips=chosenClips.filter(x=>clipKey(x)!==clipKey(c));else chosenClips.push(c);b.parentElement.classList.toggle('on');});
   };
   renderParts();renderFolders();
+  if(sentence&&chosenClips&&chosenClips.length)renderAudio('',true);
   if(!sentence){renderSources();renderAudio(o.headword||'');q('sv-word').addEventListener('change',()=>renderAudio(q('sv-word').value.trim()));}
   q('sv-back').value=o.back!==undefined&&o.back!==''?o.back:composeText();
   if(o.item&&o.item.back_html)edited=false;
@@ -1636,7 +1642,7 @@ async function openSaveSheet(o){
     if(!edited&&selected.length&&source.doc)back_html=partsHtml(source.doc,source.unit,selected);
     const back=q('sv-back').value.trim();
     if(!back&&!back_html&&!sentence){toast('Add something for the back of the card');return;}
-    const data={id:o.item?o.item.id:(o.existing?o.existing.id:0),folder_id:folderId,headword,reading:q('sv-reading').value.trim(),back,back_html:edited?'':back_html,note:q('sv-note').value.trim(),context:q('sv-context').value.trim(),dict:source.dict||0,dict_name:source.dict_name||'',page:source.page||'',anchor:source.anchor||'',kind:sentence?'sentence':source.kind||'entry',image:keepImage,review:o.item?!!o.item.review:true,audio:JSON.stringify((chosenClips||[]).map(c=>({dict:c.dict,path:c.path,dictionary:c.dictionary,label:c.label,accent:c.accent||''})))};
+    const data={id:o.item?o.item.id:(o.existing?o.existing.id:0),folder_id:folderId,headword,reading:q('sv-reading').value.trim(),back,back_html:edited?'':back_html,note:q('sv-note').value.trim(),context:q('sv-context').value.trim(),dict:source.dict||0,dict_name:source.dict_name||'',page:source.page||'',anchor:source.anchor||'',kind:sentence?'sentence':source.kind||'entry',image:keepImage,review:o.item?!!o.item.review:true,audio:JSON.stringify((chosenClips||[]).map(c=>({dict:c.dict,path:c.path,dictionary:c.dictionary,label:c.label,accent:c.accent||'',...(c.url?{url:c.url}:{})})))};
     await api('item.save',data);
     try{localStorage.setItem('lastFolder',String(folderId));}catch(e){}
     closeSheet(s);

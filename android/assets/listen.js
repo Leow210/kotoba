@@ -82,6 +82,7 @@
       </div>
       <div class="ls-progress"><i data-f="bar"></i></div>
       <div class="ls-controls"><button class="icon-btn" data-a="prev" aria-label="Previous line">${icon('prev')}</button><button class="ls-play" data-a="toggle" aria-label="Play or pause"></button><button class="icon-btn" data-a="next" aria-label="Next line">${icon('next')}</button></div>
+      <div class="ls-card-row"><button class="btn small" data-a="card2">${icon('star')} Add card</button><span class="hint">or tap a word to look it up and save it</span></div>
       <button class="ls-opts-toggle" data-a="opts"></button>
       <div class="ls-opts" data-f="opts"></div>`;
     let i=Math.max(0,Math.min(start,queue.length-1)),rep=0,playing=true,heard=false,timer=0,pausedByLookup=false,closed=false;
@@ -166,10 +167,15 @@
         if(pausedByLookup&&!sheetStack.length){pausedByLookup=false;playing=true;paintPlay();if(rep>=opts.repeats)load(i+1,true);else audio.play().catch(()=>{});}
       }});
     });
-    el.querySelector('[data-a="card"]').onclick=handle(async()=>{
+    // A sentence card: the line, its English on the back, and the voice itself to play in review.
+    const addCard=handle(async()=>{
       const {g,it}=queue[i];
-      await saveSentence({text:it.text,back:it.translation||'',note:`${set.title} · ${g.name} · ${it.title}`});
+      if(playing){playing=false;clearTimeout(timer);audio.pause();paintPlay();}
+      await saveSentence({text:it.text,back:it.translation||'',note:`${set.title} · ${g.name} · ${it.title}`,
+        clips:[{dict:0,path:`${set.id}/${it.audio}`,url:url(set.id,it.audio),dictionary:`${g.name} · ${it.title}`,label:g.nameEn||g.name}]});
     });
+    el.querySelector('[data-a="card"]').onclick=addCard;
+    el.querySelector('[data-a="card2"]').onclick=addCard;
     // Keys on the Mac: space plays/pauses, ← → move between lines, R hears it again.
     const onKey=e=>{
       if(!el.isConnected){removeEventListener('keydown',onKey);return;}
