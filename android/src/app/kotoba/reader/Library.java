@@ -2170,6 +2170,20 @@ public class Library {
         return new JSONObject().put("matched","").put("key",clean).put("items",new JSONArray()).put("forms",new JSONArray()).put("kanji",kanji(clean));
     }
 
+    /** Leaves thesaurus pages (類語 dictionaries, 日本語シソーラス) out of a lookup's items and forms. */
+    public void dropThesaurus(JSONObject r) throws Exception {
+        java.util.Set<Long> the=new java.util.HashSet<>();
+        JSONArray t=Store.rows(db,"SELECT id FROM dicts d WHERE NOT (1=1"+THESAURUS_FILTER+")");
+        for(int i=0;i<t.length();i++)the.add(t.getJSONObject(i).getLong("id"));
+        if(the.isEmpty())return;
+        java.util.function.Function<JSONArray,JSONArray> keep=a->{JSONArray o=new JSONArray();for(int i=0;a!=null&&i<a.length();i++){JSONObject x=a.optJSONObject(i);if(x!=null&&!the.contains(x.optLong("dict")))o.put(x);}return o;};
+        JSONArray items=keep.apply(r.optJSONArray("items"));
+        r.put("items",items);
+        if(items.length()>0&&the.size()>0)r.put("key",items.getJSONObject(0).optString("key",r.optString("key")));
+        JSONArray forms=r.optJSONArray("forms");
+        for(int i=0;forms!=null&&i<forms.length();i++){JSONObject f=forms.optJSONObject(i);if(f!=null&&f.has("items"))f.put("items",keep.apply(f.optJSONArray("items")));}
+    }
+
     /** A particle or the copula right after a word: 静かな, 日本の, 穏やかに, 元気だ. */
     // (not か, さ, も… which also end words: 静か, 高さ, 最も)
     static final java.util.Set<String> JA_TAILS=new java.util.HashSet<>(java.util.Arrays.asList("な","の","に","で","だ","って","だった","です","でした","じゃ","では","には"));

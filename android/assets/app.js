@@ -225,7 +225,9 @@ function renderSearchThesaurusToggle(){
   const on=settings.search_thesaurus!==false,b=$('search-thesaurus-toggle');
   b.textContent=on?'類語 ON':'類語 OFF';b.classList.toggle('on',on);b.setAttribute('aria-pressed',String(on));
 }
-$('search-thesaurus-toggle').onclick=()=>{settings.search_thesaurus=settings.search_thesaurus===false;saveLocalSettings();renderSearchThesaurusToggle();runSearch();};
+// The same switch keeps thesaurus pages out of lookup popups (main window, video player, helper, overlay).
+const syncThesaurusSetting=()=>api('setting',{key:'hide_thesaurus',value:settings.search_thesaurus===false?'1':''}).catch(()=>{});
+$('search-thesaurus-toggle').onclick=()=>{settings.search_thesaurus=settings.search_thesaurus===false;saveLocalSettings();renderSearchThesaurusToggle();syncThesaurusSetting();runSearch();};
 const GROUP_ORDER=['Japanese','Kanji','Korean','Chinese','Thai','Russian','English'];
 const GROUP_LABEL={Japanese:'Japanese 国語',Kanji:'Kanji 漢字',Pronunciation:'Pronunciation 発音',Korean:'Korean 韓',Chinese:'Chinese 中',Thai:'Thai タイ',Russian:'Russian 露',English:'English 英'};
 const MORE_LABEL={Japanese:'More 日本語',Korean:'More 한국어',Chinese:'More 中文'};
@@ -2261,7 +2263,7 @@ async function dictMenu(id){
 
 // ---------- start ----------
 (async function init(){
-  loadLocalSettings();applyTheme();renderSearchThesaurusToggle();
+  loadLocalSettings();applyTheme();renderSearchThesaurusToggle();syncThesaurusSetting();
   try{
     const server=await api('settings');
     if(server.new_per_day)settings.new_per_day=server.new_per_day;
