@@ -80,7 +80,7 @@ def get_asset(url):
     for attempt in range(2):
         try:
             req = urllib.request.Request(url, headers={'User-Agent': UA})
-            with urllib.request.urlopen(req, timeout=20, context=CTX) as r:
+            with urllib.request.urlopen(req, timeout=60, context=CTX) as r:
                 return r.read()
         except urllib.error.HTTPError as e:
             if e.code == 404:
@@ -201,7 +201,11 @@ def main():
                 if not raw.exists():
                     continue
                 dest.parent.mkdir(parents=True, exist_ok=True)
-                subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', str(raw), '-ac', '1', '-c:a', 'aac', '-b:a', '64k', str(dest)], check=True)
+                # A clip cut short (a full disk, a dropped connection) is thrown away, to be fetched again next run.
+                if subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', str(raw), '-ac', '1', '-c:a', 'aac', '-b:a', '64k', str(dest)]).returncode != 0:
+                    raw.unlink(missing_ok=True)
+                    dest.unlink(missing_ok=True)
+                    continue
             en = en_by_audio.get(q['audio']) or {}
             nick = NICKNAME.get(lang, '旅行者')
             items.append({'id': vid, 'title': clean(q.get('title'), args.traveler, nick), 'titleEn': clean(en.get('title'), args.traveler, 'Traveler'),

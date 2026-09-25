@@ -114,7 +114,11 @@ def main():
                     if not raw.exists():
                         continue
                     dest.parent.mkdir(parents=True, exist_ok=True)
-                    subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', str(raw), '-ac', '1', '-c:a', 'aac', '-b:a', '64k', str(dest)], check=True)
+                    # A clip cut short (a full disk, a dropped connection) is thrown away, to be fetched again next run.
+                if subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', str(raw), '-ac', '1', '-c:a', 'aac', '-b:a', '64k', str(dest)]).returncode != 0:
+                    raw.unlink(missing_ok=True)
+                    dest.unlink(missing_ok=True)
+                    continue
                 en = en_voice.get(vid) or {}
                 g['items'].append({'id': vid, 'title': clean(v.get('title'), nick), 'titleEn': clean(en.get('title'), 'Trailblazer'),
                                    'text': clean(v['text'], nick), 'translation': clean(en.get('text'), 'Trailblazer'),
