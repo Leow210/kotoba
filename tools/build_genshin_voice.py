@@ -138,6 +138,9 @@ def main():
     out = Path(args.out) if args.out else DATA / f'genshin-{lang}'
     out.mkdir(parents=True, exist_ok=True)
     avatars = api(f'{args.lang}/avatar')['data']['items']
+    # The newest characters can be missing from the other languages' lists for a while (their clips are there).
+    for k, v in api('chs/avatar')['data']['items'].items():
+        avatars.setdefault(k, v)
     avatars_en = api('en/avatar')['data']['items']
     only = {x for x in args.only.split(',') if x}
     ids = sorted((k for k in avatars if k.isdigit() and (not only or k in only)), key=lambda k: (avatars[k].get('release') or 0, k))
