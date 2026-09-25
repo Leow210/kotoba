@@ -89,7 +89,9 @@ def main():
             if not dest.exists():
                 # The wiki's file server only answers browsers (Cloudflare), so the files come from a folder you saved
                 # them to (Downloads by default), under the wiki's own names.
-                raw = next((d / n for d in args.files for n in (fname, fname.replace('_', ' ')) if (d / n).exists()), None)
+                # Browsers save Fandom's space-containing file names with underscores.
+                names = (fname, fname.replace(' ', '_'), fname.replace('_', ' '))
+                raw = next((d / n for d in args.files for n in names if (d / n).exists()), None)
                 if raw is None:
                     print('  missing', fname)
                     continue
