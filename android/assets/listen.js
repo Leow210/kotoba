@@ -110,7 +110,7 @@
       const {it}=queue[i];
       const hidden=opts.text==='hide'||(opts.text==='after'&&!heard);
       f('text').classList.toggle('hidden',hidden);
-      f('tr').hidden=!opts.tr||!it.translation;
+      f('tr').hidden=!opts.tr||!it.translation||hidden;// the English only once the Chinese is showing
     }
     function paint(){
       const {g,it}=queue[i];
@@ -154,7 +154,7 @@
     el.querySelector('[data-a="next"]').onclick=()=>load(i+1,true);
     // Tap the text: hidden → shown; a word → looked up (the line waits meanwhile).
     f('text').addEventListener('click',async e=>{
-      if(f('text').classList.contains('hidden')){heard=true;f('text').classList.remove('hidden');return;}
+      if(f('text').classList.contains('hidden')){heard=true;paintText();return;}
       const w=e.target.closest('.mu-w');if(!w||!window.tappableWord)return;
       const {g,it}=queue[i];
       const word=tappableWord(it.text,w);if(!word)return;
