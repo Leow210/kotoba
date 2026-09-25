@@ -118,6 +118,7 @@ public class MainActivity extends Activity {
             @Override public void keepAwake(boolean on){runOnUiThread(()->{if(on)getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);});}
         });
         routes.books=books;routes.comics=comics;routes.ocr=ocr;
+        routes.listening=new Listening(new File(getExternalFilesDir(null),"listening"));
         routes.upgradeIndexesLater();
         web=new KotobaWebView(this);
         setContentView(web);
@@ -223,6 +224,22 @@ public class MainActivity extends Activity {
         });}
         @JavascriptInterface public void copy(String text){runOnUiThread(()->{((ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("Kotoba",text));});}
         @JavascriptInterface public void share(String text){runOnUiThread(()->startActivity(Intent.createChooser(new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT,text),"Share")));}
+        /** Pleco keeps its licensed dictionaries in its own app; hand it the word or sentence to display there. */
+        @JavascriptInterface public void plecoLookup(String word){runOnUiThread(()->{
+            String q=word==null?"":word.trim();if(q.isEmpty())return;
+            try{
+                Uri uri=Uri.parse("plecoapi://x-callback-url/s?q="+Uri.encode(q));
+                startActivity(new Intent(Intent.ACTION_VIEW,uri).setPackage("com.pleco.chinesesystem"));
+            }catch(Exception e){event("toast","Install Pleco to look up this word");}
+        });}
+        @JavascriptInterface public void plecoRead(String text){runOnUiThread(()->{
+            String t=text==null?"":text.trim();if(t.isEmpty())return;
+            try{
+                Intent i=new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT,t);
+                i.setClassName("com.pleco.chinesesystem","com.pleco.chinesesystem.PlecoDocumentReaderActivity");
+                startActivity(i);
+            }catch(Exception e){event("toast","Install Pleco to read this text");}
+        });}
         /** The folder a sync tool (Syncthing…) shares with the Mac. */
         @JavascriptInterface public void pickSyncFolder(){runOnUiThread(()->{
             Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
@@ -742,6 +759,11 @@ public class MainActivity extends Activity {
                 if(res==null)return response("text/plain",new byte[0],404,null);
                 String mime=(String)res[1];
                 return response(mime,(byte[])res[0],200,mime.contains("html")?ENTRY_CSP:null);
+            }
+            if(path.startsWith("/listen/")){
+                File f=routes.listening==null?null:routes.listening.file(path.substring(8));
+                if(f==null)return response("text/plain",new byte[0],404,null);
+                return response(Library.mime(f.getName()),Files.readAllBytes(f.toPath()),200,null);
             }
             if(path.startsWith("/d/")){
                 String rest=path.substring(3);

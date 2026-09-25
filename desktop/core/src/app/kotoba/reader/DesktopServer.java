@@ -65,6 +65,7 @@ public class DesktopServer {
         File ocrExe=new File(web.getParentFile().getParentFile(),"MacOS/kotoba-ocr");
         if(!ocrExe.canExecute())ocrExe=new File(web.getParentFile(),"mac/.build/release/KotobaOCR");
         if(ocrExe.canExecute())Ocr.external=new VisionOcr(ocrExe,store);
+        routes.listening=new Listening(new File(data,"listening"));
         routes.comics=new Comics(context,store.db,uri->FileChannel.open(Path.of(uri.startsWith("file://")?uri.substring(7):uri),StandardOpenOption.READ));
         byte[] t=new byte[18];new SecureRandom().nextBytes(t);
         StringBuilder b=new StringBuilder();for(byte x:t)b.append(String.format("%02x",x));
@@ -101,6 +102,7 @@ public class DesktopServer {
             case "translate.config":return translator.config();
             case "translate.set":translator.set(d);return translator.config();
             case "translate":return translator.translate(d.getString("text"),d.optString("from",""),d.optString("to",""),d.optString("engine",""),d.optString("context",""));
+            case "pleco.phone":return plecoPhone(d.getString("text"),d.optBoolean("reader",false));
             case "captions.report":return captionsReport(d);
             case "captions.add":return captionsAdd(d);
             case "captions.want":return captionsWant();
@@ -146,6 +148,26 @@ public class DesktopServer {
             }
             default:return routes.route(route,d);
         }
+    }
+
+    /** Opens a Pleco search on the USB-connected Android phone, without reading Pleco's dictionary files. */
+    JSONObject plecoPhone(String text,boolean reader) throws Exception {
+        String q=text.trim();
+        if(q.isEmpty()||q.length()>4000)throw new Exception("Choose text to open in Pleco.");
+        ProcessBuilder command;
+        if(reader)command=new ProcessBuilder(tool("adb"),"-d","shell","am","start","-a","android.intent.action.SEND",
+            "-t","text/plain","-n","com.pleco.chinesesystem/.PlecoDocumentReaderActivity","--es","android.intent.extra.TEXT",q);
+        else{
+            String encoded=java.net.URLEncoder.encode(q,StandardCharsets.UTF_8).replace("+","%20");
+            command=new ProcessBuilder(tool("adb"),"-d","shell","am","start","-a","android.intent.action.VIEW",
+                "-d","plecoapi://x-callback-url/s?q="+encoded,"-p","com.pleco.chinesesystem");
+        }
+        Process p=command
+            .redirectErrorStream(true).start();
+        String output=new String(p.getInputStream().readAllBytes(),StandardCharsets.UTF_8);
+        if(p.waitFor()!=0||output.contains("Error:")||output.contains("Exception"))
+            throw new Exception("Could not open Pleco on the USB-connected phone. Check that it is connected and unlocked.");
+        return new JSONObject().put("text",q);
     }
 
     // ---------- Mihon ----------
@@ -761,6 +783,12 @@ public class DesktopServer {
                 if(f==null){send(x,404,"text/plain",new byte[0],null);return;}
                 String mime=(String)f[1];
                 send(x,200,mime,(byte[])f[0],mime.contains("html")?ENTRY_CSP:null);
+                return;
+            }
+            if(path.startsWith("/listen/")){
+                File f=routes.listening.file(path.substring(8));
+                if(f==null){send(x,404,"text/plain",new byte[0],null);return;}
+                send(x,200,Library.mime(f.getName()),Files.readAllBytes(f.toPath()),null);
                 return;
             }
             if(path.startsWith("/file/")){

@@ -67,6 +67,7 @@ const debounce=(fn,ms)=>{let t;return (...a)=>{clearTimeout(t);t=setTimeout(()=>
 const nfkc=(s)=>String(s||'').normalize('NFKD').replace(/[\u0300\u0301]/g,'').normalize('NFKC').toLowerCase().replace(/ё/g,'е').replace(/[\u30a1-\u30f6]/g,c=>String.fromCharCode(c.charCodeAt(0)-96));
 const norm=(s)=>nfkc(s).replace(/[\s\u200b]/g,'');
 const cleanKey=(s)=>norm(s).replace(/[▽▼▲△×〈〉〔〕【】［］\[\]()（）《》〘〙‐\-－―—━・･=＝‖|⚷⚶⚹＊*]/g,'');
+const chineseHeadword=(s)=>/^[\p{Script=Han}]{1,12}$/u.test(String(s||'').trim());
 function fmtInterval(sec){
   if(sec<3600)return Math.max(1,Math.round(sec/60))+'m';
   if(sec<86400)return Math.round(sec/3600)+'h';
@@ -427,6 +428,7 @@ async function renderSearchEmpty(){
   const phone=!document.documentElement.classList.contains('desktop');
   const tools=[
     {id:'music',glyph:'♪',title:'Lyrics',sub:'for the song that’s playing',run:()=>window.openMusic&&openMusic()},
+    {id:'listen',glyph:'聴',title:'Listening',sub:'hear, repeat, shadow',run:()=>window.openListening&&openListening()},
     phone&&{id:'scan',glyph:'写',title:'Scan text',sub:'photo or screenshot',run:()=>window.openScan&&openScan()},
     phone&&window.Kotoba&&Kotoba.startScreenText&&{id:'screen',glyph:'文',title:'Screen text',sub:'over games and apps',run:()=>Kotoba.startScreenText()},
     dicts.some(d=>d.kind==='kanji'&&d.enabled)&&{id:'kanji',glyph:'漢',title:'Kanji grid',sub:'by radical and strokes',run:()=>openKanjiGrid()},
@@ -1395,7 +1397,7 @@ function showSelbar(){
   const bar=$('selbar');
   const reading=selection.opts&&selection.opts.reader;
   bar.innerHTML=[
-    ['lookup','search','Look up'],...(reading?[['highlight','edit','Highlight']]:[['search','book','Search']]),['copy','copy','Copy'],['card','star','Save'],...(reading?[['sentence','text','Sentence']]:[]),['translate','share','Translate'],['share','share','Share'],
+    ['lookup','search','Look up'],...(window.Kotoba&&Kotoba.plecoLookup&&chineseHeadword(selection.text)?[['pleco','book','Pleco']]:[]),...(reading?[['highlight','edit','Highlight']]:[['search','book','Search']]),['copy','copy','Copy'],['card','star','Save'],...(reading?[['sentence','text','Sentence']]:[]),['translate','share','Translate'],['share','share','Share'],
   ].map(([a,i,l])=>`<button data-sel="${a}">${icon(i)}${l}</button>`).join('');
   bar.hidden=false;
   bar.querySelectorAll('[data-sel]').forEach(b=>{
@@ -1424,6 +1426,7 @@ window.selectionAction=(action)=>handle(async()=>{
   if(action==='copy'){Kotoba.copy(text);toast('Copied');clearSelections();return;}
   if(action==='share'){Kotoba.share(text);return;}
   if(action==='translate'){Kotoba.translate(text);clearSelections();return;}
+  if(action==='pleco'){Kotoba.plecoLookup(text);clearSelections();return;}
   if(action==='sentence'){clearSelections();await saveSentence({text:sel.context||text,note:readerSourceNote()});return;}
   if(action==='search'){clearSelections();closeAllOverlays();showTab('search');$('q').value=text.slice(0,100);$('q-clear').hidden=false;search.mode='headword';document.querySelectorAll('#modes [data-mode]').forEach(x=>x.classList.toggle('on',x.dataset.mode==='headword'));await runSearch();remember();return;}
   if(action==='lookup'){await lookupSheet(text,sel);return;}
@@ -1444,16 +1447,24 @@ window.selectionAction=(action)=>handle(async()=>{
 
 async function lookupSheet(text,sel,extra={}){
   const r=await api('lookup',{text,lang:extra.lang||''});
+  const pleco=window.Kotoba&&Kotoba.plecoLookup&&chineseHeadword(r.matched||text.trim())&&
+    (extra.lang==='zh'||(r.items||[]).some(it=>parentOf(dictById(it.dict)?.grp)==='Chinese'));
   if(!r.items.length){
-    const s=openSheet(`<div class="sheet-body"><p class="hint">No headword starts with “${esc(text.slice(0,40))}”.</p></div><div class="sheet-foot"><button class="btn wide" id="lk-search">${icon('search')} Search definitions</button><button class="btn primary wide" id="lk-card">${icon('star')} Save</button></div>`,{title:'Look up',onClose:extra.onClose});
+    const s=openSheet(`<div class="sheet-body"><p class="hint">No headword starts with “${esc(text.slice(0,40))}”.</p></div><div class="sheet-foot"><button class="btn wide" id="lk-search">${icon('search')} Search definitions</button>${pleco?`<button class="btn wide" id="lk-pleco">Pleco</button>`:''}<button class="btn primary wide" id="lk-card">${icon('star')} Save</button></div>`,{title:'Look up',onClose:extra.onClose});
     s.sheet.querySelector('#lk-search').onclick=()=>{closeSheet(s);closeAllOverlays();showTab('search');$('q').value=text.slice(0,100);search.mode='definition';document.querySelectorAll('#modes [data-mode]').forEach(x=>x.classList.toggle('on',x.dataset.mode==='definition'));runSearch();};
+    if(s.sheet.querySelector('#lk-pleco'))s.sheet.querySelector('#lk-pleco').onclick=()=>Kotoba.plecoLookup(text.trim());
+    const missingContext=sel&&sel.context&&sel.context.trim();
+    if(missingContext&&missingContext!==text.trim()&&pleco&&Kotoba.plecoRead){
+      const read=document.createElement('button');read.className='btn wide';read.textContent='Read sentence in Pleco';
+      s.sheet.querySelector('#lk-pleco').after(read);read.onclick=()=>Kotoba.plecoRead(missingContext);
+    }
     s.sheet.querySelector('#lk-card').onclick=()=>{closeSheet(s);openSaveSheet({review:true,kind:'selection',headword:text.slice(0,60),back:'',context:sel&&sel.context||''});};
     return;
   }
   let index=0;
   const items=r.items;
   const formNote=r.explain?`<div class="form-note"><b>${esc(r.matched)}</b> → ${esc(r.key)} · ${esc(r.explain)}</div>`:'';
-  const s=openSheet(`${formNote}<div class="dict-tabs" id="lk-tabs" ${items.length<2?'hidden':''}></div><div class="lk-units" id="lk-units" hidden></div><div class="sheet-body" style="padding:0"><iframe class="lookup-frame" id="lk-frame"></iframe></div><div class="sheet-foot"><button class="btn wide" id="lk-open">${icon('book')} Open</button><button class="btn primary wide" id="lk-card">${icon('star')} Save</button></div>`,{title:r.key,tall:false,onClose:extra.onClose});
+  const s=openSheet(`${formNote}<div class="dict-tabs" id="lk-tabs" ${items.length<2?'hidden':''}></div><div class="lk-units" id="lk-units" hidden></div><div class="sheet-body" style="padding:0"><iframe class="lookup-frame" id="lk-frame"></iframe></div><div class="sheet-foot"><button class="btn wide" id="lk-open">${icon('book')} Open</button>${pleco?`<button class="btn wide" id="lk-pleco">Pleco</button>`:''}<button class="btn primary wide" id="lk-card">${icon('star')} Save</button></div>`,{title:r.key,tall:false,onClose:extra.onClose});
   const frame=s.sheet.querySelector('#lk-frame');
   let wired=null,focusUnit=null;
   const show=async(i)=>{
@@ -1490,12 +1501,17 @@ async function lookupSheet(text,sel,extra={}){
     wireKnownButton(kb,r.key,items[0].dict,extra.lang||'');
   }
   s.sheet.querySelector('#lk-open').onclick=()=>{closeSheet(s);const it=items[index];openEntry({...it,key:r.key,alternatives:items});};
+  if(s.sheet.querySelector('#lk-pleco'))s.sheet.querySelector('#lk-pleco').onclick=()=>Kotoba.plecoLookup(r.matched||r.key);
   // The sentence the word was found in (a book line, a comic bubble) can be kept as a sentence card too.
   const context=sel&&sel.context&&sel.context.trim();
   if(context&&context!==text.trim()){
     const b=document.createElement('button');b.className='btn wide';b.innerHTML=`${icon('text')} Sentence`;
     s.sheet.querySelector('#lk-open').after(b);
     b.onclick=handle(async()=>{closeSheet(s);await saveSentence({text:context,image:extra.image?await extra.image():'',note:extra.book||readerSourceNote()});});
+    if(pleco&&Kotoba.plecoRead){
+      const read=document.createElement('button');read.className='btn wide';read.textContent='Read sentence in Pleco';
+      b.after(read);read.onclick=()=>Kotoba.plecoRead(context);
+    }
   }
   s.sheet.querySelector('#lk-card').onclick=handle(()=>{const it=items[index];closeSheet(s);return saveLookupResult(it,r.key,sel&&sel.context||'',items,true,extra.book||'');});
   await show(0);

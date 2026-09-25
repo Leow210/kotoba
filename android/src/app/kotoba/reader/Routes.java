@@ -28,6 +28,7 @@ public class Routes {
     public final Extras extras;
     public Books books;// set by the platform (both apps have the book reader)
     public Comics comics;// and the comic reader
+    public Listening listening;// listening sets (Glossika-style)
     public Ocr ocr;// with its text layer
     Lyrics lyrics;// synced lyrics for the song that's playing (the one online feature)
     Lyrics lyrics(){if(lyrics==null)lyrics=new Lyrics(store);return lyrics;}
@@ -57,6 +58,8 @@ public class Routes {
                 return result;
             }
             // ---------- lyrics (the song playing in Spotify, YouTube Music, NetEase…) ----------
+            case "listen.sets":return listening==null?new JSONArray():listening.sets();
+            case "listen.set":return listening.set(d.getString("id"));
             case "lyrics.get":return lyrics().get(d.optString("title"),d.optString("artist"),d.optString("album",""),d.optDouble("duration",0),d.optBoolean("refresh",false));
             case "lyrics.search":return lyrics().search(d.getString("q"));
             case "lyrics.pick":return lyrics().pick(d.optString("title"),d.optString("artist"),d.getString("source"),d.getLong("id"));

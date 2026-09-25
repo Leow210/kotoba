@@ -173,6 +173,7 @@
     const poll=setInterval(refresh,1000);
   }
   window.openMusic=openMusic;
+  window.tappableText=tappable;window.tappableWord=wordAt;// Listening shows its lines the same way
 
   // Entry points: the Lyrics tile on the Dictionary home screen, and the Mac's Music tab (desktop-after.js).
 })();
