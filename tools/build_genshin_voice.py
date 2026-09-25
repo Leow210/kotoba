@@ -28,6 +28,14 @@ LANGS = {'chs': ('zh', '原神 · 角色语音', 'CHS'), 'jp': ('ja', '原神 ·
 REGIONS = {'MONDSTADT': ('蒙德', 'Mondstadt'), 'LIYUE': ('璃月', 'Liyue'), 'INAZUMA': ('稻妻', 'Inazuma'), 'SUMERU': ('须弥', 'Sumeru'),
            'FONTAINE': ('枫丹', 'Fontaine'), 'NATLAN': ('纳塔', 'Natlan'), 'NODKRAI': ('挪德卡莱', 'Nod-Krai'),
            'SNEZHNAYA': ('至冬', 'Snezhnaya'), 'MAINACTOR': ('旅行者', 'Traveler'), 'RANGER': ('其他', 'Other')}
+# yatta's other codes: the Fatui are Snezhnayan; Skirk (OMNI_SCOURGE) and Aloy (RANGER) come from outside Teyvat.
+REGION_ALIAS = {'FATUI': 'SNEZHNAYA', 'SNEZHNAYA_STAR': 'SNEZHNAYA', 'NODKRAI_ZIBAI': 'NODKRAI', 'OMNI_SCOURGE': 'RANGER', 'HVISION': 'RANGER'}
+
+
+def region_of(code):
+    code = (code or '').upper()
+    code = REGION_ALIAS.get(code, code)
+    return code if code in REGIONS else 'RANGER'
 last = [0.0]
 
 
@@ -192,7 +200,7 @@ def main():
             if b:
                 icon.parent.mkdir(parents=True, exist_ok=True)
                 icon.write_bytes(b)
-        region = (a.get('region') or '').upper()
+        region = region_of(a.get('region'))
         rz, ren = REGIONS.get(region, (region.title(), region.title()))
         groups.append({'id': aid, 'name': a.get('name', aid), 'nameEn': a_en.get('name', ''), 'icon': f'icons/{aid}.png' if icon.exists() else '',
                        'section': rz, 'sectionEn': ren, 'order': list(REGIONS).index(region) if region in REGIONS else 99,
