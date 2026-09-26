@@ -754,3 +754,4 @@ svg.i.sm{width:16px;height:16px}
 .ls-mode.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
 .ls-group-note{margin:2px 18px 8px;padding:10px 12px;border-radius:12px;background:var(--accent-soft);font-size:14px;line-height:1.55;color:var(--ink2)}
 .ls-ctl-space{width:40px;flex:none}/* balances the loop button so play stays centred */
+.ls-opt-head{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:6px}

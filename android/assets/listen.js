@@ -8,7 +8,7 @@
 (function(){
   const store={get(k,d){try{const v=localStorage.getItem(k);return v===null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
   const url=(set,p)=>`/listen/${encodeURIComponent(set)}/`+String(p).split('/').map(encodeURIComponent).join('/');
-  const defaults={repeats:2,gap:1.2,speed:1,text:'after',tr:false,pause:true,chain:'next',end:'loop',roman:'show',gloss:true,mode:'passive'};
+  const defaults={repeats:2,gap:1.2,speed:1,text:'after',tr:false,pause:true,chain:'next',end:'loop',roman:'show',gloss:true,mode:'passive',l1repeats:1,l1speed:1,sayPause:'auto',thinkPause:'auto'};
   const opts=Object.assign({},defaults,store.get('listen.opts',{}));
   if(opts.speed===0.9)opts.speed=1;// no longer offered
   const saveOpts=()=>store.set('listen.opts',opts);
@@ -221,6 +221,7 @@
     while(k<cps.length){html+=span(k);k++;}
     return html;
   }
+  const LANG_NAME={yue:['粵','Cantonese'],zh:['普','Mandarin'],ja:['日','Japanese'],ko:['韓','Korean'],th:['泰','Thai'],en:['英','English']};
   const lookupLang=l=>l==='yue'?'zh':l;// Cantonese: the Chinese dictionaries (CantoDict, CC-CEDICT…)
 
   /** Mac: holding the hover key (Shift) over a word looks it up, as in books and videos; the last popup gives way. */
@@ -291,16 +292,33 @@
       else{opts.chain='next';opts.end='loop';}
       saveOpts();paintOpts();showOpts();paintLoop();toast(el.querySelector('[data-a="loop"]').title,1200);
     };
-    const showOpts=()=>{f('opts').hidden=!opts.open;el.querySelector('[data-a="opts"]').textContent=(opts.open?'▾ ':'▸ ')+`×${opts.repeats} · pause ${({0:'none',0.5:'brief',1.2:'short',2:'long'})[opts.gap]||opts.gap} · speed ${opts.speed} · text ${opts.text==='after'?'after hearing':opts.text} · ${set.l1?'translation':'English'} ${opts.tr?'on':'off'}`;};
+    const showOpts=()=>{
+      f('opts').hidden=!opts.open;
+      const gap=({0:'none',0.5:'brief',1.2:'short',2:'long'})[opts.gap]||opts.gap,T=(LANG_NAME[set.lang]||[''])[0],L=(LANG_NAME[set.l1]||[''])[0];
+      const parts=set.l1?[`${T} ×${opts.repeats} · ${opts.speed}×`,`${L} ×${opts.l1repeats||1} · ${opts.l1speed||1}×`,`pause ${gap}`,`translation ${opts.tr?'on':'off'}`]
+        :[`×${opts.repeats}`,`pause ${gap}`,`speed ${opts.speed}`,`text ${opts.text==='after'?'after hearing':opts.text}`,`English ${opts.tr?'on':'off'}`];
+      el.querySelector('[data-a="opts"]').textContent=(opts.open?'▾ ':'▸ ')+parts.join(' · ');
+    };
     el.querySelector('[data-a="opts"]').onclick=()=>{opts.open=!opts.open;saveOpts();showOpts();};
     function paintOpts(){
       const chip=(key,val,label)=>`<button class="chip small ${opts[key]===val?'on':''}" data-o="${key}" data-v="${val}">${label}</button>`;
-      f('opts').innerHTML=`<div><span>Hear each</span>${chip('repeats',1,'×1')}${chip('repeats',2,'×2')}${chip('repeats',3,'×3')}</div>
+      const speeds=k=>`${chip(k,0.8,'0.8')}${chip(k,1,'1')}${chip(k,1.25,'1.25')}${chip(k,1.5,'1.5')}${chip(k,2,'2')}`;
+      // Two languages: each its own repeats and speed, and the two pauses the modes use.
+      const T=LANG_NAME[set.lang]||['',''],L=LANG_NAME[set.l1]||['',''];
+      f('opts').innerHTML=(set.l1?`<div class="ls-opt-head">${T[0]} ${T[1]}</div>`:'')+`<div><span>Hear each</span>${chip('repeats',1,'×1')}${chip('repeats',2,'×2')}${chip('repeats',3,'×3')}</div>
+        <div><span>Speed</span>${speeds('speed')}</div>
+        ${set.l1?`<div class="ls-opt-head">${L[0]} ${L[1]}</div>
+        <div><span>Hear each</span>${chip('l1repeats',1,'×1')}${chip('l1repeats',2,'×2')}</div>
+        <div><span>Speed</span>${speeds('l1speed')}</div>
+        <div class="ls-opt-head">Pauses</div>
+        <div><span>說 Time to say it</span>${chip('sayPause','auto','auto')}${chip('sayPause',4,'4 s')}${chip('sayPause',6,'6 s')}${chip('sayPause',8,'8 s')}</div>
+        <div><span>懂 Time to understand</span>${chip('thinkPause','auto','auto')}${chip('thinkPause',2,'2 s')}${chip('thinkPause',3,'3 s')}${chip('thinkPause',5,'5 s')}</div>`:''}
         <div><span>Pause to repeat</span>${chip('gap',0,'none')}${chip('gap',0.5,'brief')}${chip('gap',1.2,'short')}${chip('gap',2,'long')}</div>
-        <div><span>Speed</span>${chip('speed',0.8,'0.8')}${chip('speed',1,'1')}${chip('speed',1.25,'1.25')}${chip('speed',1.5,'1.5')}${chip('speed',2,'2')}</div>
+        ${set.l1?`<div class="ls-opt-head">Display</div>`:''}
         <div><span>Text</span>${chip('text','show','show')}${chip('text','after','after hearing')}${chip('text','hide','hide')}</div>
         <div><span>${set.l1?'Translation':'English'}</span>${chip('tr',true,'show')}${chip('tr',false,'hide')}</div>
-        <div><span>After a character</span>${chip('chain','next','next one')}${chip('chain','loop','again')}${chip('chain','stop','stop')}</div>
+        ${set.l1?`<div class="ls-opt-head">Playback</div>`:''}
+        <div><span>After a ${unit.toLowerCase()}</span>${chip('chain','next','next one')}${chip('chain','loop','again')}${chip('chain','stop','stop')}</div>
         <div><span>At the end</span>${chip('end','loop','start over')}${chip('end','stop','stop')}</div>
         <div><span>Pause on lookup</span>${chip('pause',true,'on')}${chip('pause',false,'off')}</div>
         ${set.roman?`<div><span>Jyutping</span>${chip('roman','show','show')}${chip('roman','after','after hearing')}${chip('roman','hide','hide')}</div>
@@ -310,6 +328,7 @@
         const k=b.dataset.o,raw=b.dataset.v;opts[k]=raw==='true'?true:raw==='false'?false:isNaN(+raw)?raw:+raw;
         saveOpts();paintOpts();paintText();showOpts();audio.playbackRate=opts.speed;
         if(k==='accent'||k==='roman'||k==='gloss')paint();
+        if(['repeats','l1repeats','sayPause','thinkPause','gap'].includes(k)){steps=buildSteps(queue[i].it);si=Math.min(si,steps.length);}
         paintLoop();
       });
     }
@@ -353,11 +372,16 @@
     const hasL1=it=>!!it.l1audio;
     const repeatWait=it=>{const cap=opts.gap>1.5?14:opts.gap>=1?9:4;return (opts.gap?Math.min((it.dur||2)*opts.gap/opts.speed,cap)+(opts.gap<1?0.3:0.6):0.7)*1000;};
     function buildSteps(it){
-      const T={play:'target'},L={play:'l1'},mode=set.l1?opts.mode||'passive':'plain';
+      const T={play:'target'},mode=set.l1?opts.mode||'passive':'plain';
       const reps=[];for(let r=0;r<Math.max(1,opts.repeats);r++){if(r)reps.push({wait:repeatWait(it)});reps.push(T);}
-      if(mode==='passive')return (hasL1(it)?[L,{wait:600}]:[]).concat(reps,[{wait:repeatWait(it)}]);
-      if(mode==='produce')return [L,{wait:Math.round(Math.min(6000,Math.max(4000,(it.dur||2)*1500+1500))),say:true}].concat(reps,[{wait:repeatWait(it)}]);
-      if(mode==='comprehend')return [T,{wait:Math.round(Math.min(4000,Math.max(3000,(it.dur||2)*800+2000))),think:true},L,{wait:900}];
+      // The translation language: heard ×1–2 (a short breath between), at its own speed.
+      const Ls=[];for(let r=0;r<Math.max(1,opts.l1repeats||1);r++){if(r)Ls.push({wait:500});Ls.push({play:'l1'});}
+      // 說: time to say it (auto: from the line's length, 4–6 s); 懂: time to understand it (auto: 3–4 s).
+      const say=opts.sayPause==='auto'||!opts.sayPause?Math.round(Math.min(6000,Math.max(4000,(it.dur||2)*1500+1500))):opts.sayPause*1000;
+      const think=opts.thinkPause==='auto'||!opts.thinkPause?Math.round(Math.min(4000,Math.max(3000,(it.dur||2)*800+2000))):opts.thinkPause*1000;
+      if(mode==='passive')return (hasL1(it)?Ls.concat([{wait:600}]):[]).concat(reps,[{wait:repeatWait(it)}]);
+      if(mode==='produce')return Ls.concat([{wait:say,say:true}],reps,[{wait:repeatWait(it)}]);
+      if(mode==='comprehend')return reps.concat([{wait:think,think:true}],Ls,[{wait:900}]);
       return reps.concat([{wait:repeatWait(it)}]);
     }
     function load(n,autoplay){
@@ -377,7 +401,7 @@
       const src=st.play==='l1'?it.l1audio:it.audio;
       // No recording yet (still to be voiced): about as long as it would take to say.
       if(!src){timer=setTimeout(()=>played(st),Math.max(1500,[...(st.play==='l1'?it.translation||'':it.text)].length*260));return;}
-      audio.src=url(set.id,src);audio.playbackRate=st.play==='l1'?1:opts.speed;
+      audio.src=url(set.id,src);audio.playbackRate=st.play==='l1'?opts.l1speed||1:opts.speed;
       audio.play().catch(()=>{playing=false;paintPlay();});
     }
     function played(st){
