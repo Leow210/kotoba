@@ -459,6 +459,7 @@ async function renderSearchEmpty(){
   const tools=[
     {id:'music',glyph:'♪',title:'Lyrics',sub:'for the song that’s playing',run:()=>window.openMusic&&openMusic()},
     {id:'listen',glyph:'聴',title:'Listening',sub:'hear, repeat, shadow',run:()=>window.openListening&&openListening()},
+    {id:'thai',glyph:'ก',title:'Thai script',sub:'letters, vowels, tones',run:()=>window.openThaiScript&&openThaiScript()},
     phone&&{id:'scan',glyph:'写',title:'Scan text',sub:'photo or screenshot',run:()=>window.openScan&&openScan()},
     phone&&window.Kotoba&&Kotoba.startScreenText&&{id:'screen',glyph:'文',title:'Screen text',sub:'over games and apps',run:()=>Kotoba.startScreenText()},
     dicts.some(d=>d.kind==='kanji'&&d.enabled)&&{id:'kanji',glyph:'漢',title:'Kanji grid',sub:'by radical and strokes',run:()=>openKanjiGrid()},

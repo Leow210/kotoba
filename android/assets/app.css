@@ -755,3 +755,45 @@ svg.i.sm{width:16px;height:16px}
 .ls-group-note{margin:2px 18px 8px;padding:10px 12px;border-radius:12px;background:var(--accent-soft);font-size:14px;line-height:1.55;color:var(--ink2)}
 .ls-ctl-space{width:40px;flex:none}/* balances the loop button so play stays centred */
 .ls-opt-head{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+
+/* Thai script trainer */
+:root{--th-mid:#2f7d5b;--th-high:#b4432d;--th-low:#2b5fa8;--tn-mid:#6b7280;--tn-low:#2b5fa8;--tn-falling:#b4432d;--tn-high:#2f7d5b;--tn-rising:#8a4fc0}
+.th-page{display:flex;flex-direction:column}
+.th-scroll{flex:1;overflow:auto;padding:8px 16px 40px;max-width:900px;width:100%;margin:0 auto}
+.th-roman{margin:4px 0 10px;font-size:12.5px}
+.th-classes{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin-bottom:12px}
+.th-class{border-radius:12px;padding:10px 12px;background:var(--surface);border:1px solid var(--line)}
+.th-class b{display:block;font-size:14px}.th-class small{color:var(--muted);font-size:12px}
+.th-class.mid b{color:var(--th-mid)}.th-class.high b{color:var(--th-high)}.th-class.low b{color:var(--th-low)}
+.th-unit{display:block;width:100%;text-align:left;padding:14px;margin:8px 0;border-radius:14px;background:var(--surface);border:1px solid var(--line)}
+.th-unit b{display:block;font:600 16px var(--serif)}.th-unit small{color:var(--muted);font-size:12.5px}
+.th-tabs{display:flex;gap:6px;padding:6px 14px 8px;border-bottom:1px solid var(--line)}
+.th-intro{font-size:14px;line-height:1.6;color:var(--ink2)}
+.th-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.th-card,.th-mark{display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px 8px;border-radius:14px;background:var(--surface);border:1px solid var(--line);text-align:center}
+.th-card small,.th-mark small{font-size:11.5px;color:var(--muted)}
+.th-card.rare{opacity:.75}
+.th-glyph{font:500 44px/1.25 "Noto Sans Thai","Thonburi",sans-serif}.th-glyph.small{font-size:30px}.th-glyph.big{font-size:88px}
+.th-card.mid .th-glyph,.th-glyph.mid{color:var(--th-mid)}.th-card.high .th-glyph,.th-glyph.high{color:var(--th-high)}.th-card.low .th-glyph,.th-glyph.low{color:var(--th-low)}
+.th-card.vowel.short .th-glyph{color:var(--th-high)}.th-card.vowel.long .th-glyph{color:var(--th-low)}
+.th-word{font:500 17px "Noto Sans Thai","Thonburi",sans-serif}.th-word i{font:italic 13px var(--sans,inherit);color:var(--muted)}
+.th-marks{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:12px}
+.th-legend{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 10px;font-size:12.5px;font-weight:600}
+.t-mid{color:var(--tn-mid)}.t-low{color:var(--tn-low)}.t-falling{color:var(--tn-falling)}.t-high{color:var(--tn-high)}.t-rising{color:var(--tn-rising)}
+.th-card.tone .th-tone-name{font-weight:700}.th-card.t-mid .th-tone-name{color:var(--tn-mid)}.th-card.t-low .th-tone-name{color:var(--tn-low)}.th-card.t-falling .th-tone-name{color:var(--tn-falling)}.th-card.t-high .th-tone-name{color:var(--tn-high)}.th-card.t-rising .th-tone-name{color:var(--tn-rising)}
+.th-card.tone .th-glyph{color:var(--ink)}
+.th-quiz,.th-result,.th-write{display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px 0;text-align:center}
+.th-count{color:var(--muted)}
+.th-listen{display:inline-flex;gap:6px;align-items:center;padding:12px 20px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-weight:600}.th-listen svg{width:18px;height:18px}
+.th-opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;width:100%;max-width:520px}
+.th-opt{padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--surface);font-size:16px;font-weight:600}
+.th-opts.glyphs .th-opt{font:500 32px "Noto Sans Thai","Thonburi",sans-serif}
+.th-opt.right{background:#dff3e7;border-color:#2f7d5b;color:#1f5c40}.th-opt.wrong{background:#fbe3de;border-color:#b4432d;color:#8a2f1d}
+.th-feedback{font-size:14px;color:var(--ink2);min-height:2.5em}.th-feedback .btn{margin-top:8px}
+.th-result b{font:600 40px var(--serif)}
+.th-ask b{display:block;font:600 22px "Noto Sans Thai","Thonburi",sans-serif}.th-ask small{display:block;color:var(--muted);margin:4px 0 8px}
+.th-pad{position:relative;width:min(92vw,360px);aspect-ratio:1;border-radius:18px;border:2px dashed var(--line);background:var(--surface);touch-action:none}
+.th-pad canvas{position:absolute;inset:0;width:100%;height:100%;z-index:2;touch-action:none;cursor:crosshair}
+.th-answer,.th-guide{position:absolute;inset:0;display:grid;place-items:center;font:400 min(62vw,240px)/1 "Noto Sans Thai","Thonburi",sans-serif;pointer-events:none}
+.th-answer{color:rgba(47,125,91,.45);z-index:3}.th-guide{color:rgba(120,120,120,.18);z-index:1}
+.th-write-btns{display:flex;gap:8px;justify-content:center}

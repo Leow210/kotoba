@@ -337,10 +337,12 @@
       const mode=set.l1?opts.mode||'passive':'plain';
       // Production: the Mandarin prompt shows, the Cantonese once it's been said. Comprehension: nothing until the
       // Mandarin answer. Otherwise the Text / Translation options.
-      const hidden=mode==='produce'?!heard:mode==='comprehend'?!heardL1:opts.text==='hide'||(opts.text==='after'&&!heard);
+      // The transcript shows after the first hearing of the target line in every mode (in 懂 too: the meaning, the
+      // Mandarin, still waits for its turn).
+      const hidden=!revealed&&(mode==='produce'||mode==='comprehend'?!heard:opts.text==='hide'||(opts.text==='after'&&!heard));
       f('text').classList.toggle('hidden',hidden);
       f('tr').hidden=!it.translation||(mode==='produce'?false:mode==='comprehend'?!heardL1:!opts.tr||hidden);
-      const romanHidden=hidden||opts.roman==='after'&&!heard;
+      const romanHidden=hidden||opts.roman==='after'&&!heard&&!revealed;
       f('roman').hidden=romanHidden;f('gloss').hidden=romanHidden;
       f('text').classList.toggle('roman-hidden',romanHidden);
     }
@@ -368,7 +370,7 @@
     // ---------- playback: each line is a sequence of steps, set by the mode ----------
     // plain: Cantonese ×N · passive: Mandarin → Cantonese ×N · produce: Mandarin → pause to say it → Cantonese ·
     // comprehend: Cantonese → pause to understand → Mandarin. Between hearings, the pause to repeat.
-    let steps=[],si=0,heardL1=false;
+    let steps=[],si=0,heardL1=false,revealed=false;
     const hasL1=it=>!!it.l1audio;
     const repeatWait=it=>{const cap=opts.gap>1.5?14:opts.gap>=1?9:4;return (opts.gap?Math.min((it.dur||2)*opts.gap/opts.speed,cap)+(opts.gap<1?0.3:0.6):0.7)*1000;};
     function buildSteps(it){
@@ -386,7 +388,7 @@
     }
     function load(n,autoplay){
       clearTimeout(timer);audio.pause();
-      i=(n+queue.length)%queue.length;rep=0;heard=false;heardL1=false;
+      i=(n+queue.length)%queue.length;rep=0;heard=false;heardL1=false;revealed=false;
       steps=buildSteps(queue[i].it);si=0;
       paint();
       if(autoplay&&playing)run();
@@ -437,7 +439,8 @@
     el.querySelector('[data-a="next"]').onclick=()=>load(i+1,true);
     // Tap the text: hidden → shown; a word → looked up (the line waits meanwhile).
     f('text').addEventListener('click',e=>{
-      if(f('text').classList.contains('hidden')){heard=true;paintText();return;}
+      // Tapping the blurred line shows it now (whatever the mode or the Text option), until the next line.
+      if(f('text').classList.contains('hidden')){revealed=true;paintText();return;}
       const w=e.target.closest('.mu-w');if(w)lookWord(w);
     });
     hoverWords(f('text'),w=>{if(!f('text').classList.contains('hidden'))lookWord(w);});
