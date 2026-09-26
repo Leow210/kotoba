@@ -738,7 +738,7 @@ svg.i.sm{width:16px;height:16px}
 .ls-sec{display:flex;align-items:center;gap:8px}
 .ls-sec-play{margin-left:auto;display:inline-flex;align-items:center;gap:4px;font:600 12px var(--sans,inherit);text-transform:none;letter-spacing:0;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:4px 10px}
 .ls-sec-play svg{width:12px;height:12px}
-.ls-loop{font-size:20px}.ls-loop.off{opacity:.35}
+.ls-loop svg{width:22px;height:22px}.ls-loop.on{color:var(--accent)}.ls-loop.off{color:var(--muted);opacity:.6}
 /* Jyutping over words, tones coloured (1 high level … 6 low level); the word-by-word gloss */
 .tn.t1{color:#c2410c}.tn.t2{color:#b45309}.tn.t3{color:#15803d}.tn.t4{color:#1d4ed8}.tn.t5{color:#7e22ce}.tn.t6{color:#57534e}
 .ls-text.roman-hidden rt{visibility:hidden}
@@ -753,3 +753,4 @@ svg.i.sm{width:16px;height:16px}
 .ls-mode b{font:600 20px var(--serif)}.ls-mode span{font-size:12.5px;font-weight:600}.ls-mode small{font-size:10.5px;color:var(--muted)}
 .ls-mode.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
 .ls-group-note{margin:2px 18px 8px;padding:10px 12px;border-radius:12px;background:var(--accent-soft);font-size:14px;line-height:1.55;color:var(--ink2)}
+.ls-ctl-space{width:40px;flex:none}/* balances the loop button so play stays centred */

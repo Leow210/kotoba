@@ -255,7 +255,7 @@
       </div>
       ${set.l1?`<div class="ls-modes" data-f="modes"></div>`:''}
       <div class="ls-progress"><i data-f="bar"></i></div>
-      <div class="ls-controls"><button class="icon-btn" data-a="prev" aria-label="Previous line">${icon('prev')}</button><button class="ls-play" data-a="toggle" aria-label="Play or pause"></button><button class="icon-btn" data-a="next" aria-label="Next line">${icon('next')}</button><button class="icon-btn ls-loop" data-a="loop" aria-label="Loop"></button></div>
+      <div class="ls-controls"><span class="ls-ctl-space"></span><button class="icon-btn" data-a="prev" aria-label="Previous line">${icon('prev')}</button><button class="ls-play" data-a="toggle" aria-label="Play or pause"></button><button class="icon-btn" data-a="next" aria-label="Next line">${icon('next')}</button><button class="icon-btn ls-loop" data-a="loop" aria-label="Loop"></button></div>
       <button class="ls-opts-toggle" data-a="opts"></button>
       <div class="ls-opts" data-f="opts"></div>`;
     let i=Math.max(0,Math.min(start,queue.length-1)),rep=0,playing=true,heard=false,timer=0,pausedByLookup=false,closed=false;
@@ -279,7 +279,9 @@
     const loopMode=()=>opts.chain==='loop'?'one':opts.end!=='stop'?'all':'off';
     function paintLoop(){
       const m=loopMode(),b=el.querySelector('[data-a="loop"]');
-      b.textContent=m==='one'?'🔂':'🔁';b.classList.toggle('off',m==='off');
+      // A line icon like the others: two arrows in a loop, with a small 1 for "this character"; grey when off.
+      b.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12"/><path d="M7 22l-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/>${m==='one'?'<path d="M11.2 10.2l1.3-1v6" stroke-width="1.6"/>':''}</svg>`;
+      b.classList.toggle('off',m==='off');b.classList.toggle('on',m!=='off');
       b.title=m==='one'?'Looping this character':m==='all'?'Looping: starts over at the end':'Not looping';
     }
     el.querySelector('[data-a="loop"]').onclick=()=>{
