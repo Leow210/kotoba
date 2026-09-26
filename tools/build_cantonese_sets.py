@@ -3,7 +3,7 @@
 mandarin.json → yue-mandarin): characters, jyutping, the Mandarin translation (shown, and voiced by tts_kokoro.py),
 English kept for reference, and a note per group. Cantonese audio comes from tts_minimax.py (listed in tts.json).
 
-  python3 tools/build_cantonese_sets.py
+  python3 tools/build_cantonese_sets.py [FILE.json SET-ID]   (a content file kept elsewhere, e.g. a personal one)
 """
 import json
 from pathlib import Path
@@ -14,7 +14,7 @@ SETS = {'particles.json': 'yue-particles', 'mandarin.json': 'yue-mandarin'}
 
 
 def build(src, set_id):
-    d = json.loads((SRC / src).read_text())
+    d = json.loads((SRC / src).read_text())   # an absolute path replaces SRC
     out = DATA / set_id
     out.mkdir(parents=True, exist_ok=True)
     old = {}
@@ -46,5 +46,6 @@ def build(src, set_id):
 
 
 if __name__ == '__main__':
-    for src, sid in SETS.items():
+    import sys
+    for src, sid in ({sys.argv[1]: sys.argv[2]} if len(sys.argv) > 2 else SETS).items():
         build(src, sid)
