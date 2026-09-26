@@ -39,9 +39,9 @@ def post(path, body):
     return d
 
 
-def speak(text, voice, model, speed=1.0):
+def speak(text, voice, model, speed=1.0, boost='Chinese,Yue'):
     """MP3 bytes for the text."""
-    d = post('/v1/t2a_v2', {'model': model, 'text': text, 'stream': False, 'language_boost': 'Chinese,Yue', 'output_format': 'hex',
+    d = post('/v1/t2a_v2', {'model': model, 'text': text, 'stream': False, 'language_boost': boost, 'output_format': 'hex',
                             'voice_setting': {'voice_id': voice, 'speed': speed, 'vol': 1, 'pitch': 0},
                             'audio_setting': {'sample_rate': 32000, 'bitrate': 128000, 'format': 'mp3', 'channel': 1}})
     return bytes.fromhex(d['data']['audio'])
