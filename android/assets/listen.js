@@ -8,7 +8,7 @@
 (function(){
   const store={get(k,d){try{const v=localStorage.getItem(k);return v===null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
   const url=(set,p)=>`/listen/${encodeURIComponent(set)}/`+String(p).split('/').map(encodeURIComponent).join('/');
-  const defaults={repeats:2,gap:1.2,speed:1,text:'after',tr:false,pause:true,chain:'next',end:'loop'};
+  const defaults={repeats:2,gap:1.2,speed:1,text:'after',tr:false,pause:true,chain:'next',end:'loop',roman:'show',gloss:true,mode:'passive'};
   const opts=Object.assign({},defaults,store.get('listen.opts',{}));
   if(opts.speed===0.9)opts.speed=1;// no longer offered
   const saveOpts=()=>store.set('listen.opts',opts);
@@ -63,7 +63,8 @@
     const el=document.createElement('div');el.className='ls-page';
     el.innerHTML=`<div class="bar"><button class="icon-btn" data-a="back" aria-label="Back">${icon('back')}</button>${g.icon?`<img class="ls-bar-icon" src="${url(set.id,g.icon)}" alt="">`:''}<div class="title"><b>${esc(g.name)}</b><small>${esc(g.nameEn||'')} · ${g.items.length} lines</small></div></div>
       <div class="ls-actions"><button class="btn primary" data-a="play">${icon('play')} Play all</button><button class="btn" data-a="shuffle">${icon('shuffle')} Shuffle</button><button class="btn" data-a="story" hidden>${icon('book')} Story</button></div>
-      <div class="ls-scroll"><div class="ls-lines">${g.items.map((it,i)=>`<button class="ls-line" data-i="${i}"><span class="ls-line-title">${esc(it.title)}${it.titleEn?`<small>${esc(it.titleEn)}</small>`:''}</span><span class="ls-line-text">${esc(it.text)}</span>${it.translation?`<span class="ls-line-tr">${esc(it.translation)}</span>`:''}</button>`).join('')}</div></div>`;
+      ${g.note?`<p class="ls-group-note">${esc(g.note)}</p>`:''}
+      <div class="ls-scroll"><div class="ls-lines">${g.items.map((it,i)=>`<button class="ls-line" data-i="${i}"><span class="ls-line-title">${esc(it.title)}${it.titleEn?`<small>${esc(it.titleEn)}</small>`:''}</span><span class="ls-line-text">${esc(it.text)}</span>${it.roman?`<span class="ls-line-roman">${romanHtml(it.roman)}</span>`:''}${it.translation?`<span class="ls-line-tr">${esc(it.translation)}</span>`:''}</button>`).join('')}</div></div>`;
     pushPage(el);
     el.querySelector('[data-a="back"]').onclick=()=>popPage();
     const queue=g.items.map(it=>({g,it}));
@@ -202,6 +203,26 @@
     return html;
   }
 
+  // ---------- romanization (jyutping) over each word, tones coloured; the word-by-word gloss under ----------
+  const toneOf=syl=>{const m=/([1-6])$/.exec(syl);return m?m[1]:'';};
+  const romanHtml=r=>esc(r).replace(/[a-z]+[1-6]/gi,m=>`<span class="tn t${toneOf(m)}">${m}</span>`);
+  /** Words as ruby (tappable characters, their jyutping above), or the whole line's jyutping under it. */
+  function wordsHtml(it){
+    const cps=[...it.text],off=[];let o=0;for(const c of cps){off.push(o);o+=c.length;}
+    const span=k=>`<span class="mu-w" data-o="${off[k]}">${esc(cps[k])}</span>`;
+    if(!it.words||!it.words.length)return cps.map((_,k)=>span(k)).join('');
+    let k=0,html='';
+    for(const w of it.words){
+      const n=[...w.w].length,inner=cps.slice(k,k+n).map((_,j)=>span(k+j)).join('');
+      const romanized=/[a-z][1-6]/i.test(w.j||'');
+      html+=romanized?`<ruby>${inner}<rt>${romanHtml(w.j)}</rt></ruby>`:inner;
+      k+=n;
+    }
+    while(k<cps.length){html+=span(k);k++;}
+    return html;
+  }
+  const lookupLang=l=>l==='yue'?'zh':l;// Cantonese: the Chinese dictionaries (CantoDict, CC-CEDICT…)
+
   /** Mac: holding the hover key (Shift) over a word looks it up, as in books and videos; the last popup gives way. */
   function hoverWords(container,look){
     if(!window.KotobaHover)return;
@@ -226,9 +247,13 @@
       <div class="ls-stage">
         <div class="ls-who" data-f="who"></div>
         <div class="ls-text" data-f="text"></div>
+        <div class="ls-roman" data-f="roman"></div>
+        <div class="ls-gloss" data-f="gloss"></div>
         <div class="ls-tr" data-f="tr"></div>
         <div class="ls-note" data-f="note"></div>
+        <div class="ls-cue" data-f="cue"></div>
       </div>
+      ${set.l1?`<div class="ls-modes" data-f="modes"></div>`:''}
       <div class="ls-progress"><i data-f="bar"></i></div>
       <div class="ls-controls"><button class="icon-btn" data-a="prev" aria-label="Previous line">${icon('prev')}</button><button class="ls-play" data-a="toggle" aria-label="Play or pause"></button><button class="icon-btn" data-a="next" aria-label="Next line">${icon('next')}</button><button class="icon-btn ls-loop" data-a="loop" aria-label="Loop"></button></div>
       <button class="ls-opts-toggle" data-a="opts"></button>
@@ -244,6 +269,7 @@
     }
     for(let x=queue.length-1;x>=0;x--)runs[x].len=x+1<queue.length&&runs[x+1].n===runs[x].n?runs[x+1].len:runs[x].k+1;
     const chained=runCount===new Set(queue.map(q=>q.g)).size;
+    const unit=({Lessons:'Lesson',Topics:'Topic',Characters:'Character'})[set.groupLabel]||'Character';
     const f=n=>el.querySelector(`[data-f="${n}"]`);
     pushPage(el,{onClose:()=>{closed=true;clearTimeout(timer);audio.pause();audio.src='';}});
     el.querySelector('[data-a="back"]').onclick=()=>popPage();
@@ -263,7 +289,7 @@
       else{opts.chain='next';opts.end='loop';}
       saveOpts();paintOpts();showOpts();paintLoop();toast(el.querySelector('[data-a="loop"]').title,1200);
     };
-    const showOpts=()=>{f('opts').hidden=!opts.open;el.querySelector('[data-a="opts"]').textContent=(opts.open?'▾ ':'▸ ')+`×${opts.repeats} · pause ${({0:'none',0.5:'brief',1.2:'short',2:'long'})[opts.gap]||opts.gap} · speed ${opts.speed} · text ${opts.text==='after'?'after hearing':opts.text} · English ${opts.tr?'on':'off'}`;};
+    const showOpts=()=>{f('opts').hidden=!opts.open;el.querySelector('[data-a="opts"]').textContent=(opts.open?'▾ ':'▸ ')+`×${opts.repeats} · pause ${({0:'none',0.5:'brief',1.2:'short',2:'long'})[opts.gap]||opts.gap} · speed ${opts.speed} · text ${opts.text==='after'?'after hearing':opts.text} · ${set.l1?'translation':'English'} ${opts.tr?'on':'off'}`;};
     el.querySelector('[data-a="opts"]').onclick=()=>{opts.open=!opts.open;saveOpts();showOpts();};
     function paintOpts(){
       const chip=(key,val,label)=>`<button class="chip small ${opts[key]===val?'on':''}" data-o="${key}" data-v="${val}">${label}</button>`;
@@ -271,31 +297,45 @@
         <div><span>Pause to repeat</span>${chip('gap',0,'none')}${chip('gap',0.5,'brief')}${chip('gap',1.2,'short')}${chip('gap',2,'long')}</div>
         <div><span>Speed</span>${chip('speed',0.8,'0.8')}${chip('speed',1,'1')}${chip('speed',1.25,'1.25')}${chip('speed',1.5,'1.5')}${chip('speed',2,'2')}</div>
         <div><span>Text</span>${chip('text','show','show')}${chip('text','after','after hearing')}${chip('text','hide','hide')}</div>
-        <div><span>English</span>${chip('tr',true,'show')}${chip('tr',false,'hide')}</div>
+        <div><span>${set.l1?'Translation':'English'}</span>${chip('tr',true,'show')}${chip('tr',false,'hide')}</div>
         <div><span>After a character</span>${chip('chain','next','next one')}${chip('chain','loop','again')}${chip('chain','stop','stop')}</div>
         <div><span>At the end</span>${chip('end','loop','start over')}${chip('end','stop','stop')}</div>
         <div><span>Pause on lookup</span>${chip('pause',true,'on')}${chip('pause',false,'off')}</div>
+        ${set.roman?`<div><span>Jyutping</span>${chip('roman','show','show')}${chip('roman','after','after hearing')}${chip('roman','hide','hide')}</div>
+        <div><span>Word gloss</span>${chip('gloss',true,'show')}${chip('gloss',false,'hide')}</div>`:''}
         ${set.lang==='ja'?`<div><span>Pitch accent</span>${chip('accent',true,'show')}${chip('accent',false,'hide')}</div>`:''}`;
       f('opts').querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>{
         const k=b.dataset.o,raw=b.dataset.v;opts[k]=raw==='true'?true:raw==='false'?false:isNaN(+raw)?raw:+raw;
         saveOpts();paintOpts();paintText();showOpts();audio.playbackRate=opts.speed;
-        if(k==='accent')paint();
+        if(k==='accent'||k==='roman'||k==='gloss')paint();
         paintLoop();
       });
     }
     function paintText(){
       const {it}=queue[i];
-      const hidden=opts.text==='hide'||(opts.text==='after'&&!heard);
+      const mode=set.l1?opts.mode||'passive':'plain';
+      // Production: the Mandarin prompt shows, the Cantonese once it's been said. Comprehension: nothing until the
+      // Mandarin answer. Otherwise the Text / Translation options.
+      const hidden=mode==='produce'?!heard:mode==='comprehend'?!heardL1:opts.text==='hide'||(opts.text==='after'&&!heard);
       f('text').classList.toggle('hidden',hidden);
-      f('tr').hidden=!opts.tr||!it.translation||hidden;// the English only once the Chinese is showing
+      f('tr').hidden=!it.translation||(mode==='produce'?false:mode==='comprehend'?!heardL1:!opts.tr||hidden);
+      const romanHidden=hidden||opts.roman==='after'&&!heard;
+      f('roman').hidden=romanHidden;f('gloss').hidden=romanHidden;
+      f('text').classList.toggle('roman-hidden',romanHidden);
     }
     function paint(){
       const {g,it}=queue[i];
       const r=runs[i];
-      f('pos').textContent=r&&chained?`Character ${r.n+1} / ${runCount} · line ${r.k+1} / ${r.len} · ${i+1} / ${queue.length}`:`${i+1} / ${queue.length}`;
-      f('who').innerHTML=`${g.icon?`<img src="${url(set.id,g.icon)}" alt="">`:''}<span><b>${esc(g.name)}</b> · ${esc(it.title)}${it.titleEn?`<small>${esc(g.nameEn||'')} · ${esc(it.titleEn)}</small>`:''}</span>`;
-      f('text').innerHTML=window.tappableText?tappableText(it.text):esc(it.text);
-      f('text').classList.toggle('acc',set.lang==='ja'&&!!opts.accent);
+      f('pos').textContent=r&&chained?`${unit} ${r.n+1} / ${runCount} · line ${r.k+1} / ${r.len} · ${i+1} / ${queue.length}`:`${i+1} / ${queue.length}`;
+      // (a line titled like its group — a particle, a topic — doesn't repeat it)
+      const sameTitle=it.title===g.name;
+      f('who').innerHTML=`${g.icon?`<img src="${url(set.id,g.icon)}" alt="">`:''}<span><b>${esc(g.name)}</b>${sameTitle?'':` · ${esc(it.title)}`}${it.titleEn||g.nameEn?`<small>${esc(g.nameEn||'')}${it.titleEn&&!sameTitle?` · ${esc(it.titleEn)}`:''}</small>`:''}</span>`;
+      const romanOn=set.roman&&opts.roman!=='hide';
+      f('text').innerHTML=set.roman&&it.words&&it.words.length&&romanOn?wordsHtml(it):window.tappableText?tappableText(it.text):esc(it.text);
+      f('text').classList.toggle('acc',set.lang==='ja'&&!!opts.accent||!!(romanOn&&it.words&&it.words.length));
+      // A line without word-by-word jyutping has it underneath; the gloss (I · be · Fung) under that.
+      f('roman').innerHTML=romanOn&&it.roman&&!(it.words&&it.words.length)?romanHtml(it.roman):'';
+      f('gloss').innerHTML=set.roman&&opts.gloss!==false&&it.words&&it.words.some(w=>w.g)?it.words.filter(w=>/\S/.test(w.w)&&!/^[。，？！、…「」,.?!]+$/.test(w.w)).map(w=>`<span><b>${esc(w.w)}</b>${esc(w.g||'')}</span>`).join(''):'';
       if(set.lang==='ja'&&opts.accent){const at=i;accents([it.text],set.id).then(r=>{if(at===i&&el.isConnected)f('text').innerHTML=accentHtml(it.text,r[0]);}).catch(e=>toast(e.message));}
       f('tr').textContent=it.translation||'';
       f('note').textContent=it.note||'';
@@ -304,41 +344,69 @@
     }
     function paintPlay(){el.querySelector('[data-a="toggle"]').innerHTML=playing?'<svg viewBox="0 0 24 24"><path d="M8 5h3v14H8zM13 5h3v14h-3z" fill="currentColor"/></svg>':'<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>';}
 
-    function load(n,autoplay){
-      clearTimeout(timer);
-      i=(n+queue.length)%queue.length;rep=0;heard=false;
-      audio.src=url(set.id,queue[i].it.audio);audio.playbackRate=opts.speed;
-      paint();
-      if(autoplay&&playing)audio.play().catch(()=>{playing=false;paintPlay();});
+    // ---------- playback: each line is a sequence of steps, set by the mode ----------
+    // plain: Cantonese ×N · passive: Mandarin → Cantonese ×N · produce: Mandarin → pause to say it → Cantonese ·
+    // comprehend: Cantonese → pause to understand → Mandarin. Between hearings, the pause to repeat.
+    let steps=[],si=0,heardL1=false;
+    const hasL1=it=>!!it.l1audio;
+    const repeatWait=it=>{const cap=opts.gap>1.5?14:opts.gap>=1?9:4;return (opts.gap?Math.min((it.dur||2)*opts.gap/opts.speed,cap)+(opts.gap<1?0.3:0.6):0.7)*1000;};
+    function buildSteps(it){
+      const T={play:'target'},L={play:'l1'},mode=set.l1?opts.mode||'passive':'plain';
+      const reps=[];for(let r=0;r<Math.max(1,opts.repeats);r++){if(r)reps.push({wait:repeatWait(it)});reps.push(T);}
+      if(mode==='passive')return (hasL1(it)?[L,{wait:600}]:[]).concat(reps,[{wait:repeatWait(it)}]);
+      if(mode==='produce')return [L,{wait:Math.round(Math.min(6000,Math.max(4000,(it.dur||2)*1500+1500))),say:true}].concat(reps,[{wait:repeatWait(it)}]);
+      if(mode==='comprehend')return [T,{wait:Math.round(Math.min(4000,Math.max(3000,(it.dur||2)*800+2000))),think:true},L,{wait:900}];
+      return reps.concat([{wait:repeatWait(it)}]);
     }
-    // After each hearing: room to say it yourself (as long as the line, times the pause setting), then again or on.
-    audio.addEventListener('ended',()=>{
-      if(closed)return;
-      rep++;heard=true;paintText();
+    function load(n,autoplay){
+      clearTimeout(timer);audio.pause();
+      i=(n+queue.length)%queue.length;rep=0;heard=false;heardL1=false;
+      steps=buildSteps(queue[i].it);si=0;
+      paint();
+      if(autoplay&&playing)run();
+    }
+    function run(){
+      clearTimeout(timer);
+      if(!playing||closed)return;
+      if(si>=steps.length){lineDone();return;}
+      const st=steps[si],it=queue[i].it;
+      f('cue').textContent=st.say?'說 Say it in Cantonese':st.think?'懂 What does it mean?':'';
+      if(st.wait){timer=setTimeout(()=>{si++;run();},st.wait);return;}
+      const src=st.play==='l1'?it.l1audio:it.audio;
+      // No recording yet (still to be voiced): about as long as it would take to say.
+      if(!src){timer=setTimeout(()=>played(st),Math.max(1500,[...(st.play==='l1'?it.translation||'':it.text)].length*260));return;}
+      audio.src=url(set.id,src);audio.playbackRate=st.play==='l1'?1:opts.speed;
+      audio.play().catch(()=>{playing=false;paintPlay();});
+    }
+    function played(st){
       const {g,it}=queue[i];
-      const done=store.get('listen.done.'+set.id,{});(done[g.id]=done[g.id]||{})[it.id]=1;store.set('listen.done.'+set.id,done);
-      // Room to repeat it: as long as the line (times the setting), but a long speech doesn't need its whole length.
-      const cap=opts.gap>1.5?14:opts.gap>=1?9:4;
-      const wait=(opts.gap?Math.min((it.dur||audio.duration||2)*opts.gap/opts.speed,cap)+(opts.gap<1?0.3:0.6):0.7)*1000;
-      timer=setTimeout(()=>{
-        if(!playing||closed)return;
-        if(rep<opts.repeats){audio.currentTime=0;audio.play().catch(()=>{});}
-        else{
-          const last=i+1>=queue.length,newChar=last||queue[i+1].g!==g;
-          // This character again: back to its first line in the queue.
-          if(newChar&&opts.chain==='loop'){let s0=i;while(s0>0&&queue[s0-1].g===g)s0--;load(s0,true);}
-          else if(last&&opts.end!=='stop')load(0,true);                        // start over from the top
-          else if(last){playing=false;paintPlay();toast('That was the last line');}
-          else if(newChar&&opts.chain==='stop'){playing=false;paintPlay();load(i+1,false);toast(`End of ${g.name} · press play for ${queue[i].g.name}`);}
-          else load(i+1,true);
-        }
-      },wait);
-    });
-    el.querySelector('[data-a="toggle"]').onclick=()=>{
-      playing=!playing;paintPlay();
-      if(playing){if(audio.ended||audio.paused){if(rep>=opts.repeats)load(i+1,true);else audio.play().catch(()=>{});}}
-      else{clearTimeout(timer);audio.pause();}
-    };
+      if(st.play==='target'){
+        rep++;heard=true;
+        const done=store.get('listen.done.'+set.id,{});(done[g.id]=done[g.id]||{})[it.id]=1;store.set('listen.done.'+set.id,done);
+      }else heardL1=true;
+      paintText();si++;run();
+    }
+    audio.addEventListener('ended',()=>{if(!closed&&steps[si]&&steps[si].play)played(steps[si]);});
+    function lineDone(){
+      const {g}=queue[i];
+      f('cue').textContent='';
+      const last=i+1>=queue.length,newChar=last||queue[i+1].g!==g;
+      // This character again: back to its first line in the queue.
+      if(newChar&&opts.chain==='loop'){let s0=i;while(s0>0&&queue[s0-1].g===g)s0--;load(s0,true);}
+      else if(last&&opts.end!=='stop')load(0,true);                        // start over from the top
+      else if(last){playing=false;paintPlay();toast('That was the last line');}
+      else if(newChar&&opts.chain==='stop'){playing=false;paintPlay();load(i+1,false);toast(`End of ${g.name} · press play for ${queue[i].g.name}`);}
+      else load(i+1,true);
+    }
+    // Pause and resume where it was (mid-clip, or at the step it had reached).
+    function resume(){
+      playing=true;paintPlay();
+      const st=steps[si];
+      if(st&&st.play&&audio.src&&audio.currentTime>0&&!audio.ended)audio.play().catch(()=>{});
+      else run();
+    }
+    function pause(){playing=false;paintPlay();clearTimeout(timer);audio.pause();}
+    el.querySelector('[data-a="toggle"]').onclick=()=>playing?pause():resume();
     el.querySelector('[data-a="prev"]').onclick=()=>load(i-1,true);
     el.querySelector('[data-a="next"]').onclick=()=>load(i+1,true);
     // Tap the text: hidden → shown; a word → looked up (the line waits meanwhile).
@@ -353,16 +421,16 @@
       const word=tappableWord(it.text,w);if(!word)return;
       f('text').querySelectorAll('.mu-w.on').forEach(x=>x.classList.remove('on'));
       if(w.dataset.end!=null)f('text').querySelectorAll('.mu-w').forEach(x=>{if(x.dataset.end===w.dataset.end&&+x.dataset.o>=+w.dataset.o)x.classList.add('on');});else w.classList.add('on');
-      if(opts.pause&&playing){pausedByLookup=true;playing=false;clearTimeout(timer);audio.pause();paintPlay();}
-      await lookupSheet(word,{context:it.text},{lang:set.lang,book:`${set.title} · ${g.name} · ${it.title}`,anchor:w.getBoundingClientRect(),onClose:()=>{
+      if(opts.pause&&playing){pausedByLookup=true;pause();}
+      await lookupSheet(word,{context:it.text},{lang:lookupLang(set.lang),book:`${set.title} · ${g.name} · ${it.title}`,anchor:w.getBoundingClientRect(),onClose:()=>{
         f('text').querySelectorAll('.mu-w.on').forEach(x=>x.classList.remove('on'));
-        if(pausedByLookup&&!sheetStack.length){pausedByLookup=false;playing=true;paintPlay();if(rep>=opts.repeats)load(i+1,true);else audio.play().catch(()=>{});}
+        if(pausedByLookup&&!sheetStack.length){pausedByLookup=false;resume();}
       }});
     }
     // A sentence card: the line, its English on the back, and the voice itself to play in review.
     const addCard=handle(async()=>{
       const {g,it}=queue[i];
-      if(playing){playing=false;clearTimeout(timer);audio.pause();paintPlay();}
+      if(playing)pause();
       await saveSentence({text:it.text,back:it.translation||'',note:`${set.title} · ${g.name} · ${it.title}`,
         clips:[{dict:0,path:`${set.id}/${it.audio}`,url:url(set.id,it.audio),dictionary:`${g.name} · ${it.title}`,label:g.nameEn||g.name}]});
     });
@@ -374,9 +442,18 @@
       if(e.key===' '){e.preventDefault();el.querySelector('[data-a="toggle"]').click();}
       else if(e.key==='ArrowRight')load(i+1,true);
       else if(e.key==='ArrowLeft')load(i-1,true);
-      else if(e.key==='r'||e.key==='R'){clearTimeout(timer);rep=Math.max(0,rep-1);audio.currentTime=0;playing=true;paintPlay();audio.play().catch(()=>{});}
+      else if(e.key==='r'||e.key==='R'){const k=steps.findIndex(x=>x.play==='target');si=Math.max(0,k);playing=true;paintPlay();audio.pause();run();}
     };
     addEventListener('keydown',onKey);
+    // The three ways to practise (sets with a Mandarin track): hear it, say it, understand it.
+    function paintModes(){
+      if(!set.l1)return;
+      const m=opts.mode||'passive';
+      const M=[['passive','聽','Passive','普 → 粵 → repeat'],['produce','說','Produce','普 → you say it → 粵'],['comprehend','懂','Understand','粵 → you get it → 普']];
+      f('modes').innerHTML=M.map(([k,g,l,sub])=>`<button class="ls-mode ${m===k?'on':''}" data-m="${k}"><b>${g}</b><span>${l}</span><small>${sub}</small></button>`).join('');
+      f('modes').querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{opts.mode=b.dataset.m;saveOpts();paintModes();load(i,playing);});
+    }
+    paintModes();
     paintOpts();showOpts();paintPlay();paintLoop();load(i,true);
   }
 

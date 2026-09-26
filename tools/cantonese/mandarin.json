@@ -1,0 +1,127 @@
+{
+  "title": "粵語 · 普粵對照 From Mandarin",
+  "subtitle": "What changes when you know Mandarin: core words, aspect, word order, questions and negation · written for Kotoba",
+  "sections": [
+    {"name": "一 · 核心詞", "nameEn": "Core words", "groups": [
+      {"id": "hai-m-mou", "name": "係・唔・冇", "nameEn": "是 · 不 · 沒有", "note": "係 hai6 = 是; 唔 m4 = 不; 冇 mou5 = 沒有 (有冇 = 有沒有). 冇 also negates past actions (我冇去 = 我沒去).", "items": [
+        {"text": "我係香港人。", "roman": "ngo5 hai6 hoeng1 gong2 jan4.", "translation": "I'm from Hong Kong.", "mandarin": "我是香港人。"},
+        {"text": "佢唔係學生。", "roman": "keoi5 m4 hai6 hok6 saang1.", "translation": "He isn't a student.", "mandarin": "他不是學生。"},
+        {"text": "我今日冇錢。", "roman": "ngo5 gam1 jat6 mou5 cin2.", "translation": "I don't have any money today.", "mandarin": "我今天沒有錢。"},
+        {"text": "你有冇兄弟姊妹？", "roman": "nei5 jau5 mou5 hing1 dai6 zi2 mui6?", "translation": "Do you have any siblings?", "mandarin": "你有沒有兄弟姐妹？"},
+        {"text": "我琴日冇去返工。", "roman": "ngo5 kam4 jat6 mou5 heoi3 faan1 gung1.", "translation": "I didn't go to work yesterday.", "mandarin": "我昨天沒去上班。"}
+      ]},
+      {"id": "keoi-ge-di", "name": "佢・嘅・啲", "nameEn": "他 · 的 · 些", "note": "佢 keoi5 = 他/她/它 (佢哋 = 他們); 嘅 ge3 = 的; 啲 di1 = 些, and \"a bit\" after adjectives (快啲 = 快一點).", "items": [
+        {"text": "佢哋係我嘅同事。", "roman": "keoi5 dei6 hai6 ngo5 ge3 tung4 si6.", "translation": "They're my colleagues.", "mandarin": "他們是我的同事。"},
+        {"text": "呢啲係邊個嘅嘢？", "roman": "ni1 di1 hai6 bin1 go3 ge3 je5?", "translation": "Whose things are these?", "mandarin": "這些是誰的東西？"},
+        {"text": "行快啲啦。", "roman": "haang4 faai3 di1 laa1.", "translation": "Walk a bit faster.", "mandarin": "走快一點吧。"},
+        {"text": "我想要多啲時間。", "roman": "ngo5 soeng2 jiu3 do1 di1 si4 gaan3.", "translation": "I want a bit more time.", "mandarin": "我想要多一點時間。"}
+      ]},
+      {"id": "ni-go", "name": "呢・嗰・邊", "nameEn": "這 · 那 · 哪", "note": "呢 ni1 = 這; 嗰 go2 = 那; 邊 bin1 = 哪. With a classifier: 呢個, 嗰本, 邊個 (= 誰 / 哪個). 呢度 / 嗰度 / 邊度 = 這裡 / 那裡 / 哪裡.", "items": [
+        {"text": "呢個幾多錢？", "roman": "ni1 go3 gei2 do1 cin2?", "translation": "How much is this one?", "mandarin": "這個多少錢？"},
+        {"text": "我想要嗰本書。", "roman": "ngo5 soeng2 jiu3 go2 bun2 syu1.", "translation": "I want that book.", "mandarin": "我想要那本書。"},
+        {"text": "洗手間喺邊度？", "roman": "sai2 sau2 gaan1 hai2 bin1 dou6?", "translation": "Where's the toilet?", "mandarin": "洗手間在哪裡？"},
+        {"text": "邊個打電話嚟？", "roman": "bin1 go3 daa2 din6 waa2 lei4?", "translation": "Who's calling?", "mandarin": "誰打電話來？"}
+      ]},
+      {"id": "hai2", "name": "喺", "nameEn": "在 (location)", "note": "喺 hai2 = 在 for location (喺度 = 在這裡/在家). Don't confuse with 係 hai6 = 是.", "items": [
+        {"text": "我喺屋企。", "roman": "ngo5 hai2 uk1 kei2.", "translation": "I'm at home.", "mandarin": "我在家。"},
+        {"text": "佢喺公司做嘢。", "roman": "keoi5 hai2 gung1 si1 zou6 je5.", "translation": "He's working at the office.", "mandarin": "他在公司工作。"},
+        {"text": "你老細喺唔喺度？", "roman": "nei5 lou5 sai3 hai2 m4 hai2 dou6?", "translation": "Is your boss in?", "mandarin": "你老闆在不在？"}
+      ]}
+    ]},
+    {"name": "二 · 動詞", "nameEn": "Everyday verbs", "groups": [
+      {"id": "verbs1", "name": "食・飲・睇・講", "nameEn": "吃 · 喝 · 看 · 說", "note": "食 sik6 = 吃; 飲 jam2 = 喝; 睇 tai2 = 看; 講 gong2 = 說 (講嘢 = 說話). 話 waa6 = 說 when reporting (佢話… = 他說…).", "items": [
+        {"text": "你食咗飯未呀？", "roman": "nei5 sik6 zo2 faan6 mei6 aa3?", "translation": "Have you eaten yet?", "mandarin": "你吃飯了沒有？"},
+        {"text": "我想飲杯咖啡。", "roman": "ngo5 soeng2 jam2 bui1 gaa3 fe1.", "translation": "I'd like a cup of coffee.", "mandarin": "我想喝杯咖啡。"},
+        {"text": "我哋今晚去睇戲啦。", "roman": "ngo5 dei6 gam1 maan5 heoi3 tai2 hei3 laa1.", "translation": "Let's go to the cinema tonight.", "mandarin": "我們今晚去看電影吧。"},
+        {"text": "佢話佢好攰。", "roman": "keoi5 waa6 keoi5 hou2 gui6.", "translation": "He says he's tired.", "mandarin": "他說他很累。"},
+        {"text": "你講慢啲得唔得？", "roman": "nei5 gong2 maan6 di1 dak1 m4 dak1?", "translation": "Could you speak a bit slower?", "mandarin": "你說慢一點可以嗎？"}
+      ]},
+      {"id": "verbs2", "name": "行・企・瞓・着・搵・攞", "nameEn": "走 · 站 · 睡 · 穿 · 找 · 拿", "note": "行 haang4 = 走 (walk; 走 zau2 = leave!); 企 kei5 = 站; 瞓 fan3 = 睡; 着 zoek3 = 穿; 搵 wan2 = 找; 攞 lo2 = 拿.", "items": [
+        {"text": "我行路返屋企。", "roman": "ngo5 haang4 lou6 faan1 uk1 kei2.", "translation": "I walk home.", "mandarin": "我走路回家。"},
+        {"text": "唔好企喺度，坐低啦。", "roman": "m4 hou2 kei5 hai2 dou6, co5 dai1 laa1.", "translation": "Don't just stand there, sit down.", "mandarin": "別站在這裡，坐下吧。"},
+        {"text": "我琴晚好夜先瞓。", "roman": "ngo5 kam4 maan5 hou2 je6 sin1 fan3.", "translation": "I went to bed very late last night.", "mandarin": "我昨晚很晚才睡。"},
+        {"text": "今日凍，着多件衫啦。", "roman": "gam1 jat6 dung3, zoek3 do1 gin6 saam1 laa1.", "translation": "It's cold today, wear another layer.", "mandarin": "今天冷，多穿一件衣服吧。"},
+        {"text": "我搵唔到我部電話。", "roman": "ngo5 wan2 m4 dou2 ngo5 bou6 din6 waa2.", "translation": "I can't find my phone.", "mandarin": "我找不到我的手機。"},
+        {"text": "幫我攞嗰個袋。", "roman": "bong1 ngo5 lo2 go2 go3 doi2.", "translation": "Get that bag for me.", "mandarin": "幫我拿那個袋子。"}
+      ]},
+      {"id": "bei2", "name": "畀", "nameEn": "給 (and word order)", "note": "畀 bei2 = 給. Word order differs: 畀本書我 = 給我一本書 — the thing comes before the person.", "items": [
+        {"text": "畀本書我。", "roman": "bei2 bun2 syu1 ngo5.", "translation": "Give me the book.", "mandarin": "給我那本書。"},
+        {"text": "我畀咗錢佢喇。", "roman": "ngo5 bei2 zo2 cin2 keoi5 laa3.", "translation": "I've already given him the money.", "mandarin": "我已經給他錢了。"},
+        {"text": "佢畀人鬧。", "roman": "keoi5 bei2 jan4 naau6.", "translation": "He got told off.", "mandarin": "他被人罵。"}
+      ]}
+    ]},
+    {"name": "三 · 體貌", "nameEn": "Aspect", "groups": [
+      {"id": "zo-gan-gwo", "name": "咗・緊・過", "nameEn": "了 · 在/正在 · 過", "note": "V咗 zo2 = V了 (completed); V緊 gan2 = 在V (in progress); V過 gwo3 = V過 (experience) — 緊 comes after the verb, unlike 在.", "items": [
+        {"text": "我買咗新電話。", "roman": "ngo5 maai5 zo2 san1 din6 waa2.", "translation": "I bought a new phone.", "mandarin": "我買了新手機。"},
+        {"text": "佢食緊飯。", "roman": "keoi5 sik6 gan2 faan6.", "translation": "He's eating.", "mandarin": "他在吃飯。"},
+        {"text": "你去過日本未？", "roman": "nei5 heoi3 gwo3 jat6 bun2 mei6?", "translation": "Have you been to Japan?", "mandarin": "你去過日本沒有？"},
+        {"text": "我做緊嘢，等陣再傾。", "roman": "ngo5 zou6 gan2 je5, dang2 zan6 zoi3 king1.", "translation": "I'm working — let's talk later.", "mandarin": "我在工作，等一下再聊。"}
+      ]},
+      {"id": "mei", "name": "未・仲", "nameEn": "還沒 · 還", "note": "未 mei6 = 還沒 (V咗未？ = V了沒有？); 仲 zung6 = 還 (仲未 = 還沒).", "items": [
+        {"text": "你做完功課未？", "roman": "nei5 zou6 jyun4 gung1 fo3 mei6?", "translation": "Have you finished your homework?", "mandarin": "你做完功課沒有？"},
+        {"text": "我仲未食早餐。", "roman": "ngo5 zung6 mei6 sik6 zou2 caan1.", "translation": "I haven't had breakfast yet.", "mandarin": "我還沒吃早餐。"},
+        {"text": "佢仲喺度。", "roman": "keoi5 zung6 hai2 dou6.", "translation": "He's still here.", "mandarin": "他還在這裡。"}
+      ]},
+      {"id": "resultatives", "name": "晒・埋・返・開", "nameEn": "all · also · back · habitually", "note": "V晒 saai3 = all of it (食晒 = 吃光); V埋 maai4 = also / finish off (做埋 = 也做 / 做完); V返 faan1 = back, again (攞返 = 拿回); V開 hoi1 = usually, habitually (用開 = 平常用的).", "items": [
+        {"text": "佢食晒啲蛋糕。", "roman": "keoi5 sik6 saai3 di1 daan6 gou1.", "translation": "He ate all the cake.", "mandarin": "他把蛋糕吃光了。"},
+        {"text": "你做埋呢樣先走啦。", "roman": "nei5 zou6 maai4 ni1 joeng6 sin1 zau2 laa1.", "translation": "Finish this one too before you go.", "mandarin": "你把這個也做完再走吧。"},
+        {"text": "記得攞返把遮。", "roman": "gei3 dak1 lo2 faan1 baa2 ze1.", "translation": "Remember to take the umbrella back.", "mandarin": "記得把雨傘拿回來。"},
+        {"text": "我用開呢隻牌子。", "roman": "ngo5 jung6 hoi1 ni1 zek3 paai4 zi2.", "translation": "This is the brand I usually use.", "mandarin": "我一直用這個牌子。"}
+      ]}
+    ]},
+    {"name": "四 · 語序", "nameEn": "Word order", "groups": [
+      {"id": "sin1", "name": "V先", "nameEn": "先V", "note": "先 sin1 goes after the verb phrase: 你行先 = 你先走.", "items": [
+        {"text": "你行先，我遲啲嚟。", "roman": "nei5 haang4 sin1, ngo5 ci4 di1 lei4.", "translation": "You go first, I'll come a bit later.", "mandarin": "你先走，我晚一點來。"},
+        {"text": "食咗飯先啦。", "roman": "sik6 zo2 faan6 sin1 laa1.", "translation": "Eat first.", "mandarin": "先吃飯吧。"},
+        {"text": "我諗吓先。", "roman": "ngo5 nam2 haa5 sin1.", "translation": "Let me think about it first.", "mandarin": "我先想一想。"}
+      ]},
+      {"id": "gwo-compare", "name": "A 形容詞 過 B", "nameEn": "A 比 B 形容詞", "note": "Comparison: 佢高過我 = 他比我高. \"Much more\": 高好多; \"a bit more\": 高少少.", "items": [
+        {"text": "佢高過我。", "roman": "keoi5 gou1 gwo3 ngo5.", "translation": "He's taller than me.", "mandarin": "他比我高。"},
+        {"text": "今日熱過琴日好多。", "roman": "gam1 jat6 jit6 gwo3 kam4 jat6 hou2 do1.", "translation": "Today is much hotter than yesterday.", "mandarin": "今天比昨天熱很多。"},
+        {"text": "搭地鐵快過搭巴士。", "roman": "daap3 dei6 tit3 faai3 gwo3 daap3 baa1 si2.", "translation": "Taking the MTR is faster than the bus.", "mandarin": "坐地鐵比坐公車快。"}
+      ]},
+      {"id": "do-siu", "name": "V多啲・V少啲", "nameEn": "多V一點", "note": "\"More / less\" comes after the verb: 食多啲 = 多吃一點, 講少兩句 = 少說兩句.", "items": [
+        {"text": "食多啲菜啦。", "roman": "sik6 do1 di1 coi3 laa1.", "translation": "Eat more vegetables.", "mandarin": "多吃一點菜吧。"},
+        {"text": "你講少兩句啦。", "roman": "nei5 gong2 siu2 loeng5 geoi3 laa1.", "translation": "Say a bit less, will you.", "mandarin": "你少說兩句吧。"},
+        {"text": "瞓多陣啦。", "roman": "fan3 do1 zan6 laa1.", "translation": "Sleep a bit longer.", "mandarin": "多睡一會兒吧。"}
+      ]}
+    ]},
+    {"name": "五 · 問題", "nameEn": "Questions", "groups": [
+      {"id": "qwords", "name": "乜嘢・點・幾時・點解・幾多", "nameEn": "什麼 · 怎麼 · 什麼時候 · 為什麼 · 多少", "note": "乜嘢/咩 mat1 je5/me1 = 什麼; 點 dim2 = 怎麼; 幾時 gei2 si4 = 什麼時候; 點解 dim2 gaai2 = 為什麼; 幾多 gei2 do1 = 多少.", "items": [
+        {"text": "你做緊乜嘢？", "roman": "nei5 zou6 gan2 mat1 je5?", "translation": "What are you doing?", "mandarin": "你在做什麼？"},
+        {"text": "去機場點去？", "roman": "heoi3 gei1 coeng4 dim2 heoi3?", "translation": "How do I get to the airport?", "mandarin": "去機場怎麼去？"},
+        {"text": "你幾時返嚟？", "roman": "nei5 gei2 si4 faan1 lei4?", "translation": "When are you coming back?", "mandarin": "你什麼時候回來？"},
+        {"text": "點解你唔嚟？", "roman": "dim2 gaai2 nei5 m4 lei4?", "translation": "Why aren't you coming?", "mandarin": "你為什麼不來？"},
+        {"text": "呢度有幾多人？", "roman": "ni1 dou6 jau5 gei2 do1 jan4?", "translation": "How many people are here?", "mandarin": "這裡有多少人？"}
+      ]},
+      {"id": "vnv", "name": "V唔V・得唔得", "nameEn": "V不V · 可以嗎", "note": "Yes/no questions are usually V唔V (去唔去 = 去不去) or 得唔得 (可以嗎). Two-syllable verbs: 鍾唔鍾意, 可唔可以.", "items": [
+        {"text": "你去唔去？", "roman": "nei5 heoi3 m4 heoi3?", "translation": "Are you going?", "mandarin": "你去不去？"},
+        {"text": "你鍾唔鍾意食辣？", "roman": "nei5 zung1 m4 zung1 ji3 sik6 laat6?", "translation": "Do you like spicy food?", "mandarin": "你喜不喜歡吃辣？"},
+        {"text": "我可唔可以坐呢度？", "roman": "ngo5 ho2 m4 ho2 ji5 co5 ni1 dou6?", "translation": "Can I sit here?", "mandarin": "我可以坐這裡嗎？"},
+        {"text": "聽日先交，得唔得？", "roman": "ting1 jat6 sin1 gaau1, dak1 m4 dak1?", "translation": "Can I hand it in tomorrow?", "mandarin": "明天才交，可以嗎？"}
+      ]}
+    ]},
+    {"name": "六 · 否定同能願", "nameEn": "Negation and ability", "groups": [
+      {"id": "neg", "name": "唔好・唔使・咪", "nameEn": "別 · 不用 · 別", "note": "唔好 m4 hou2 = 別/不要; 唔使 m4 sai2 = 不用; 咪 mai5 = 別 (casual).", "items": [
+        {"text": "唔好咁大聲。", "roman": "m4 hou2 gam3 daai6 seng1.", "translation": "Don't be so loud.", "mandarin": "別這麼大聲。"},
+        {"text": "唔使客氣。", "roman": "m4 sai2 haak3 hei3.", "translation": "You're welcome / no need to be polite.", "mandarin": "不用客氣。"},
+        {"text": "咪郁！", "roman": "mai5 juk1!", "translation": "Don't move!", "mandarin": "別動！"}
+      ]},
+      {"id": "sik-dak", "name": "識・會・得", "nameEn": "會 (know how) · 會 (will) · 能", "note": "識 sik1 = 會 (know how to); 會 wui5 = 會 (will); V得 = can (食得 = 可以吃); V唔到 = can't manage to.", "items": [
+        {"text": "你識唔識講廣東話？", "roman": "nei5 sik1 m4 sik1 gong2 gwong2 dung1 waa2?", "translation": "Can you speak Cantonese?", "mandarin": "你會不會說廣東話？"},
+        {"text": "聽日會落雨。", "roman": "ting1 jat6 wui5 lok6 jyu5.", "translation": "It'll rain tomorrow.", "mandarin": "明天會下雨。"},
+        {"text": "呢啲嘢食得唔得㗎？", "roman": "ni1 di1 je5 sik6 dak1 m4 dak1 gaa3?", "translation": "Is this stuff edible?", "mandarin": "這些東西能吃嗎？"},
+        {"text": "我聽唔明你講乜。", "roman": "ngo5 teng1 m4 ming4 nei5 gong2 mat1.", "translation": "I don't understand what you're saying.", "mandarin": "我聽不懂你說什麼。"}
+      ]}
+    ]},
+    {"name": "七 · 量詞", "nameEn": "Classifiers", "groups": [
+      {"id": "classifiers", "name": "個・隻・部・架・間・條・張", "nameEn": "classifiers that differ", "note": "Many classifiers differ from Mandarin: 部 bou6 for phones and machines, 架 gaa3 for vehicles, 間 gaan1 for shops and rooms, 隻 zek3 for many animals and some objects. A classifier + noun alone can mean \"the\": 部電話壞咗 = 那部手機壞了.", "items": [
+        {"text": "部電話壞咗。", "roman": "bou6 din6 waa2 waai6 zo2.", "translation": "The phone's broken.", "mandarin": "手機壞了。"},
+        {"text": "我想買架新車。", "roman": "ngo5 soeng2 maai5 gaa3 san1 ce1.", "translation": "I want to buy a new car.", "mandarin": "我想買輛新車。"},
+        {"text": "嗰間餐廳好出名。", "roman": "go2 gaan1 caan1 teng1 hou2 ceot1 meng2.", "translation": "That restaurant is very famous.", "mandarin": "那家餐廳很有名。"},
+        {"text": "我屋企有兩隻貓。", "roman": "ngo5 uk1 kei2 jau5 loeng5 zek3 maau1.", "translation": "I have two cats at home.", "mandarin": "我家有兩隻貓。"},
+        {"text": "借條筆嚟用吓。", "roman": "ze3 tiu4 bat1 lei4 jung6 haa5.", "translation": "Lend me a pen for a sec.", "mandarin": "借一支筆用一下。"}
+      ]}
+    ]}
+  ]
+}

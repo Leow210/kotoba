@@ -1,0 +1,1018 @@
+{
+ "title": "粵語 · 語氣助詞 Particles",
+ "subtitle": "The 33 sentence-final particles on jyutping.org/en/blog/particles, everyday ones first · examples written for Kotoba",
+ "sections": [
+  {
+   "name": "一 · 最常用",
+   "nameEn": "Everyday",
+   "groups": [
+    {
+     "id": "aa3",
+     "name": "啊／呀 aa3",
+     "nameEn": "softens, questions, lists",
+     "note": "The all-purpose softener. On a question it sounds friendlier; on a statement it adds warmth or emphasis; after items in a list it separates them. After a vowel it often becomes 呀 (same sound).",
+     "items": [
+      {
+       "text": "你去邊度呀？",
+       "roman": "nei5 heoi3 bin1 dou6 aa3?",
+       "translation": "Where are you going?",
+       "mandarin": "你去哪裡啊？"
+      },
+      {
+       "text": "好好食啊！",
+       "roman": "hou2 hou2 sik6 aa3!",
+       "translation": "It's really tasty!",
+       "mandarin": "很好吃啊！"
+      },
+      {
+       "text": "蘋果呀、橙呀、香蕉呀，乜都有。",
+       "roman": "ping4 gwo2 aa3, caang2 aa3, hoeng1 ziu1 aa3, mat1 dou1 jau5.",
+       "translation": "Apples, oranges, bananas — they have everything.",
+       "mandarin": "蘋果啊、橙子啊、香蕉啊，什麼都有。"
+      }
+     ]
+    },
+    {
+     "id": "ne1",
+     "name": "呢 ne1",
+     "nameEn": "and you? / where's…? / wh-questions",
+     "note": "\"How about…?\" after a noun (你呢？), \"where is…?\" on its own noun (我部電話呢？), and a gentle marker on wh-questions. Also pronounced le1.",
+     "items": [
+      {
+       "text": "我好攰，你呢？",
+       "roman": "ngo5 hou2 gui6, nei5 ne1?",
+       "translation": "I'm tired, how about you?",
+       "mandarin": "我很累，你呢？"
+      },
+      {
+       "text": "我部電話呢？",
+       "roman": "ngo5 bou6 din6 waa2 ne1?",
+       "translation": "Where's my phone?",
+       "mandarin": "我的手機呢？"
+      },
+      {
+       "text": "點解佢今日冇嚟呢？",
+       "roman": "dim2 gaai2 keoi5 gam1 jat6 mou5 lei4 ne1?",
+       "translation": "Why didn't he come today, I wonder?",
+       "mandarin": "他今天為什麼沒來呢？"
+      }
+     ]
+    },
+    {
+     "id": "ge3",
+     "name": "嘅 ge3",
+     "nameEn": "that's how it is (assertion)",
+     "note": "Marks a statement as a fact or a settled judgment, like Mandarin 的 at the end of 是…的. Very common after 係 and adjectives.",
+     "items": [
+      {
+       "text": "呢件衫係我媽媽買嘅。",
+       "roman": "ni1 gin6 saam1 hai6 ngo5 maa4 maa1 maai5 ge3.",
+       "translation": "This top was bought by my mum.",
+       "mandarin": "這件衣服是我媽媽買的。"
+      },
+      {
+       "text": "佢一定會嚟嘅。",
+       "roman": "keoi5 jat1 ding6 wui5 lei4 ge3.",
+       "translation": "He'll definitely come.",
+       "mandarin": "他一定會來的。"
+      },
+      {
+       "text": "我唔食辣嘅。",
+       "roman": "ngo5 m4 sik6 laat6 ge3.",
+       "translation": "I don't eat spicy food (that's just how I am).",
+       "mandarin": "我是不吃辣的。"
+      }
+     ]
+    },
+    {
+     "id": "laa1",
+     "name": "啦 laa1",
+     "nameEn": "go on / let's (requests, suggestions)",
+     "note": "Requests, suggestions and urging: \"come on\", \"let's\". Also agreement (好啦 okay then) and listing examples.",
+     "items": [
+      {
+       "text": "快啲啦，就嚟遲到喇！",
+       "roman": "faai3 di1 laa1, zau6 lei4 ci4 dou3 laa3!",
+       "translation": "Hurry up, we're about to be late!",
+       "mandarin": "快點吧，快遲到了！"
+      },
+      {
+       "text": "一齊去食飯啦。",
+       "roman": "jat1 cai4 heoi3 sik6 faan6 laa1.",
+       "translation": "Let's go eat together.",
+       "mandarin": "一起去吃飯吧。"
+      },
+      {
+       "text": "好啦好啦，我聽你講啦。",
+       "roman": "hou2 laa1 hou2 laa1, ngo5 teng1 nei5 gong2 laa1.",
+       "translation": "Okay, okay, I'll do what you say.",
+       "mandarin": "好啦好啦，我聽你的吧。"
+      }
+     ]
+    },
+    {
+     "id": "laa3",
+     "name": "喇 laa3",
+     "nameEn": "now / already (a change)",
+     "note": "Something has changed or is about to: \"now\", \"already\". Mandarin 了 at the end of a sentence.",
+     "items": [
+      {
+       "text": "落雨喇！",
+       "roman": "lok6 jyu5 laa3!",
+       "translation": "It's started raining!",
+       "mandarin": "下雨了！"
+      },
+      {
+       "text": "我食飽喇。",
+       "roman": "ngo5 sik6 baau2 laa3.",
+       "translation": "I'm full now.",
+       "mandarin": "我吃飽了。"
+      },
+      {
+       "text": "夠鐘喇，走啦。",
+       "roman": "gau3 zung1 laa3, zau2 laa1.",
+       "translation": "It's time, let's go.",
+       "mandarin": "時間到了，走吧。"
+      }
+     ]
+    },
+    {
+     "id": "gaa3",
+     "name": "㗎 gaa3",
+     "nameEn": "it is so (嘅 + 啊)",
+     "note": "嘅 ge3 + 啊 aa3 fused: an explanation or a firm \"that's the way it is\", often a bit emphatic. As a question (㗎？) it asks for confirmation or shows surprise.",
+     "items": [
+      {
+       "text": "呢度唔可以食煙㗎。",
+       "roman": "ni1 dou6 m4 ho2 ji5 sik6 jin1 gaa3.",
+       "translation": "You can't smoke here, you know.",
+       "mandarin": "這裡是不可以抽菸的。"
+      },
+      {
+       "text": "佢好叻㗎。",
+       "roman": "keoi5 hou2 lek1 gaa3.",
+       "translation": "She's really smart, you know.",
+       "mandarin": "他很厲害的。"
+      },
+      {
+       "text": "你真係識講日文㗎？",
+       "roman": "nei5 zan1 hai6 sik1 gong2 jat6 man2 gaa3?",
+       "translation": "You really speak Japanese?",
+       "mandarin": "你真的會說日語啊？"
+      }
+     ]
+    },
+    {
+     "id": "me1",
+     "name": "咩 me1",
+     "nameEn": "really? (surprised question)",
+     "note": "A yes/no question expecting or showing surprise: \"Don't tell me…?\", \"Really?\". Different from 咩 me1 meaning \"what\" inside a sentence.",
+     "items": [
+      {
+       "text": "你唔知咩？",
+       "roman": "nei5 m4 zi1 me1?",
+       "translation": "You didn't know?",
+       "mandarin": "你不知道嗎？（難道不知道？）"
+      },
+      {
+       "text": "佢結咗婚咩？",
+       "roman": "keoi5 git3 zo2 fan1 me1?",
+       "translation": "He got married?",
+       "mandarin": "他結婚了？（真的嗎？）"
+      },
+      {
+       "text": "今日唔使返工咩？",
+       "roman": "gam1 jat6 m4 sai2 faan1 gung1 me1?",
+       "translation": "You don't have to go to work today?",
+       "mandarin": "今天不用上班嗎？（真的？）"
+      }
+     ]
+    },
+    {
+     "id": "maa3",
+     "name": "嗎 maa3",
+     "nameEn": "yes/no question",
+     "note": "The plain yes/no question particle, like Mandarin 嗎, but less common in speech than 去唔去 (V-not-V). Also maa1 in some greetings.",
+     "items": [
+      {
+       "text": "你好嗎？",
+       "roman": "nei5 hou2 maa3?",
+       "translation": "How are you?",
+       "mandarin": "你好嗎？"
+      },
+      {
+       "text": "你明白嗎？",
+       "roman": "nei5 ming4 baak6 maa3?",
+       "translation": "Do you understand?",
+       "mandarin": "你明白嗎？"
+      },
+      {
+       "text": "呢度有Wi-Fi嗎？",
+       "roman": "ni1 dou6 jau5 waai1 faai1 maa3?",
+       "translation": "Is there Wi-Fi here?",
+       "mandarin": "這裡有Wi-Fi嗎？"
+      }
+     ]
+    },
+    {
+     "id": "wo3",
+     "name": "喎 wo3",
+     "nameEn": "hey, notice this",
+     "note": "Points out something the speaker has just noticed or wants you to notice: \"oh!\", \"mind you\". Also passes on what someone said.",
+     "items": [
+      {
+       "text": "呢間餐廳幾好食喎。",
+       "roman": "ni1 gaan1 caan1 teng1 gei2 hou2 sik6 wo3.",
+       "translation": "Hey, this restaurant's pretty good.",
+       "mandarin": "這家餐廳還挺好吃的喔。"
+      },
+      {
+       "text": "佢今日唔喺度喎。",
+       "roman": "keoi5 gam1 jat6 m4 hai2 dou6 wo3.",
+       "translation": "Oh, he's not here today.",
+       "mandarin": "他今天不在喔。"
+      },
+      {
+       "text": "小心啲喎，地下好滑。",
+       "roman": "siu2 sam1 di1 wo3, dei6 haa2 hou2 waat6.",
+       "translation": "Be careful, mind you — the floor's slippery.",
+       "mandarin": "小心點喔，地上很滑。"
+      }
+     ]
+    },
+    {
+     "id": "lo1",
+     "name": "囉 lo1",
+     "nameEn": "obviously / so then",
+     "note": "\"Obviously\", \"just do it then\": a slightly impatient or matter-of-fact conclusion.",
+     "items": [
+      {
+       "text": "唔鍾意咪唔好食囉。",
+       "roman": "m4 zung1 ji3 mai6 m4 hou2 sik6 lo1.",
+       "translation": "If you don't like it, then just don't eat it.",
+       "mandarin": "不喜歡就別吃囉。"
+      },
+      {
+       "text": "佢病咗，所以冇嚟囉。",
+       "roman": "keoi5 beng6 zo2, so2 ji5 mou5 lei4 lo1.",
+       "translation": "He was sick, so obviously he didn't come.",
+       "mandarin": "他病了，所以就沒來囉。"
+      },
+      {
+       "text": "噉你自己去囉。",
+       "roman": "gam2 nei5 zi6 gei2 heoi3 lo1.",
+       "translation": "Well then, go by yourself.",
+       "mandarin": "那你自己去唄。"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "二 · 常用",
+   "nameEn": "Common",
+   "groups": [
+    {
+     "id": "zaa3",
+     "name": "咋 zaa3",
+     "nameEn": "only, just",
+     "note": "\"Only\", \"just\" — the amount or situation is small. Often with 得…咋 or 先…咋.",
+     "items": [
+      {
+       "text": "我得十蚊咋。",
+       "roman": "ngo5 dak1 sap6 man1 zaa3.",
+       "translation": "I've only got ten dollars.",
+       "mandarin": "我只有十塊錢而已。"
+      },
+      {
+       "text": "佢先三歲咋。",
+       "roman": "keoi5 sin1 saam1 seoi3 zaa3.",
+       "translation": "She's only three.",
+       "mandarin": "他才三歲而已。"
+      },
+      {
+       "text": "開玩笑咋，唔好嬲啦。",
+       "roman": "hoi1 wun6 siu3 zaa3, m4 hou2 nau1 laa1.",
+       "translation": "It's only a joke, don't be mad.",
+       "mandarin": "開玩笑而已，別生氣嘛。"
+      }
+     ]
+    },
+    {
+     "id": "ze1",
+     "name": "啫 ze1",
+     "nameEn": "it's just…, no big deal",
+     "note": "Plays something down: \"it's just…\", \"only\", \"no big deal\".",
+     "items": [
+      {
+       "text": "小事啫，唔使擔心。",
+       "roman": "siu2 si6 ze1, m4 sai2 daam1 sam1.",
+       "translation": "It's just a small thing, don't worry.",
+       "mandarin": "小事而已，不用擔心。"
+      },
+      {
+       "text": "我問吓啫。",
+       "roman": "ngo5 man6 haa5 ze1.",
+       "translation": "I'm just asking.",
+       "mandarin": "我只是問問罷了。"
+      },
+      {
+       "text": "佢講笑啫，你咪當真。",
+       "roman": "keoi5 gong2 siu3 ze1, nei5 mai5 dong3 zan1.",
+       "translation": "He's only kidding, don't take it seriously.",
+       "mandarin": "他只是開玩笑，你別當真。"
+      }
+     ]
+    },
+    {
+     "id": "aa1",
+     "name": "吖 aa1",
+     "nameEn": "friendly request / of course",
+     "note": "Makes a request or offer friendly (唔該…吖), or shows ready agreement (好吖). Also a mildly sarcastic \"sure, go ahead\".",
+     "items": [
+      {
+       "text": "唔該俾杯水我吖。",
+       "roman": "m4 goi1 bei2 bui1 seoi2 ngo5 aa1.",
+       "translation": "Could you give me a glass of water, please?",
+       "mandarin": "麻煩給我一杯水吧。"
+      },
+      {
+       "text": "好吖，一齊去吖。",
+       "roman": "hou2 aa1, jat1 cai4 heoi3 aa1.",
+       "translation": "Sure, let's go together.",
+       "mandarin": "好啊，一起去吧。"
+      },
+      {
+       "text": "你試吓吖。",
+       "roman": "nei5 si3 haa5 aa1.",
+       "translation": "Go on, give it a try.",
+       "mandarin": "你試試看嘛。"
+      }
+     ]
+    },
+    {
+     "id": "maa3b",
+     "name": "嘛 maa3／maa5",
+     "nameEn": "obviously, you know",
+     "note": "\"It's obvious, isn't it\" — gives a reason the listener should already accept. Not a question particle.",
+     "items": [
+      {
+       "text": "佢係你朋友嘛，幫吓佢啦。",
+       "roman": "keoi5 hai6 nei5 pang4 jau5 maa3, bong1 haa5 keoi5 laa1.",
+       "translation": "He's your friend, after all — help him out.",
+       "mandarin": "他是你朋友嘛，幫幫他吧。"
+      },
+      {
+       "text": "落緊雨嘛，梗係塞車啦。",
+       "roman": "lok6 gan2 jyu5 maa3, gang2 hai6 sak1 ce1 laa1.",
+       "translation": "It's raining, so of course there's traffic.",
+       "mandarin": "正在下雨嘛，當然塞車啦。"
+      },
+      {
+       "text": "我都話咗唔得嘛。",
+       "roman": "ngo5 dou1 waa6 zo2 m4 dak1 maa3.",
+       "translation": "I told you it wouldn't work, didn't I.",
+       "mandarin": "我都說了不行嘛。"
+      }
+     ]
+    },
+    {
+     "id": "gwaa3",
+     "name": "啩 gwaa3",
+     "nameEn": "I guess, probably",
+     "note": "Uncertainty: \"I suppose\", \"probably\". Often with 應該 or 可能.",
+     "items": [
+      {
+       "text": "佢應該到咗屋企啩。",
+       "roman": "keoi5 jing1 goi1 dou3 zo2 uk1 kei2 gwaa3.",
+       "translation": "He's probably home by now, I guess.",
+       "mandarin": "他應該到家了吧。"
+      },
+      {
+       "text": "唔會落雨啩。",
+       "roman": "m4 wui5 lok6 jyu5 gwaa3.",
+       "translation": "It won't rain, I don't think.",
+       "mandarin": "應該不會下雨吧。"
+      },
+      {
+       "text": "大概五點啩。",
+       "roman": "daai6 koi3 ng5 dim2 gwaa3.",
+       "translation": "About five o'clock, I suppose.",
+       "mandarin": "大概五點吧。"
+      }
+     ]
+    },
+    {
+     "id": "tim1",
+     "name": "添 tim1",
+     "nameEn": "too, as well; and on top of that",
+     "note": "\"Also, in addition\" (再食多碗添); or \"on top of it all\" for something surprising or unfortunate.",
+     "items": [
+      {
+       "text": "再嚟一碗添。",
+       "roman": "zoi3 lai4 jat1 wun2 tim1.",
+       "translation": "One more bowl, please.",
+       "mandarin": "再來一碗。"
+      },
+      {
+       "text": "佢識講法文添。",
+       "roman": "keoi5 sik1 gong2 faat3 man2 tim1.",
+       "translation": "She can even speak French too.",
+       "mandarin": "他還會說法語呢。"
+      },
+      {
+       "text": "唔記得帶遮，落雨添！",
+       "roman": "m4 gei3 dak1 daai3 ze1, lok6 jyu5 tim1!",
+       "translation": "Forgot my umbrella — and now it's raining!",
+       "mandarin": "忘了帶傘，還下起雨來了！"
+      }
+     ]
+    },
+    {
+     "id": "laak3",
+     "name": "嘞 laak3",
+     "nameEn": "right, okay (confirming, settling)",
+     "note": "Confirms or settles something: \"right\", \"that's it then\". Close to 喇 but firmer; also lak3 / la3.",
+     "items": [
+      {
+       "text": "係嘞，你記唔記得帶鎖匙？",
+       "roman": "hai6 laak3, nei5 gei3 m4 gei3 dak1 daai3 so2 si4?",
+       "translation": "Oh right, did you remember the keys?",
+       "mandarin": "對了，你記得帶鑰匙嗎？"
+      },
+      {
+       "text": "得嘞，我知道嘞。",
+       "roman": "dak1 laak3, ngo5 zi1 dou3 laak3.",
+       "translation": "Okay, got it.",
+       "mandarin": "好了，我知道了。"
+      },
+      {
+       "text": "我走先嘞，拜拜。",
+       "roman": "ngo5 zau2 sin1 laak3, baai1 baai3.",
+       "translation": "I'm heading off then, bye.",
+       "mandarin": "我先走了，拜拜。"
+      }
+     ]
+    },
+    {
+     "id": "lok3",
+     "name": "咯 lok3",
+     "nameEn": "that's that (completed, told you)",
+     "note": "Something is finished or already settled; can sound like \"I've told you already\". Also lo3.",
+     "items": [
+      {
+       "text": "我都話咗係噉咯。",
+       "roman": "ngo5 dou1 waa6 zo2 hai6 gam2 lok3.",
+       "translation": "I already said that's how it is.",
+       "mandarin": "我都說了是這樣的了。"
+      },
+      {
+       "text": "搞掂咯，可以走咯。",
+       "roman": "gaau2 dim6 lok3, ho2 ji5 zau2 lok3.",
+       "translation": "All done — we can go now.",
+       "mandarin": "搞定了，可以走了。"
+      },
+      {
+       "text": "冇計咯。",
+       "roman": "mou5 gai2 lok3.",
+       "translation": "Nothing we can do, then.",
+       "mandarin": "沒辦法了。"
+      }
+     ]
+    },
+    {
+     "id": "bo3",
+     "name": "噃 bo3",
+     "nameEn": "reminder, mind you",
+     "note": "A reminder or warning (喎 wo3 + stronger): \"don't forget\", \"mind you\".",
+     "items": [
+      {
+       "text": "記得食藥噃。",
+       "roman": "gei3 dak1 sik6 joek6 bo3.",
+       "translation": "Remember to take your medicine, okay?",
+       "mandarin": "記得吃藥喔。"
+      },
+      {
+       "text": "你唔好唔記得噃。",
+       "roman": "nei5 m4 hou2 m4 gei3 dak1 bo3.",
+       "translation": "Don't you forget, mind.",
+       "mandarin": "你可別忘了喔。"
+      },
+      {
+       "text": "好凍噃，着多件衫啦。",
+       "roman": "hou2 dung3 bo3, zoek3 do1 gin6 saam1 laa1.",
+       "translation": "It's cold, mind — put on another layer.",
+       "mandarin": "很冷喔，多穿一件衣服吧。"
+      }
+     ]
+    },
+    {
+     "id": "haa2",
+     "name": "吓 haa2",
+     "nameEn": "huh? / right?",
+     "note": "At the start: \"Huh? What?\" — surprise or asking to repeat. At the end: \"right?\", checking agreement.",
+     "items": [
+      {
+       "text": "吓？佢辭咗職？",
+       "roman": "haa2? keoi5 ci4 zo2 zik1?",
+       "translation": "Huh? She quit?",
+       "mandarin": "啊？他辭職了？"
+      },
+      {
+       "text": "吓，噉都得？",
+       "roman": "haa2, gam2 dou1 dak1?",
+       "translation": "What, that works?",
+       "mandarin": "蛤，這樣也行？"
+      },
+      {
+       "text": "你聽日會嚟吓？",
+       "roman": "nei5 ting1 jat6 wui5 lei4 haa2?",
+       "translation": "You'll come tomorrow, right?",
+       "mandarin": "你明天會來吧？"
+      }
+     ]
+    },
+    {
+     "id": "ho2",
+     "name": "嗬 ho2",
+     "nameEn": "right? (seeking agreement)",
+     "note": "\"Right?\", \"isn't it?\" — asks the listener to agree with something both of you know.",
+     "items": [
+      {
+       "text": "今日好熱嗬？",
+       "roman": "gam1 jat6 hou2 jit6 ho2?",
+       "translation": "It's hot today, isn't it?",
+       "mandarin": "今天很熱，對吧？"
+      },
+      {
+       "text": "你係新嚟嘅嗬？",
+       "roman": "nei5 hai6 san1 lei4 ge3 ho2?",
+       "translation": "You're new here, right?",
+       "mandarin": "你是新來的，對吧？"
+      },
+      {
+       "text": "噉就夠嘞嗬？",
+       "roman": "gam2 zau6 gau3 laak3 ho2?",
+       "translation": "That's enough then, right?",
+       "mandarin": "這樣就夠了，對吧？"
+      }
+     ]
+    },
+    {
+     "id": "he2",
+     "name": "嚱 he2",
+     "nameEn": "isn't it? (with feeling)",
+     "note": "Like 嗬, asks for agreement, often with a little feeling or admiration: \"…isn't it!\"",
+     "items": [
+      {
+       "text": "呢套戲幾好睇嚱？",
+       "roman": "ni1 tou3 hei3 gei2 hou2 tai2 he2?",
+       "translation": "This film's pretty good, isn't it?",
+       "mandarin": "這部電影挺好看的，是吧？"
+      },
+      {
+       "text": "佢啲字好靚嚱？",
+       "roman": "keoi5 di1 zi6 hou2 leng3 he2?",
+       "translation": "Her handwriting is lovely, isn't it?",
+       "mandarin": "他的字很漂亮，是吧？"
+      },
+      {
+       "text": "今晚個月光好圓嚱？",
+       "roman": "gam1 maan5 go3 jyut6 gwong1 hou2 jyun4 he2?",
+       "translation": "The moon's so round tonight, isn't it?",
+       "mandarin": "今晚的月亮很圓，是吧？"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "三 · 語氣變化",
+   "nameEn": "Shades and variants",
+   "groups": [
+    {
+     "id": "aa4",
+     "name": "呀 aa4",
+     "nameEn": "so…? (surprised, checking)",
+     "note": "Low-falling aa4: surprise or checking what you heard — \"so you mean…?\"",
+     "items": [
+      {
+       "text": "噉唔通乜都唔使做呀？",
+       "roman": "gam2 m4 tung1 mat1 dou1 m4 sai2 zou6 aa4?",
+       "translation": "So we don't have to do anything at all?",
+       "mandarin": "那難道什麼都不用做了？"
+      },
+      {
+       "text": "你今日唔返學呀？",
+       "roman": "nei5 gam1 jat6 m4 faan1 hok6 aa4?",
+       "translation": "You're not going to school today?",
+       "mandarin": "你今天不上學啊？"
+      },
+      {
+       "text": "佢係你哥哥呀？",
+       "roman": "keoi5 hai6 nei5 go4 go1 aa4?",
+       "translation": "He's your brother?",
+       "mandarin": "他是你哥哥啊？"
+      }
+     ]
+    },
+    {
+     "id": "gaa4",
+     "name": "嘎 gaa4",
+     "nameEn": "really? (surprised 㗎)",
+     "note": "The surprised question form of 㗎: \"so it's…?\", \"really?\"",
+     "items": [
+      {
+       "text": "原來要收錢嘎？",
+       "roman": "jyun4 loi4 jiu3 sau1 cin2 gaa4?",
+       "translation": "Oh, so it costs money?",
+       "mandarin": "原來要收錢的啊？"
+      },
+      {
+       "text": "呢啲係你做嘎？",
+       "roman": "ni1 di1 hai6 nei5 zou6 gaa4?",
+       "translation": "You made these?",
+       "mandarin": "這些是你做的啊？"
+      },
+      {
+       "text": "佢哋係兩兄弟嘎？",
+       "roman": "keoi5 dei6 hai6 loeng5 hing1 dai6 gaa4?",
+       "translation": "They're brothers?",
+       "mandarin": "他們是兩兄弟啊？"
+      }
+     ]
+    },
+    {
+     "id": "gaa1",
+     "name": "𠺢／咖 gaa1",
+     "nameEn": "that's the way (explaining)",
+     "note": "Explains how things normally are, sometimes as advice: \"that's how it should be\".",
+     "items": [
+      {
+       "text": "噉先啱𠺢嘛。",
+       "roman": "gam2 sin1 ngaam1 gaa1 maa3.",
+       "translation": "That's the right way, you see.",
+       "mandarin": "這樣才對嘛。"
+      },
+      {
+       "text": "新手係噉𠺢啦。",
+       "roman": "san1 sau2 hai6 gam2 gaa1 laa1.",
+       "translation": "Beginners are like that, that's normal.",
+       "mandarin": "新手都是這樣的啦。"
+      },
+      {
+       "text": "呢啲嘢要慢慢嚟𠺢。",
+       "roman": "ni1 di1 je5 jiu3 maan6 maan2 lei4 gaa1.",
+       "translation": "These things take time, that's how it is.",
+       "mandarin": "這種事是要慢慢來的。"
+      }
+     ]
+    },
+    {
+     "id": "gaa2",
+     "name": "𠿪 gaa2",
+     "nameEn": "…is it? (a condition, doubt)",
+     "note": "Questions a condition or checks with doubt: \"only if…, right?\"",
+     "items": [
+      {
+       "text": "前提係做得出先得𠿪？",
+       "roman": "cin4 tai4 hai6 zou6 dak1 ceot1 sin1 dak1 gaa2?",
+       "translation": "Only if it can be done, right?",
+       "mandarin": "前提是做得出來才行，是吧？"
+      },
+      {
+       "text": "要預約先入得𠿪？",
+       "roman": "jiu3 jyu6 joek3 sin1 jap6 dak1 gaa2?",
+       "translation": "You can only go in with a booking?",
+       "mandarin": "要預約才能進去嗎？"
+      },
+      {
+       "text": "要排隊𠿪？",
+       "roman": "jiu3 paai4 deoi2 gaa2?",
+       "translation": "We have to queue, do we?",
+       "mandarin": "還要排隊啊？"
+      }
+     ]
+    },
+    {
+     "id": "gaak3",
+     "name": "𠺝／嗝 gaak3",
+     "nameEn": "you know full well",
+     "note": "\"You know very well…\" — reminding the listener of something they should already know (嘅 + 㗎 + 嘞 feeling).",
+     "items": [
+      {
+       "text": "你平時好飲得𠺝。",
+       "roman": "nei5 ping4 si4 hou2 jam2 dak1 gaak3.",
+       "translation": "You usually drink a lot, you know you do.",
+       "mandarin": "你平常很能喝的嘛。"
+      },
+      {
+       "text": "佢一向好準時𠺝。",
+       "roman": "keoi5 jat1 hoeng3 hou2 zeon2 si4 gaak3.",
+       "translation": "He's always punctual, you know.",
+       "mandarin": "他一向很準時的嘛。"
+      },
+      {
+       "text": "呢度星期一唔開𠺝。",
+       "roman": "ni1 dou6 sing1 kei4 jat1 m4 hoi1 gaak3.",
+       "translation": "It's closed on Mondays here, you know.",
+       "mandarin": "這裡星期一不開的嘛。"
+      }
+     ]
+    },
+    {
+     "id": "le4",
+     "name": "咧 le4",
+     "nameEn": "then how about…? (offering)",
+     "note": "Offers or proposes, often a bit coaxing or teasing: \"then how about…?\"",
+     "items": [
+      {
+       "text": "我送你一張戲飛咧？",
+       "roman": "ngo5 sung3 nei5 jat1 zoeng1 hei3 fei1 le4?",
+       "translation": "What if I gave you a movie ticket?",
+       "mandarin": "我送你一張電影票怎麼樣？"
+      },
+      {
+       "text": "唔去就唔去咧。",
+       "roman": "m4 heoi3 zau6 m4 heoi3 le4.",
+       "translation": "If you don't want to go, then don't.",
+       "mandarin": "不去就不去唄。"
+      },
+      {
+       "text": "你試吓先咧。",
+       "roman": "nei5 si3 haa5 sin1 le4.",
+       "translation": "How about you try it first?",
+       "mandarin": "你先試試看怎麼樣？"
+      }
+     ]
+    },
+    {
+     "id": "le5",
+     "name": "哩 le5",
+     "nameEn": "really, honestly (insisting)",
+     "note": "Insists on the truth of what you say: \"honestly\", \"I'm telling you\".",
+     "items": [
+      {
+       "text": "我真係冇呃你哩。",
+       "roman": "ngo5 zan1 hai6 mou5 ngaak1 nei5 le5.",
+       "translation": "I honestly didn't lie to you.",
+       "mandarin": "我真的沒騙你。"
+      },
+      {
+       "text": "佢真係好好人哩。",
+       "roman": "keoi5 zan1 hai6 hou2 hou2 jan4 le5.",
+       "translation": "He really is a good guy, I'm telling you.",
+       "mandarin": "他真的是個好人。"
+      },
+      {
+       "text": "我冇拎你啲嘢哩。",
+       "roman": "ngo5 mou5 ling1 nei5 di1 je5 le5.",
+       "translation": "I didn't take your stuff, honestly.",
+       "mandarin": "我真的沒拿你的東西。"
+      }
+     ]
+    },
+    {
+     "id": "lo4",
+     "name": "囖 lo4",
+     "nameEn": "of course, that's right",
+     "note": "Agrees emphatically or treats something as obvious: \"of course\", \"exactly\".",
+     "items": [
+      {
+       "text": "係囖，點解你自己唔去？",
+       "roman": "hai6 lo4, dim2 gaai2 nei5 zi6 gei2 m4 heoi3?",
+       "translation": "Exactly — so why don't you go yourself?",
+       "mandarin": "就是啊，你為什麼不自己去？"
+      },
+      {
+       "text": "梗係囖！",
+       "roman": "gang2 hai6 lo4!",
+       "translation": "Of course!",
+       "mandarin": "當然啦！"
+      },
+      {
+       "text": "就係佢囖。",
+       "roman": "zau6 hai6 keoi5 lo4.",
+       "translation": "It's him, obviously.",
+       "mandarin": "就是他嘛。"
+      }
+     ]
+    },
+    {
+     "id": "lou3",
+     "name": "嚕 lou3",
+     "nameEn": "done now (completion)",
+     "note": "A newly completed state, like 咯/喇: \"there, done\".",
+     "items": [
+      {
+       "text": "我做完功課嚕。",
+       "roman": "ngo5 zou6 jyun4 gung1 fo3 lou3.",
+       "translation": "I've finished my homework now.",
+       "mandarin": "我做完功課了。"
+      },
+      {
+       "text": "到站嚕，落車啦。",
+       "roman": "dou3 zaam6 lou3, lok6 ce1 laa1.",
+       "translation": "We're at the stop — get off.",
+       "mandarin": "到站了，下車吧。"
+      },
+      {
+       "text": "天光嚕。",
+       "roman": "tin1 gwong1 lou3.",
+       "translation": "It's daylight now.",
+       "mandarin": "天亮了。"
+      }
+     ]
+    },
+    {
+     "id": "wo4",
+     "name": "啝／咊 wo4",
+     "nameEn": "oh, so it turns out",
+     "note": "Realising something new: \"oh, so…\", \"turns out\".",
+     "items": [
+      {
+       "text": "篇文原來係佢寫嘅啝。",
+       "roman": "pin1 man4 jyun4 loi4 hai6 keoi5 se2 ge3 wo4.",
+       "translation": "Oh, so it turns out he wrote the article.",
+       "mandarin": "原來那篇文章是他寫的啊。"
+      },
+      {
+       "text": "原來你識佢啝。",
+       "roman": "jyun4 loi4 nei5 sik1 keoi5 wo4.",
+       "translation": "Oh, so you know him.",
+       "mandarin": "原來你認識他啊。"
+      },
+      {
+       "text": "今日原來係佢生日啝。",
+       "roman": "gam1 jat6 jyun4 loi4 hai6 keoi5 saang1 jat6 wo4.",
+       "translation": "Oh, it turns out it's her birthday today.",
+       "mandarin": "原來今天是他生日啊。"
+      }
+     ]
+    },
+    {
+     "id": "wo5",
+     "name": "𡁜／唩 wo5",
+     "nameEn": "so they say (reporting)",
+     "note": "Passes on what someone else said: \"he says…\", \"apparently\".",
+     "items": [
+      {
+       "text": "佢話佢唔去𡁜。",
+       "roman": "keoi5 waa6 keoi5 m4 heoi3 wo5.",
+       "translation": "He says he's not going.",
+       "mandarin": "他說他不去。"
+      },
+      {
+       "text": "聽日會打風𡁜。",
+       "roman": "ting1 jat6 wui5 daa2 fung1 wo5.",
+       "translation": "Apparently there's a typhoon tomorrow.",
+       "mandarin": "聽說明天會颳颱風。"
+      },
+      {
+       "text": "老闆話今晚要OT𡁜。",
+       "roman": "lou5 baan2 waa6 gam1 maan5 jiu3 ou1 ti1 wo5.",
+       "translation": "The boss says we have to work overtime tonight.",
+       "mandarin": "老闆說今晚要加班。"
+      }
+     ]
+    },
+    {
+     "id": "zaa4",
+     "name": "喳 zaa4",
+     "nameEn": "only that much? (surprised)",
+     "note": "The surprised question form of 咋: \"only…?\"",
+     "items": [
+      {
+       "text": "就得咁多喳？",
+       "roman": "zau6 dak1 gam3 do1 zaa4?",
+       "translation": "That's all?",
+       "mandarin": "就只有這麼多？"
+      },
+      {
+       "text": "十蚊喳？咁平！",
+       "roman": "sap6 man1 zaa4? gam3 peng4!",
+       "translation": "Only ten dollars? So cheap!",
+       "mandarin": "才十塊？這麼便宜！"
+      },
+      {
+       "text": "你先返嚟喳？",
+       "roman": "nei5 sin1 faan1 lei4 zaa4?",
+       "translation": "You've only just got back?",
+       "mandarin": "你才剛回來啊？"
+      }
+     ]
+    },
+    {
+     "id": "zek1",
+     "name": "唧 zek1",
+     "nameEn": "…at all? (pressing)",
+     "note": "Presses a question, sometimes impatiently: \"what on earth…?\"",
+     "items": [
+      {
+       "text": "究竟發生咗咩事唧？",
+       "roman": "gau3 ging2 faat3 sang1 zo2 me1 si6 zek1?",
+       "translation": "What on earth happened?",
+       "mandarin": "到底發生了什麼事啊？"
+      },
+      {
+       "text": "你講乜唧？",
+       "roman": "nei5 gong2 mat1 zek1?",
+       "translation": "What are you even saying?",
+       "mandarin": "你到底在說什麼？"
+      },
+      {
+       "text": "使唔使咁緊張唧？",
+       "roman": "sai2 m4 sai2 gam3 gan2 zoeng1 zek1?",
+       "translation": "Is there any need to be so nervous?",
+       "mandarin": "有必要這麼緊張嗎？"
+      }
+     ]
+    },
+    {
+     "id": "aak3",
+     "name": "𡅅 aak3",
+     "nameEn": "definitely not / I'm telling you",
+     "note": "Firm insistence, often with a negative: \"it's not, okay?\"",
+     "items": [
+      {
+       "text": "唔係𡅅！",
+       "roman": "m4 hai6 aak3!",
+       "translation": "It's not, I'm telling you!",
+       "mandarin": "不是啦！"
+      },
+      {
+       "text": "我冇講過𡅅。",
+       "roman": "ngo5 mou5 gong2 gwo3 aak3.",
+       "translation": "I never said that, okay?",
+       "mandarin": "我沒說過啊。"
+      },
+      {
+       "text": "唔得𡅅，太危險。",
+       "roman": "m4 dak1 aak3, taai3 ngai4 him2.",
+       "translation": "No way — it's too dangerous.",
+       "mandarin": "不行啦，太危險了。"
+      }
+     ]
+    },
+    {
+     "id": "naa4",
+     "name": "嗱 naa4",
+     "nameEn": "look / here (at the start)",
+     "note": "Sentence-initial: draws attention — \"look\", \"here\", \"now listen\".",
+     "items": [
+      {
+       "text": "嗱，就喺呢度。",
+       "roman": "naa4, zau6 hai2 ni1 dou6.",
+       "translation": "Look, it's right here.",
+       "mandarin": "你看，就在這裡。"
+      },
+      {
+       "text": "嗱，我同你講。",
+       "roman": "naa4, ngo5 tung4 nei5 gong2.",
+       "translation": "Now listen, let me tell you.",
+       "mandarin": "聽著，我跟你說。"
+      },
+      {
+       "text": "嗱，俾你。",
+       "roman": "naa4, bei2 nei5.",
+       "translation": "Here, this is for you.",
+       "mandarin": "喏，給你。"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "四 · 組合",
+   "nameEn": "Combinations",
+   "groups": [
+    {
+     "id": "combo",
+     "name": "㗎喇・㗎嘛・咋嘛・啦嘛",
+     "nameEn": "stacked particles",
+     "note": "Particles stack, each adding its shade: 㗎喇 (it's so, now), 㗎嘛 (it's so, obviously), 咋嘛 (only, you know), 啦嘛 (come on, obviously).",
+     "items": [
+      {
+       "text": "佢已經走咗㗎喇。",
+       "roman": "keoi5 ji5 ging1 zau2 zo2 gaa3 laa3.",
+       "translation": "He's already left, you know.",
+       "mandarin": "他已經走了啦。"
+      },
+      {
+       "text": "佢係老師㗎嘛，梗係識啦。",
+       "roman": "keoi5 hai6 lou5 si1 gaa3 maa3, gang2 hai6 sik1 laa1.",
+       "translation": "He's a teacher, of course he knows.",
+       "mandarin": "他是老師嘛，當然會啦。"
+      },
+      {
+       "text": "我問吓咋嘛，唔使咁惡。",
+       "roman": "ngo5 man6 haa5 zaa3 maa3, m4 sai2 gam3 ok3.",
+       "translation": "I was only asking — no need to be so fierce.",
+       "mandarin": "我只是問問而已嘛，不用這麼兇。"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

@@ -739,3 +739,17 @@ svg.i.sm{width:16px;height:16px}
 .ls-sec-play{margin-left:auto;display:inline-flex;align-items:center;gap:4px;font:600 12px var(--sans,inherit);text-transform:none;letter-spacing:0;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:4px 10px}
 .ls-sec-play svg{width:12px;height:12px}
 .ls-loop{font-size:20px}.ls-loop.off{opacity:.35}
+/* Jyutping over words, tones coloured (1 high level … 6 low level); the word-by-word gloss */
+.tn.t1{color:#c2410c}.tn.t2{color:#b45309}.tn.t3{color:#15803d}.tn.t4{color:#1d4ed8}.tn.t5{color:#7e22ce}.tn.t6{color:#57534e}
+.ls-text.roman-hidden rt{visibility:hidden}
+.ls-roman{font:15px/1.6 ui-monospace,Menlo,monospace;letter-spacing:.02em}
+.ls-gloss{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12.5px;color:var(--muted)}
+.ls-gloss span{display:inline-flex;flex-direction:column;align-items:center}.ls-gloss b{font:500 15px var(--serif);color:var(--ink2)}
+.ls-line-roman{display:block;font:12.5px ui-monospace,Menlo,monospace;margin-top:2px}
+.ls-text.acc rt .tn{font:600 1em ui-monospace,Menlo,monospace}
+.ls-cue{min-height:1.4em;font:600 14px var(--sans,inherit);color:var(--accent)}
+.ls-modes{display:flex;gap:8px;padding:0 14px 8px;max-width:760px;width:100%;margin:0 auto}
+.ls-mode{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;padding:8px 6px;border-radius:14px;border:1px solid var(--line);background:var(--surface);color:var(--ink2)}
+.ls-mode b{font:600 20px var(--serif)}.ls-mode span{font-size:12.5px;font-weight:600}.ls-mode small{font-size:10.5px;color:var(--muted)}
+.ls-mode.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.ls-group-note{margin:2px 18px 8px;padding:10px 12px;border-radius:12px;background:var(--accent-soft);font-size:14px;line-height:1.55;color:var(--ink2)}
