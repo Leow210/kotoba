@@ -10,13 +10,15 @@
   let page=null;
 
   /** Text as tappable characters/words, like a comic bubble: CJK and Thai by character, Korean by syllable, others by word. */
+  const segmenter=typeof Intl!=='undefined'&&Intl.Segmenter?new Intl.Segmenter(undefined,{granularity:'grapheme'}):null;
+  const graphemes=s=>segmenter?[...segmenter.segment(s)].map(x=>x.segment):[...s];
   function tappable(text){
     let html='',o=0;
     for(const part of text.split(/(\s+)/)){
       if(!part)continue;
       if(/^\s+$/.test(part)){html+=' ';o+=part.length;continue;}
       if(/[぀-ヿ㐀-鿿豈-﫿]/.test(part))html+=[...part].map((ch,i)=>`<span class="mu-w" data-o="${o+i}">${esc(ch)}</span>`).join('');
-      else if(/[฀-๿]/.test(part))html+=[...part].map((ch,i)=>`<span class="mu-w" data-o="${o+i}" data-end="${o+part.length}">${esc(ch)}</span>`).join('');
+      else if(/[฀-๿]/.test(part)){let k=o;for(const ch of graphemes(part)){html+=`<span class="mu-w" data-o="${k}" data-end="${o+part.length}">${esc(ch)}</span>`;k+=ch.length;}}// whole letters with their vowel and tone marks, or the marks sit on dotted circles
       else if(/[가-힣]/.test(part))html+=`<span class="mu-word">`+[...part].map((ch,i)=>`<span class="mu-w" data-o="${o+i}" data-end="${o+part.length}">${esc(ch)}</span>`).join('')+`</span>`;
       else html+=`<span class="mu-w" data-o="${o}" data-t="${esc(part)}">${esc(part)}</span>`;
       o+=part.length;
@@ -173,7 +175,7 @@
     const poll=setInterval(refresh,1000);
   }
   window.openMusic=openMusic;
-  window.tappableText=tappable;window.tappableWord=wordAt;// Listening shows its lines the same way
+  window.tappableText=tappable;window.graphemes=graphemes;window.tappableWord=wordAt;// Listening shows its lines the same way
 
   // Entry points: the Lyrics tile on the Dictionary home screen, and the Mac's Music tab (desktop-after.js).
 })();

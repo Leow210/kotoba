@@ -208,12 +208,13 @@
   const romanHtml=r=>esc(r).replace(/[a-z]+[1-6]/gi,m=>`<span class="tn t${toneOf(m)}">${m}</span>`);
   /** Words as ruby (tappable characters, their jyutping above), or the whole line's jyutping under it. */
   function wordsHtml(it){
-    const cps=[...it.text],off=[];let o=0;for(const c of cps){off.push(o);o+=c.length;}
+    const split=window.graphemes||(s=>[...s]);// letter clusters: Thai marks stay on their letters
+    const cps=split(it.text),off=[];let o=0;for(const c of cps){off.push(o);o+=c.length;}
     const span=k=>`<span class="mu-w" data-o="${off[k]}">${esc(cps[k])}</span>`;
     if(!it.words||!it.words.length)return cps.map((_,k)=>span(k)).join('');
     let k=0,html='';
     for(const w of it.words){
-      const n=[...w.w].length,inner=cps.slice(k,k+n).map((_,j)=>span(k+j)).join('');
+      const n=split(w.w).length,inner=cps.slice(k,k+n).map((_,j)=>span(k+j)).join('');
       const romanized=/[a-z]/i.test(w.j||'');
       html+=romanized?`<ruby>${inner}<rt>${romanHtml(w.j)}</rt></ruby>`:inner;
       k+=n;
@@ -221,7 +222,7 @@
     while(k<cps.length){html+=span(k);k++;}
     return html;
   }
-  const LANG_NAME={th:['ไทย','Thai'],yue:['粵','Cantonese'],zh:['普','Mandarin'],ja:['日','Japanese'],ko:['韓','Korean'],en:['英','English']};
+  const LANG_NAME={th:['ไทย','Thai'],yue:['粵','Cantonese'],zh:['普','Mandarin'],ja:['日','Japanese'],ko:['韓','Korean'],ru:['Ру','Russian'],en:['EN','English']};
   const lookupLang=l=>l==='yue'?'zh':l;// Cantonese: the Chinese dictionaries (CantoDict, CC-CEDICT…)
 
   /** Mac: holding the hover key (Shift) over a word looks it up, as in books and videos; the last popup gives way. */
@@ -270,7 +271,7 @@
     }
     for(let x=queue.length-1;x>=0;x--)runs[x].len=x+1<queue.length&&runs[x+1].n===runs[x].n?runs[x+1].len:runs[x].k+1;
     const chained=runCount===new Set(queue.map(q=>q.g)).size;
-    const unit=({Lessons:'Lesson',Topics:'Topic',Characters:'Character'})[set.groupLabel]||'Character';
+    const unit=({Lessons:'Lesson',Topics:'Topic',Characters:'Character',Units:'Unit'})[set.groupLabel]||'Character';
     const f=n=>el.querySelector(`[data-f="${n}"]`);
     pushPage(el,{onClose:()=>{closed=true;clearTimeout(timer);audio.pause();audio.src='';}});
     el.querySelector('[data-a="back"]').onclick=()=>popPage();
@@ -321,7 +322,7 @@
         <div><span>After a ${unit.toLowerCase()}</span>${chip('chain','next','next one')}${chip('chain','loop','again')}${chip('chain','stop','stop')}</div>
         <div><span>At the end</span>${chip('end','loop','start over')}${chip('end','stop','stop')}</div>
         <div><span>Pause on lookup</span>${chip('pause',true,'on')}${chip('pause',false,'off')}</div>
-        ${set.roman?`<div><span>${set.roman==='jyutping'?'Jyutping':'Romanization'}</span>${chip('roman','show','show')}${chip('roman','after','after hearing')}${chip('roman','hide','hide')}</div>
+        ${set.roman?`<div><span>${set.roman==='jyutping'?'Jyutping':set.roman==='cases'?'Cases':'Romanization'}</span>${chip('roman','show','show')}${chip('roman','after','after hearing')}${chip('roman','hide','hide')}</div>
         <div><span>Word gloss</span>${chip('gloss',true,'show')}${chip('gloss',false,'hide')}</div>`:''}
         ${set.lang==='ja'?`<div><span>Pitch accent</span>${chip('accent',true,'show')}${chip('accent',false,'hide')}</div>`:''}`;
       f('opts').querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>{
@@ -355,7 +356,7 @@
       f('who').innerHTML=`${g.icon?`<img src="${url(set.id,g.icon)}" alt="">`:''}<span><b>${esc(g.name)}</b>${sameTitle?'':` · ${esc(it.title)}`}${it.titleEn||g.nameEn?`<small>${esc(g.nameEn||'')}${it.titleEn&&!sameTitle?` · ${esc(it.titleEn)}`:''}</small>`:''}</span>`;
       const romanOn=set.roman&&opts.roman!=='hide';
       f('text').innerHTML=set.roman&&it.words&&it.words.length&&romanOn?wordsHtml(it):window.tappableText?tappableText(it.text):esc(it.text);
-      f('text').classList.toggle('acc',set.lang==='ja'&&!!opts.accent||!!(romanOn&&it.words&&it.words.length));
+      f('text').dataset.lang=set.lang||'';f('text').classList.toggle('acc',set.lang==='ja'&&!!opts.accent||!!(romanOn&&it.words&&it.words.length));
       // A line without word-by-word jyutping has it underneath; the gloss (I · be · Fung) under that.
       f('roman').innerHTML=romanOn&&it.roman&&!(it.words&&it.words.length)?romanHtml(it.roman):'';
       f('gloss').innerHTML=set.roman&&opts.gloss!==false&&it.words&&it.words.some(w=>w.g)?it.words.filter(w=>/\S/.test(w.w)&&!/^[。，？！、…「」,.?!]+$/.test(w.w)).map(w=>`<span><b>${esc(w.w)}</b>${esc(w.g||'')}</span>`).join(''):'';
@@ -478,7 +479,8 @@
     function paintModes(){
       if(!set.l1)return;
       const m=opts.mode||'passive';
-      const M=[['passive','聽','Passive','普 → 粵 → repeat'],['produce','說','Produce','普 → you say it → 粵'],['comprehend','懂','Understand','粵 → you get it → 普']];
+      const T=(LANG_NAME[set.lang]||['?'])[0],K=(LANG_NAME[set.l1]||['?'])[0];
+      const M=[['passive','聽','Passive',`${K} → ${T} → repeat`],['produce','說','Produce',`${K} → you say it → ${T}`],['comprehend','懂','Understand',`${T} → you get it → ${K}`]];
       f('modes').innerHTML=M.map(([k,g,l,sub])=>`<button class="ls-mode ${m===k?'on':''}" data-m="${k}"><b>${g}</b><span>${l}</span><small>${sub}</small></button>`).join('');
       f('modes').querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{opts.mode=b.dataset.m;saveOpts();paintModes();load(i,playing);});
     }

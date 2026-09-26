@@ -735,6 +735,9 @@ svg.i.sm{width:16px;height:16px}
 .acc rt .pitch .flat{display:none}
 .ls-story-body.acc .ls-para{line-height:2.5}
 .ls-text.acc{line-height:2.3}
+/* Thai stacks vowels and tone marks above the letters: lift the romanization clear of them */
+.ls-text.acc[data-lang=th]{line-height:2.9}
+.ls-text[data-lang=th] rt{padding-bottom:.55em}
 .ls-sec{display:flex;align-items:center;gap:8px}
 .ls-sec-play{margin-left:auto;display:inline-flex;align-items:center;gap:4px;font:600 12px var(--sans,inherit);text-transform:none;letter-spacing:0;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:4px 10px}
 .ls-sec-play svg{width:12px;height:12px}

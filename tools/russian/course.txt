@@ -1,0 +1,260 @@
+# Russian course · A2 → B1, built around the cases. One line per sentence: TAG sentence = English
+# TAG: E everyday · C city and getting around · S shops and food · W work and study · F friends and feelings;
+# a trailing f (Ef) is a woman speaking (Russian marks it: я была́, я родила́сь). Otherwise a man.
+# A case label goes straight after a word in brackets: в Москве́[P]. N nom · A acc · G gen · D dat · I ins · P prep; add pl.
+
+## r01 | A2 | 1 · Where: the prepositional | Где? → в or на + prepositional. Most nouns take -е (в Москве́, на столе́); feminine -ь and words in -ия/-ие take -и (в Росси́и, на пло́щади). A few masculine nouns take a stressed -у́ after в/на: в году́, в лесу́, в шкафу́, на полу́. на goes with open places, events and some fixed words: на рабо́те, на ку́хне, на у́лице, на конце́рте, на вокза́ле. о (об) + prepositional = about.
+E Я живу́ в Москве́[P]. = I live in Moscow.
+E Мой брат живёт на пя́том[P] этаже́[P]. = My brother lives on the fifth floor.
+W Я учу́сь в университе́те[P] на второ́м[P] ку́рсе[P]. = I'm in my second year at university.
+C Встре́тимся на остано́вке[P]. = Let's meet at the bus stop.
+S Хлеб на столе́[P], а молоко́ в холоди́льнике[P]. = The bread's on the table and the milk's in the fridge.
+C Я е́зжу на рабо́ту[A] на авто́бусе[P]. = I go to work by bus.
+F О чём[P] ты ду́маешь? = What are you thinking about?
+F Я ду́маю о тебе́[P]. = I'm thinking about you.
+F Мы до́лго говори́ли о рабо́те[P] и о жи́зни[P]. = We talked for ages about work and life.
+E В про́шлом[P] году́[P] я был в Петербу́рге[P]. = Last year I went to St Petersburg.
+E Ключи́ в шкафу́[P]? — Нет, на полу́[P]. = Are the keys in the cupboard? — No, on the floor.
+C На у́лице[P] о́чень хо́лодно. = It's really cold outside.
+E На ку́хне[P] всегда́ беспоря́док. = The kitchen's always a mess.
+W Он сейча́с на рабо́те[P], а ве́чером бу́дет на конце́рте[P]. = He's at work now, and tonight he'll be at a concert.
+
+## r02 | A2 | 2 · Where to, and objects: the accusative | Куда́? → в or на + accusative, the same в/на as for "where" (в магази́н, на рабо́ту). The direct object is accusative: feminine -а/-я → -у/-ю (ма́му, сестру́); masculine and neuter things don't change (фильм, окно́); masculine people and animals look like the genitive (бра́та, дру́га, Анто́на); feminine -ь doesn't change (дверь). Time: в суббо́ту (on Saturday), всю неде́лю (all week), на неде́лю (for a planned week), раз в неде́лю (once a week).
+C Я иду́ в магази́н[A]. = I'm going to the shop.
+C Ты пойдёшь на вечери́нку[A] в суббо́ту[A]? = Are you going to the party on Saturday?
+S Я возьму́ ча́шку[A] ко́фе и бутербро́д[A]. = I'll have a cup of coffee and a sandwich.
+F Ты зна́ешь Анто́на[A]? — Коне́чно, я его́[A] хорошо́ зна́ю. = Do you know Anton? — Of course, I know him well.
+F Я о́чень люблю́ мою́[A] сестру́[A] и моего́[A] бра́та[A]. = I love my sister and my brother very much.
+E Я ви́дел твою́[A] ма́му[A] в магази́не[P]. = I saw your mum at the shop.
+C Я жду авто́бус[A] уже́ полчаса́[A]. = I've been waiting for the bus for half an hour.
+E Закро́й дверь[A], пожа́луйста. = Close the door, please.
+E Вчера́ мы смотре́ли но́вый[A] фильм[A]. = Yesterday we watched a new film.
+C Как пройти́ на Кра́сную[A] пло́щадь[A]? = How do I get to Red Square?
+E Я е́ду в Москву́[A] на неде́лю[A]. = I'm going to Moscow for a week.
+W Он рабо́тает всю[A] неде́лю[A] без выходны́х[Gpl]. = He works all week without a day off.
+E Раз в неде́лю[A] я хожу́ в бассе́йн[A]. = Once a week I go to the pool.
+F Я встре́тил ста́рого[A] дру́га[A] на у́лице[P]. = I ran into an old friend in the street.
+
+## r03 | A2 | 3 · Having and not having: the genitive | У + genitive (+ есть) = have: у меня́ есть брат. Нет + genitive = there isn't / I haven't: нет вре́мени, нет молока́. In the past it's always не́ было, in the future не бу́дет, whatever the noun. "Y of X": X goes in the genitive (кварти́ра дру́га). "Some" of a substance: воды́, ча́ю. Endings: masculine and neuter -а/-я, feminine -ы/-и.
+E У меня́[G] есть ста́рший брат. = I have an older brother.
+E У меня́[G] нет вре́мени[G]. = I don't have time.
+S Извини́те, молока́[G] нет. = Sorry, we're out of milk.
+E Сего́дня нет дождя́[G]. = There's no rain today.
+E Вчера́ меня́[G] не́ было до́ма. = I wasn't home yesterday.
+F Э́то кварти́ра моего́[G] дру́га[G]. = This is my friend's apartment.
+W Где кабине́т дире́ктора[G]? = Where's the director's office?
+E У него́[G] нет ни бра́та[G], ни сестры́[G]. = He has neither a brother nor a sister.
+C В э́том[P] го́роде[P] нет метро́. = There's no metro in this town.
+E Не́ было никаки́х[Gpl] пробле́м[Gpl]. = There were no problems at all.
+E Дай мне, пожа́луйста, воды́[G]. = Could you give me some water, please?
+S Нале́й мне ча́ю[G]. = Pour me some tea.
+E Нача́ло фи́льма[G] бы́ло ску́чным[I]. = The beginning of the film was boring.
+W За́втра у нас[G] не бу́дет заня́тий[Gpl]. = We won't have classes tomorrow.
+
+## r04 | A2 | 4 · Counting | After 1 (21, 31…): nominative singular (оди́н биле́т). After 2, 3, 4 (22, 23…): genitive singular (два биле́та, три часа́). After 5–20, 25… and after ско́лько, мно́го, ма́ло, не́сколько: genitive plural (пять лет, два́дцать мину́т), or genitive singular for things you can't count (мно́го рабо́ты). Age: год / го́да / лет. Dates: the ordinal (neuter) + genitive month: пя́тое ма́я; "on" a date is all genitive: пятна́дцатого ию́ля.
+S Мне два биле́та[G], пожа́луйста. = Two tickets, please.
+S Э́то сто́ит пятьсо́т рубле́й[Gpl]. = That's five hundred roubles.
+S С вас три́ста два́дцать рубле́й[Gpl]. = That'll be three hundred and twenty roubles.
+E У нас две ко́шки[G] и одна́ соба́ка. = We've got two cats and a dog.
+S Ско́лько сто́ит килогра́мм[N] я́блок[Gpl]? = How much is a kilo of apples?
+S Да́йте, пожа́луйста, буты́лку[A] воды́[G]. = A bottle of water, please.
+W У меня́[G] мно́го рабо́ты[G] и ма́ло вре́мени[G]. = I've got lots of work and not much time.
+C До це́нтра[G] пять мину́т[Gpl] пешко́м. = It's five minutes' walk to the centre.
+C Авто́бус хо́дит ка́ждые два́дцать мину́т[Gpl]. = The bus comes every twenty minutes.
+E Мы жда́ли два часа́[G]. = We waited two hours.
+F Ско́лько у тебя́[G] бра́тьев[Gpl] и сестёр[Gpl]? = How many brothers and sisters have you got?
+E На вечери́нке[P] бы́ло мно́го наро́ду[G]. = There were loads of people at the party.
+E Сего́дня пя́тое[N] ма́я[G]. = Today's the fifth of May.
+E Я роди́лся пятна́дцатого[G] ию́ля[G]. = I was born on the fifteenth of July.
+Ef Я родила́сь тре́тьего[G] ма́рта[G]. = I was born on the third of March.
+
+## r05 | A2 | 5 · The genitive plural | The hard one. Masculine hard stems: -ов (бана́нов, студе́нтов). Masculine in -ь, -ж, -ш, -ч, -щ, and feminine -ь: -ей (друзе́й, этаже́й, ноче́й). Feminine -а and neuter -о: no ending at all (мест, мину́т), often with an extra vowel slipped in (остано́вка → остано́вок, де́ньги → де́нег). -ие/-ия: -ий (зада́ний). Learn the odd ones: челове́к (after numbers) / люде́й, лет, де́нег, яи́ц, бра́тьев.
+S Я купи́л пять бана́нов[Gpl] и немно́го помидо́ров[Gpl]. = I bought five bananas and some tomatoes.
+E У меня́[G] нет де́нег[Gpl]. = I've got no money.
+S Ско́лько яи́ц[Gpl] ну́жно для то́рта[G]? = How many eggs do you need for the cake?
+W В на́шей[P] гру́ппе[P] два́дцать студе́нтов[Gpl]. = There are twenty students in our group.
+W У нас мно́го зада́ний[Gpl] на за́втра. = We've got loads of assignments for tomorrow.
+F У меня́[G] мно́го друзе́й[Gpl] в Москве́[P]. = I've got lots of friends in Moscow.
+E В до́ме[P] де́вять этаже́й[Gpl]. = The building has nine floors.
+F Сто лет[Gpl] тебя́[A] не ви́дел! = I haven't seen you for ages!
+C Здесь нет свобо́дных[Gpl] мест[Gpl]. = There are no free seats here.
+C Ско́лько остано́вок[Gpl] до вокза́ла[G]? = How many stops to the station?
+E У меня́[G] нет никаки́х[Gpl] пла́нов[Gpl] на выходны́е[Apl]. = I don't have any plans for the weekend.
+E Ско́лько челове́к[Gpl] придёт? = How many people are coming?
+C В метро́ бы́ло сто́лько люде́й[Gpl]! = There were so many people on the metro!
+S Полкило́ апельси́нов[Gpl], пожа́луйста. = Half a kilo of oranges, please.
+
+## r06 | A2 | 6 · Little words that take the genitive | из (out of), с (off, from a surface; since), от (from a person), до (as far as, until), для (for), без (without), по́сле (after), у (at someone's; by), о́коло / во́зле (near), кро́ме (apart from), из-за (because of), во вре́мя (during), напро́тив (opposite): all + genitive.
+C Я из Ло́ндона[G]. = I'm from London.
+C Во́зле до́ма[G] есть апте́ка. = There's a pharmacy near my building.
+S Ко́фе без са́хара[G], пожа́луйста. = Coffee without sugar, please.
+E Э́то пода́рок для тебя́[G]. = This is a present for you.
+W По́сле рабо́ты[G] пойдём в бар[A]? = Shall we go to a bar after work?
+C Как дое́хать до вокза́ла[G]? = How do I get to the station?
+E Я жил у ба́бушки[G] всё ле́то[A]. = I stayed at my grandma's all summer.
+E Дава́й встре́тимся о́коло кинотеа́тра[G]. = Let's meet near the cinema.
+S Магази́н рабо́тает с девяти́[G] до десяти́[G]. = The shop is open from nine till ten.
+E Кро́ме меня́[G], никто́ не пришёл. = Nobody came except me.
+W Во вре́мя обе́да[G] я не отвеча́ю на звонки́[Apl]. = I don't answer calls at lunchtime.
+F Из-за тебя́[G] я опозда́л! = I'm late because of you!
+C Напро́тив шко́лы[G] откры́лось но́вое кафе́. = A new café has opened opposite the school.
+E Я получи́л письмо́[A] от ста́рого[G] дру́га[G]. = I got a letter from an old friend.
+
+## r07 | A2 | 7 · To me, for me: the dative | The person who feels or needs something is in the dative: мне нра́вится (I like; what you like is the subject), мне ну́жно / ну́жен (I need), мне хо́лодно / ску́чно (I'm cold / bored), мне 25 лет (I'm 25). Also giving, writing, calling and helping someone: дать, подари́ть, писа́ть, звони́ть, помога́ть + dative. Endings: masculine and neuter -у/-ю; feminine -е (-и for -ь and -ия).
+E Мне[D] нра́вится э́тот го́род. = I like this city.
+F Тебе́[D] понра́вился фильм? = Did you like the film?
+E Мне[D] два́дцать пять лет[Gpl]. = I'm twenty-five.
+E Ско́лько лет твоему́[D] отцу́[D]? = How old is your father?
+W Мне[D] ну́жно зако́нчить отчёт[A] сего́дня. = I need to finish the report today.
+E Мне[D] хо́лодно, закро́й окно́[A]. = I'm cold, close the window.
+F Мне[D] ску́чно без тебя́[G]. = I'm bored without you.
+E Я подари́л ма́ме[D] цветы́[Apl]. = I gave Mum some flowers.
+F Напиши́ мне[D], когда́ прие́дешь. = Text me when you get there.
+W Я позвоню́ вам[D] за́втра. = I'll call you tomorrow.
+E Помоги́ мне[D], пожа́луйста. = Help me, please.
+F Мое́й[D] сестре́[D] нра́вятся твои́ фотогра́фии. = My sister likes your photos.
+S Мне[D] ну́жен разме́р побо́льше. = I need a bigger size.
+F Мне[D] не хо́чется никуда́ идти́. = I don't feel like going anywhere.
+E Ва́ше мне́ние мне[D] о́чень ва́жно. = Your opinion really matters to me.
+
+## r08 | B1 | 8 · к, по, and "you have to" | к + dative = towards, to someone's place (к врачу́, ко мне). по + dative = along (по у́лице), by (по телефо́ну), in a subject (экза́мен по исто́рии), every (по выходны́м); скуча́ть по = miss. на́до / ну́жно / мо́жно / нельзя́ / пришло́сь + infinitive, with the person in the dative. идти́ + dative = suit.
+E Я иду́ к врачу́[D]. = I'm going to the doctor's.
+F Приходи́ ко мне[D] в го́сти в пя́тницу[A]. = Come round to mine on Friday.
+C Иди́те пря́мо по э́той[D] у́лице[D]. = Go straight along this street.
+F Мы говори́ли по телефо́ну[D] це́лый час[A]. = We talked on the phone for a whole hour.
+E По выходны́м[Dpl] я сплю до обе́да[G]. = At weekends I sleep till lunchtime.
+W У нас экза́мен по исто́рии[D] в понеде́льник[A]. = We have a history exam on Monday.
+F Я скуча́ю по тебе́[D]. = I miss you.
+E Тебе́[D] на́до отдохну́ть. = You need a rest.
+C Де́тям[Dpl] сюда́ нельзя́. = Children aren't allowed in here.
+S Мо́жно мне[D] ещё ча́ю[G]? = Could I have some more tea?
+F Я иду́ к дру́гу[D] на день[A] рожде́ния[G]. = I'm going to a friend's birthday party.
+F Он всё вре́мя звони́т свое́й[D] ма́ме[D]. = He's always calling his mum.
+S Э́та ку́ртка тебе́[D] идёт. = That jacket suits you.
+W Мне[D] пришло́сь рабо́тать всю[A] ночь[A]. = I had to work all night.
+
+## r09 | B1 | 9 · With, and being something: the instrumental | с + instrumental = with (с дру́гом, чай с лимо́ном); мы с сестро́й = my sister and I. Being or becoming, in the past, the future or the infinitive: быть, стать, рабо́тать + instrumental (был учи́телем, стать программи́стом); the present uses the nominative (он врач). Also занима́ться, интересова́ться, по́льзоваться, дово́лен + instrumental, and the tool you use (ру́чкой). Endings: -ом/-ем (-ём) masculine and neuter, -ой/-ей feminine, -ью for feminine -ь.
+F Я пойду́ в кино́ с дру́гом[I]. = I'm going to the cinema with a friend.
+S Чай с лимо́ном[I], пожа́луйста. = Tea with lemon, please.
+E Мы с сестро́й[I] живём вме́сте. = My sister and I live together.
+W Он рабо́тает врачо́м[I]. = He works as a doctor.
+W Кем[I] ты хо́чешь стать? = What do you want to be?
+W Я хочу́ стать программи́стом[I]. = I want to become a programmer.
+Ef В де́тстве я была́ о́чень засте́нчивой[I]. = I was very shy as a child.
+E Я занима́юсь спо́ртом[I] три ра́за[G] в неде́лю[A]. = I do sport three times a week.
+W Я интересу́юсь исто́рией[I]. = I'm interested in history.
+F Поздравля́ю с днём[I] рожде́ния[G]! = Happy birthday!
+E Я пишу́ ру́чкой[I], а не карандашо́м[I]. = I write with a pen, not a pencil.
+F Что с тобо́й[I]? = What's wrong with you?
+W Я дово́лен результа́том[I]. = I'm happy with the result.
+E Он был хоро́шим[I] учи́телем[I]. = He was a good teacher.
+
+## r10 | B1 | 10 · Under, behind, in the morning | Position: под (under), над (above), ме́жду (between), пе́ред (in front of), за (behind) + instrumental. Moving somewhere under or behind takes the accusative instead: положи́ под крова́ть. за + instrumental also = to fetch (за хле́бом) and "at" a table or meal (за столо́м, за обе́дом). Times of day and seasons are plain instrumentals: у́тром, ве́чером, ле́том, зимо́й.
+E Ко́шка спит под крова́тью[I]. = The cat's asleep under the bed.
+E Над столо́м[I] виси́т карти́на. = There's a picture above the table.
+C Апте́ка ме́жду ба́нком[I] и по́чтой[I]. = The pharmacy's between the bank and the post office.
+C Я жду тебя́[A] пе́ред вхо́дом[I]. = I'm waiting for you in front of the entrance.
+S Я схожу́ за хле́бом[I]. = I'll pop out for some bread.
+E Мы сиди́м за столо́м[I] и у́жинаем. = We're sitting at the table having dinner.
+C За до́мом[I] большо́й парк. = There's a big park behind the building.
+S У́тром[I] я пью ко́фе, а ве́чером[I] чай. = I drink coffee in the morning and tea in the evening.
+E Ле́том[I] мы е́здим на мо́ре[A]. = In summer we go to the seaside.
+E Пе́ред сном[I] я всегда́ чита́ю. = I always read before bed.
+W Дава́й обсу́дим э́то за обе́дом[I]. = Let's discuss it over lunch.
+F Ме́жду на́ми[I], он мне[D] не нра́вится. = Between us, I don't like him.
+E Зимо́й[I] здесь темне́ет в четы́ре. = In winter it gets dark at four here.
+E Положи́ су́мку[A] под стол[A]. = Put the bag under the table.
+
+## r11 | B1 | 11 · To, at, from: three questions, three cases | куда́ (to): в/на + accusative, к + dative for people. где (at): в/на + prepositional, у + genitive for people. отку́да (from): из (pairs with в), с (pairs with на), от (pairs with к/у) + genitive. So в шко́лу → в шко́ле → из шко́лы; на рабо́ту → на рабо́те → с рабо́ты; к врачу́ → у врача́ → от врача́. The same with putting and lying: на стол → на столе́ → со стола́.
+C Ты куда́? — На рабо́ту[A]. = Where are you off to? — Work.
+C Я уже́ на рабо́те[P]. = I'm already at work.
+C Я е́ду с рабо́ты[G]. = I'm on my way back from work.
+C Я иду́ из магази́на[G]. = I'm on my way back from the shop.
+E Он пошёл к врачу́[D]. = He's gone to the doctor's.
+E Он сейча́с у врача́[G]. = He's at the doctor's now.
+E Он то́лько что пришёл от врача́[G]. = He's just got back from the doctor's.
+C Когда́ ты вернёшься из Пари́жа[G]? = When are you back from Paris?
+Ef Я то́лько что верну́лась с конце́рта[G]. = I've just got back from the concert.
+E Положи́ кни́гу[A] на стол[A]. = Put the book on the table.
+E Кни́га лежи́т на столе́[P]. = The book is on the table.
+E Возьми́ кни́гу[A] со стола́[G]. = Take the book off the table.
+C Мы перее́хали из Москвы́[G] в Каза́нь[A]. = We moved from Moscow to Kazan.
+C Вам[D] на́до вы́йти на сле́дующей[P] остано́вке[P]. = You need to get off at the next stop.
+
+## r12 | B1 | 12 · Pronouns in every case | я: меня́, мне, мной (обо мне) · ты: тебя́, тебе́, тобо́й · он, оно́: его́, ему́, им (о нём) · она́: её, ей, ей (о ней) · мы: нас, нам, на́ми · вы: вас, вам, ва́ми · они́: их, им, и́ми (о них). After a preposition он/она́/они́ gain н-: у него́, к ней, с ни́ми. себя́ (oneself): себя́, себе́, собо́й.
+F Я тебя́[A] люблю́. = I love you.
+F Мне[D] с тобо́й[I] хорошо́. = I'm happy with you.
+F У тебя́[G] всё хорошо́? = Is everything all right with you?
+E Я о нём[P] ничего́ не зна́ю. = I don't know anything about him.
+E Я пойду́ к ним[D]. = I'll go over to theirs.
+E Мы бы́ли у неё[G] в гостя́х[Ppl]. = We were round at her place.
+E Позвони́ ему́[D]. = Call him.
+E Спроси́ её[A]. = Ask her.
+F Я без неё[G] не могу́. = I can't live without her.
+W Скажи́ им[D], что я опа́здываю. = Tell them I'm running late.
+E Что с ним[I]? = What's up with him?
+F Ты мне[D] о́чень нра́вишься. = I really like you.
+E Он смо́трит на себя́[A] в зе́ркало[A]. = He's looking at himself in the mirror.
+E Возьми́ с собо́й[I] зонт[A]. = Take an umbrella with you.
+
+## r13 | B1 | 13 · Adjectives and "my" follow the case | The ending echoes the question: како́го (genitive; accusative for masculine people): -ого/-его · како́му (dative): -ому/-ему · каки́м (instrumental): -ым/-им · како́м (prepositional): -ом/-ем. Feminine: -ой/-ей in the genitive, dative, instrumental and prepositional; -ую/-юю in the accusative. мой → моего́, моему́, мои́м, моём; моя́ → мое́й, мою́. свой = one's own, when it belongs to the subject.
+E Мы живём в но́вой[P] кварти́ре[P]. = We live in a new apartment.
+F Я познако́мился с интере́сным[I] челове́ком[I]. = I met an interesting person.
+E У моего́[G] ста́ршего[G] бра́та[G] дво́е дете́й[Gpl]. = My older brother has two children.
+S В э́том[P] магази́не[P] нет хоро́шего[G] сы́ра[G]. = This shop doesn't have any good cheese.
+F Я подари́л мое́й[D] лу́чшей[D] подру́ге[D] кни́гу[A]. = I gave my best friend a book.
+C Я живу́ на Садо́вой[P] у́лице[P], в пя́том[P] до́ме[P]. = I live on Sadovaya Street, at number five.
+W Я рабо́таю в большо́й[P] междунаро́дной[P] компа́нии[P]. = I work for a big international company.
+E Мы говори́ли о на́шем[P] бу́дущем[P]. = We talked about our future.
+E Ты не ви́дел мою́[A] си́нюю[A] ку́ртку[A]? = Have you seen my blue jacket?
+S Я ищу́ пода́рок для мое́й[G] ма́мы[G]. = I'm looking for a present for my mum.
+F Я горжу́сь свои́м[I] мла́дшим[I] бра́том[I]. = I'm proud of my little brother.
+C Мы е́дем к на́шим[Dpl] друзья́м[Dpl] на да́чу[A]. = We're going to our friends' dacha.
+E Я не люблю́ холо́дную[A] пого́ду[A]. = I don't like cold weather.
+
+## r14 | B1 | 14 · Plurals in every case | The good news: in the plural the dative, instrumental and prepositional are the same for every gender: -ам, -ами, -ах (друзья́м, друзья́ми, о друзья́х; де́ти → де́тям, детьми́, о де́тях). Adjectives: -ым, -ыми, -ых. The accusative plural is the nominative for things and the genitive for people and animals (люблю́ дете́й). The genitive plural is unit 5.
+E Я пишу́ друзья́м[Dpl]. = I'm writing to my friends.
+W Преподава́тель разгова́ривает со студе́нтами[Ipl]. = The teacher is talking with the students.
+S В э́тих[Ppl] магази́нах[Ppl] всё до́рого. = Everything's expensive in these shops.
+E Мы ча́сто гуля́ем с детьми́[Ipl] в па́рке[P]. = We often go for walks in the park with the kids.
+E Я покупа́ю пода́рки[Apl] роди́телям[Dpl]. = I'm buying presents for my parents.
+F Я расскажу́ тебе́[D] о свои́х[Ppl] пла́нах[Ppl]. = I'll tell you about my plans.
+S Пирожки́ с гриба́ми[Ipl] и́ли с капу́стой[I]? = Pies with mushrooms or with cabbage?
+C На у́лицах[Ppl] мно́го тури́стов[Gpl]. = There are lots of tourists in the streets.
+W По утра́м[Dpl] я отвеча́ю на пи́сьма[Apl]. = In the mornings I answer emails.
+E Я люблю́ фи́льмы[Apl] о живо́тных[Ppl]. = I love films about animals.
+F Мы с друзья́ми[Ipl] ча́сто хо́дим в похо́ды[Apl]. = My friends and I often go hiking.
+E На выходны́х[Ppl] мы бы́ли у роди́телей[Gpl]. = At the weekend we were at my parents'.
+
+## r15 | B1 | 15 · When: time words | Days: в + accusative (в сре́ду, в про́шлую суббо́ту). Weeks: на + prepositional (на э́той неде́ле). Months and years: в + prepositional (в ма́е, в э́том году́). Clock time: в + accusative (в три часа́, в семь). че́рез + accusative = in (from now); … наза́д = ago; на + accusative = for (planned), опозда́ть на = late by; с … до / по = from … to.
+E В сре́ду[A] у меня́[G] выходно́й. = I've got Wednesday off.
+E В ма́е[P] мы е́дем в о́тпуск[A]. = We're going on holiday in May.
+W В э́том[P] году́[P] я хочу́ вы́учить ру́сский. = This year I want to learn Russian.
+W На э́той[P] неде́ле[P] я о́чень за́нят. = I'm really busy this week.
+C Я бу́ду че́рез час[A]. = I'll be there in an hour.
+F Мы познако́мились три го́да[G] наза́д. = We met three years ago.
+W Встре́ча в три часа́[G]. = The meeting's at three.
+W Я рабо́таю с понеде́льника[G] по пя́тницу[A]. = I work Monday to Friday.
+E Я живу́ здесь уже́ два го́да[G]. = I've been living here for two years.
+F Я опозда́ю на пять мину́т[Gpl]. = I'll be five minutes late.
+E Мы уезжа́ем на ме́сяц[A]. = We're going away for a month.
+E Ка́ждый[A] день[A] я встаю́ в семь. = I get up at seven every day.
+E В про́шлую[A] суббо́ту[A] мы бы́ли в теа́тре[P]. = Last Saturday we went to the theatre.
+E До ле́та[G] оста́лось две неде́ли[G]. = Two weeks to go till summer.
+
+## r16 | B1 | 16 · Verbs that choose their case | Learn these with their case: ждать + accusative (+ genitive for something abstract: ждать отве́та) · боя́ться + genitive · помога́ть, звони́ть, ве́рить, зави́довать, меша́ть + dative · по́льзоваться, занима́ться, горди́ться + instrumental · отвеча́ть на + accusative · гото́виться к + dative · похо́ж на + accusative · ве́рить в + accusative · (мне) не хвата́ет + genitive · a man: жени́ться на + prepositional; a woman: вы́йти за́муж за + accusative.
+E Я жду тебя́[A] уже́ час[A]. = I've been waiting for you for an hour.
+F Я бою́сь соба́к[Gpl]. = I'm scared of dogs.
+E Помоги́ ба́бушке[D] с сумка́ми[Ipl]. = Help Grandma with the bags.
+F Не звони́ мне[D] так по́здно. = Don't call me so late.
+E Я по́льзуюсь э́тим[I] приложе́нием[I] ка́ждый[A] день[A]. = I use this app every day.
+W Отве́тьте на вопро́с[A]. = Answer the question.
+E Я вам[D] о́чень благода́рен. = I'm very grateful to you.
+F Не зави́дуй ему́[D]. = Don't be jealous of him.
+F Я ве́рю тебе́[D], но не ве́рю в э́ту[A] исто́рию[A]. = I believe you, but I don't believe that story.
+W Мы гото́вимся к экза́мену[D]. = We're preparing for the exam.
+E Он о́чень похо́ж на отца́[A]. = He looks a lot like his father.
+E Мне[D] не хвата́ет де́нег[Gpl]. = I'm short of money.
+E Мы ждём отве́та[G] уже́ неде́лю[A]. = We've been waiting for an answer for a week.
+F Мой брат жени́лся на мое́й[P] подру́ге[P]. = My brother married my friend.
+Ef Я вы́шла за́муж за его́[A] лу́чшего[A] дру́га[A]. = I married his best friend.
