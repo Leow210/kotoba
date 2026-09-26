@@ -37,7 +37,10 @@ def main():
         res = batch([{'text': it['text'], 'en': it.get('translationEn') or it.get('translation', '')} for it in chunk])
         for it, zh in zip(chunk, res):
             zh = re.sub(r'\s+', ' ', zh or '').strip()
-            if not zh:
+            # Only a real Mandarin sentence: not empty, not mostly English (the model still loading answers nothing,
+            # or echoes the English), and no notes or markup; those lines wait for a rerun.
+            latin, han = len(re.findall(r'[A-Za-z]', zh)), len(re.findall(r'[\u4e00-\u9fff]', zh))
+            if not zh or han == 0 or latin > han or re.search(r'[*$\\]|\(Wait|Note', zh):
                 continue
             if not it.get('translationEn'):
                 it['translationEn'] = it.get('translation', '')
