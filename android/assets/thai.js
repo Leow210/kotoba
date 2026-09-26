@@ -79,7 +79,7 @@
       ${u.marks?`<div class="th-marks">${u.marks.map((m,i)=>`<button class="th-mark" data-m="${i}"><span class="th-glyph">◌${esc(m.ch)}</span><b>${esc(m.name)}</b><small>${esc(m.rom)}</small><small>${esc(m.rule)}</small></button>`).join('')}</div>`:''}
       ${u.kind==='tone'||u.kind==='syllable'?`<div class="th-legend">${TONES.map(([k])=>`<span class="t-${k}">${k}</span>`).join('')}</div>`:''}
       <div class="th-grid">${u.items.map(card).join('')}</div>`;
-    body.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{const it=u.items[+b.dataset.i];play(it.nameAudio,it.wordAudio);});
+    body.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{const it=u.items[+b.dataset.i];play(it.nameAudio||it.wordAudio);});
     body.querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>play(u.marks[+b.dataset.m].nameAudio));
   }
 
@@ -120,7 +120,7 @@
         body.querySelectorAll('[data-o]').forEach(x=>{if(x.dataset.o===q.answer)x.classList.add('right');else if(x===b)x.classList.add('wrong');});
         const it=q.after;
         body.querySelector('[data-f="fb"]').innerHTML=`${ok?'✓':'✗'} <b>${esc(it.ch?(u.kind==='vowel'?vowelGlyph(it.ch):it.ch):it.word)}</b> ${esc(it.name||it.sound||it.rom||'')} · ${esc(it.word||'')} ${esc(it.rom||'')}${it.why?` — ${esc(it.why)}`:''}<br><button class="btn small" data-next>Next</button>`;
-        play(it.nameAudio,it.wordAudio);
+        play(it.nameAudio||it.wordAudio);
         body.querySelector('[data-next]').onclick=()=>{k++;ask();};
       });
     }
@@ -148,7 +148,7 @@
       c.addEventListener('pointermove',e=>{if(!drawing)return;const r=c.getBoundingClientRect();ctx.lineTo(e.clientX-r.left,e.clientY-r.top);ctx.stroke();});
       c.addEventListener('pointerup',()=>drawing=false);c.addEventListener('pointercancel',()=>drawing=false);
       const $b=a=>body.querySelector(`[data-a="${a}"]`);
-      $b('hear').onclick=()=>play(it.nameAudio,it.wordAudio);
+      $b('hear').onclick=()=>play(it.nameAudio||it.wordAudio);
       $b('clear').onclick=()=>{ctx.clearRect(0,0,c.width,c.height);};
       $b('guide').onclick=()=>{const g=body.querySelector('[data-f="guide"]');g.hidden=!g.hidden;};
       $b('flip').onclick=()=>{body.querySelector('[data-f="answer"]').hidden=false;body.querySelector('[data-f="grade"]').hidden=false;$b('flip').hidden=true;play(it.nameAudio);};
