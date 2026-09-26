@@ -1,0 +1,201 @@
+# Thai course · A2. Same line format as course_a1.txt.
+
+## u11 | A2 | 11 · Time and aspect: แล้ว, ยัง, กำลัง, จะ, เคย, เพิ่ง | Thai verbs don't change for tense; small words do the work. แล้ว (after) = already/done · ยัง = still, not yet · กำลัง … อยู่ = in the middle of · จะ = will, going to · เคย = have ever · เพิ่ง = just (a moment ago) · ยังไม่ได้ = haven't yet.
+E ผม~pǒm~I (m) กิน~gin~eat ข้าว~kâao~food แล้ว~lɛ́ɛo~already = I've eaten.
+E คุณ~kun~you กิน~gin~eat ข้าว~kâao~food หรือยัง~rʉ̌ʉ-yang~yet = Have you eaten yet?
+E ยัง~yang~not yet ไม่ได้~mâi-dâi~haven't กิน~gin~eat เลย~ləəi~at all = I haven't eaten at all yet.
+S ผม~pǒm~I (m) กำลัง~gam-lang~in the middle of ทำ~tam~do การบ้าน~gaan-bâan~homework อยู่~yùu~(ongoing) = I'm doing my homework.
+E เขา~kǎo~he กำลัง~gam-lang~in the middle of มา~maa~come = He's on his way.
+T พรุ่งนี้~prûng-níi~tomorrow ผม~pǒm~I (m) จะ~jà~will ไป~bpai~go ภูเก็ต~puu-gèt~Phuket = Tomorrow I'm going to Phuket.
+T คุณ~kun~you เคย~kəəi~have ever ไป~bpai~go เชียงใหม่~chiang-mài~Chiang Mai ไหม~mái~(question) = Have you ever been to Chiang Mai?
+T เคย~kəəi~have ครับ~kráp~(polite) / ไป~bpai~go มา~maa~(and back) สอง~sɔ̌ɔng~two ครั้ง~kráng~times = Yes, I've been twice.
+T ผม~pǒm~I (m) ไม่เคย~mâi-kəəi~never กิน~gin~eat ทุเรียน~tú-rian~durian = I've never eaten durian.
+T ผม~pǒm~I (m) เพิ่ง~pə̂ng~just มา~maa~come ถึง~tʉ̌ng~arrive เมื่อวาน~mʉ̂a-waan~yesterday = I only arrived yesterday.
+B พี่~pîi~I (older) เพิ่ง~pə̂ng~just ตื่น~dtʉ̀ʉn~wake up = I just woke up.
+E ฝน~fǒn~rain ยัง~yang~still ตก~dtòk~fall อยู่~yùu~(ongoing) = It's still raining.
+S ผม~pǒm~I (m) เรียน~rian~study ภาษาไทย~paa-sǎa-tai~Thai มา~maa~(up to now) สาม~sǎam~three เดือน~dʉan~months แล้ว~lɛ́ɛo~already = I've been studying Thai for three months.
+B เรา~rao~we คบ~kóp~date กัน~gan~each other มา~maa~(up to now) ปี~bpii~year นึง~nʉng~one แล้ว~lɛ́ɛo~already = We've been together a year now.
+E เดี๋ยว~dǐao~in a moment ผม~pǒm~I (m) โทร~too~call กลับ~glàp~back นะ~ná~(soft) = I'll call you back in a bit.
+E ไป~bpai~go กัน~gan~together เถอะ~tə̀~let's = Let's go.
+E ใกล้~glâi~nearly เสร็จ~sèt~finished แล้ว~lɛ́ɛo~already = It's almost done.
+
+## u12 | A2 | 12 · Days, times, routines | Time words go first or last: พรุ่งนี้ tomorrow · เมื่อวาน yesterday · อาทิตย์หน้า next week · ทุกวัน every day. Clock time: ตีหนึ่ง–ตีห้า (1–5 am), หกโมงเช้า (6 am), เที่ยง (noon), บ่ายโมง (1 pm), ห้าโมงเย็น (5 pm), หนึ่งทุ่ม–ห้าทุ่ม (7–11 pm), เที่ยงคืน (midnight). ตั้งแต่ … ถึง = from … until. ก่อน before · หลัง(จาก) after · ตอน when, at.
+E ผม~pǒm~I (m) ตื่น~dtʉ̀ʉn~wake up หก~hòk~six โมง~moong~o'clock เช้า~cháao~morning ทุกวัน~túk-wan~every day = I get up at six every morning.
+S เรียน~rian~class เริ่ม~rə̂əm~start เก้า~gâao~nine โมง~moong~o'clock = Class starts at nine.
+S ผม~pǒm~I (m) มี~mii~have เรียน~rian~class ตั้งแต่~dtâng-dtɛ̀ɛ~from เช้า~cháao~morning ถึง~tʉ̌ng~until บ่าย~bàai~afternoon = I have classes from morning to afternoon.
+T ร้าน~ráan~shop เปิด~bpə̀ət~open กี่~gìi~what โมง~moong~o'clock ครับ~kráp~(polite) = What time does the shop open?
+T เปิด~bpə̀ət~open ถึง~tʉ̌ng~until สี่~sìi~four ทุ่ม~tûm~(pm, 7–11) = It's open until ten at night.
+T รถ~rót~bus ออก~ɔ̀ɔk~leave บ่าย~bàai~afternoon สอง~sɔ̌ɔng~two โมง~moong~o'clock = The bus leaves at two in the afternoon.
+B เจอ~jəə~meet กัน~gan~each other หนึ่ง~nʉ̀ng~one ทุ่ม~tûm~(pm) นะ~ná~(soft) = See you at seven tonight.
+E วันเสาร์~wan-sǎo~Saturday ผม~pǒm~I (m) ไม่~mâi~not ทำงาน~tam-ngaan~work = I don't work on Saturdays.
+E ก่อน~gɔ̀ɔn~before นอน~nɔɔn~sleep ผม~pǒm~I (m) อาบน้ำ~àap-náam~shower = I shower before bed.
+E หลังจาก~lǎng-jàak~after เลิก~lə̂ək~finish งาน~ngaan~work ผม~pǒm~I (m) ไป~bpai~go ยิม~yim~gym = After work I go to the gym.
+S ตอน~dtɔɔn~when เด็ก~dèk~child ผม~pǒm~I (m) อยู่~yùu~live ต่างจังหวัด~dtàang-jang-wàt~in the provinces = When I was a kid I lived in the provinces.
+T อาทิตย์หน้า~aa-tít-nâa~next week ผม~pǒm~I (m) จะ~jà~will กลับ~glàp~go back ประเทศ~bprà-têet~country = I'm going back home next week.
+S อีก~ìik~another สิบ~sìp~ten นาที~naa-tii~minutes ถึง~tʉ̌ng~arrive = I'll be there in ten minutes.
+E บางที~baang-tii~sometimes ผม~pǒm~I (m) ทำ~tam~make อาหาร~aa-hǎan~food เอง~eeng~myself = Sometimes I cook for myself.
+E ผม~pǒm~I (m) ไม่ค่อย~mâi-kɔ̂i~not often ดู~duu~watch ทีวี~tii-wii~TV = I don't watch much TV.
+B พี่~pîi~you (older) ว่าง~wâang~free วันไหน~wan-nǎi~which day = Which day are you free?
+
+## u13 | A2 | 13 · Comparing | กว่า = more than: ใหญ่กว่า "bigger (than)". ที่สุด = the most. เท่า(กัน) = as … as, the same. เหมือน = like, the same as; ต่างกัน = different. ขึ้น / ลง after an adjective = getting more / less: ดีขึ้น "better (now)".
+T ห้อง~hɔ̂ng~room นี้~níi~this ใหญ่~yài~big กว่า~gwàa~more than ห้อง~hɔ̂ng~room นั้น~nán~that = This room is bigger than that one.
+T ถูก~tùuk~cheap กว่า~gwàa~more นี้~níi~this ได้~dâi~can ไหม~mái~(question) = Can it be cheaper than this?
+E กรุงเทพ~grung-têep~Bangkok ร้อน~rɔ́ɔn~hot กว่า~gwàa~more than เชียงใหม่~chiang-mài~Chiang Mai = Bangkok is hotter than Chiang Mai.
+T ร้าน~ráan~shop ไหน~nǎi~which อร่อย~à-rɔ̀i~delicious ที่สุด~tîi-sùt~the most = Which place is the best?
+S วิชา~wí-chaa~subject นี้~níi~this ยาก~yâak~hard ที่สุด~tîi-sùt~the most = This subject is the hardest.
+B พี่~pîi~you (older) สำคัญ~sǎm-kan~important ที่สุด~tîi-sùt~the most สำหรับ~sǎm-ràp~for ผม~pǒm~me = You're the most important person to me.
+E เรา~rao~we อายุ~aa-yú~age เท่ากัน~tâo-gan~the same = We're the same age.
+E เขา~kǎo~he สูง~sǔung~tall เท่า~tâo~as ผม~pǒm~me = He's as tall as me.
+E ผม~pǒm~I (m) ชอบ~chɔ̂ɔp~like หมา~mǎa~dogs มากกว่า~mâak-gwàa~more than แมว~mɛɛo~cats = I like dogs more than cats.
+E ภาษาไทย~paa-sǎa-tai~Thai ของ~kɔ̌ɔng~of คุณ~kun~you ดีขึ้น~dii-kʉ̂n~better มาก~mâak~much = Your Thai has got much better.
+E อากาศ~aa-gàat~weather เย็น~yen~cool ลง~long~(getting less hot) แล้ว~lɛ́ɛo~now = It's getting cooler.
+E สอง~sɔ̌ɔng~two อัน~an~things นี้~níi~these เหมือนกัน~mʉ̌an-gan~the same = These two are the same.
+E ไม่~mâi~not เหมือน~mʉ̌an~like ที่~tîi~that คิด~kít~think ไว้~wái~(beforehand) = Not what I expected.
+S ภาษาไทย~paa-sǎa-tai~Thai กับ~gàp~and ภาษาลาว~paa-sǎa-laao~Lao คล้าย~kláai~similar กัน~gan~each other = Thai and Lao are similar.
+E ยิ่ง~yîng~the more เรียน~rian~study ยิ่ง~yîng~the more สนุก~sà-nùk~fun = The more I study, the more fun it is.
+E ผม~pǒm~I (m) เหมือน~mʉ̌an~like พ่อ~pɔ̂ɔ~dad = I take after my dad.
+
+## u14 | A2 | 14 · Ending particles | They carry the tone of a sentence. นะ softens, asks for agreement ("…, okay?") · สิ / ซิ urges ("go on!") · เลย = "totally", "go ahead" · หรอก softens a no · ล่ะ = "and what about…", "then?" · จัง / จังเลย = "so …!" · เนอะ = "isn't it" · น่ะ explains · ด้วย = "too", "please". With ครับ they come first: นะครับ.
+E ช่วย~chûai~help ด้วย~dûai~please = Help!
+E อย่า~yàa~don't ลืม~lʉʉm~forget นะ~ná~(okay?) = Don't forget, okay?
+E ลอง~lɔɔng~try ชิม~chim~taste ดู~duu~(and see) สิ~sì~go on = Go on, have a taste.
+T เข้า~kâo~enter มา~maa~(in) เลย~ləəi~go ahead ครับ~kráp~(polite) = Come on in.
+E ไม่~mâi~not เป็นไร~bpen-rai~matter หรอก~rɔ̀ɔk~(really) = Oh, it's nothing.
+E ไม่~mâi~not ใช่~châi~so หรอก~rɔ̀ɔk~(softened) = No, not really.
+E แล้ว~lɛ́ɛo~and then จะ~jà~will ทำ~tam~do ยังไง~yang-ngai~how ล่ะ~lâ~(then?) = So what are we going to do?
+B น่ารัก~nâa-rák~cute จัง~jang~so เลย~ləəi~totally = So cute!
+E วันนี้~wan-níi~today ร้อน~rɔ́ɔn~hot เนอะ~nə́~isn't it = It's hot today, isn't it?
+S ผม~pǒm~I (m) ไม่ได้~mâi-dâi~didn't มา~maa~come เพราะ~prɔ́~because ป่วย~bpùai~sick น่ะ~nâ~(explaining) = I didn't come because I was sick, you see.
+E ผม~pǒm~I (m) ด้วย~dûai~too = Me too.
+E ไป~bpai~go ด้วย~dûai~with (you) กัน~gan~together นะ~ná~(okay?) = Let's go together, okay?
+B คิดถึง~kít-tʉ̌ng~miss นะ~ná~(soft) = I miss you.
+E จริงๆ~jing-jing~really เหรอ~rə̌ə~(really?) = Seriously?
+E กิน~gin~eat เยอะๆ~yə́-yə́~a lot นะ~ná~(soft) = Eat up!
+E เก่ง~gèng~good at it มาก~mâak~very เลย~ləəi~totally = You're really good!
+
+## u15 | A2 | 15 · Pronouns and who you're talking to | Thai picks the pronoun by relationship. Kin words stand in for I and you: พี่ (older), น้อง (younger). เรา = we, or a casual I; เธอ = you (close) or she; นาย = you (between guys, casual); เรา/นาย is common between male friends; มึง/กู = very rough, only with close friends. Names and nicknames also stand in for "you" and "I".
+B พี่~pîi~I (older) รัก~rák~love น้อง~nɔ́ɔng~you (younger) นะ~ná~(soft) = I love you.
+B น้อง~nɔ́ɔng~I (younger) ก็~gɔ̂ɔ~also รัก~rák~love พี่~pîi~you (older) = I love you too.
+B นาย~naai~you (guy) มา~maa~come ทำ~tam~do อะไร~à-rai~what ที่นี่~tîi-nîi~here = What are you doing here?
+B เรา~rao~I (casual) ไม่~mâi~not ได้~dâi~(actually) โกรธ~gròot~angry นาย~naai~you (guy) = I'm not angry with you.
+E เธอ~təə~she สวย~sǔay~pretty มาก~mâak~very = She's really pretty.
+S พี่~pîi~(you, older) ครับ~kráp~(polite) / ห้องสมุด~hɔ̂ng-sà-mùt~library อยู่~yùu~be ตรงไหน~dtrong-nǎi~where ครับ~kráp~(polite) = Excuse me, where's the library?
+S น้อง~nɔ́ɔng~younger student ปี~bpii~year หนึ่ง~nʉ̀ng~one ต้อง~dtɔ̂ng~have to มา~maa~come รับน้อง~ráp-nɔ́ɔng~freshers' welcome = First years have to come to the freshers' welcome.
+S พี่รหัส~pîi-rá-hàt~code senior ของ~kɔ̌ɔng~of ผม~pǒm~me ใจดี~jai-dii~kind มาก~mâak~very = My code senior is really kind.
+E ป้า~bpâa~auntie ครับ~kráp~(polite) / ขอ~kɔ̌ɔ~ask for ข้าวมันไก่~kâao-man-gài~chicken rice จาน~jaan~plate นึง~nʉng~one = Auntie, one chicken rice please.
+T พี่~pîi~(you, driver) ครับ~kráp~(polite) / ไป~bpai~go สุขุมวิท~sù-kǔm-wít~Sukhumvit ไหม~mái~(question) = Hi, will you go to Sukhumvit?
+B มึง~mʉng~you (rough) บ้า~bâa~crazy เหรอ~rə̌ə~(really?) = Are you nuts? (close friends only)
+B กู~guu~I (rough) ล้อ~lɔ́ɔ~tease เล่น~lên~(for fun) = I'm just kidding. (close friends only)
+E เขา~kǎo~they ไม่~mâi~not รู้~rúu~know ว่า~wâa~that เรา~rao~we มา~maa~come = They don't know we're here.
+B ผม~pǒm~I (m) ขอ~kɔ̌ɔ~ask for เบอร์~bəə~number พี่~pîi~you (older) ได้~dâi~can ไหม~mái~(question) = Can I have your number?
+S อาจารย์~aa-jaan~professor ครับ~kráp~(polite) / ผม~pǒm~I (m) ขอ~kɔ̌ɔ~ask ส่ง~sòng~hand in งาน~ngaan~work ช้า~cháa~late ได้~dâi~can ไหม~mái~(question) ครับ~kráp~(polite) = Professor, may I hand in my work late?
+
+## u16 | A2 | 16 · Feelings and relationships | Many feelings are ใจ (heart) compounds: ดีใจ glad · เสียใจ sad, sorry · ใจดี kind · ใจร้อน impatient · ตกใจ startled · เข้าใจ understand · น้อยใจ hurt, sulky · หึง jealous (in love). รู้สึก = feel. ทำให้ = make (someone feel).
+B ผม~pǒm~I (m) ชอบ~chɔ̂ɔp~like พี่~pîi~you (older) มา~maa~(up to now) นาน~naan~long แล้ว~lɛ́ɛo~already = I've liked you for a long time.
+B พี่~pîi~I (older) ก็~gɔ̂ɔ~also รู้สึก~rúu-sʉ̀k~feel เหมือนกัน~mʉ̌an-gan~the same = I feel the same.
+B เป็น~bpen~be แฟน~fɛɛn~boyfriend กัน~gan~each other นะ~ná~(soft) = Be my boyfriend.
+B หึง~hʉ̌ng~jealous เหรอ~rə̌ə~(really?) = Are you jealous?
+B ใคร~krai~who หึง~hʉ̌ng~jealous = Who's jealous?
+B อย่า~yàa~don't น้อยใจ~nɔ́ɔi-jai~sulk สิ~sì~come on = Come on, don't sulk.
+E ผม~pǒm~I (m) ดีใจ~dii-jai~glad มาก~mâak~very ที่~tîi~that ได้~dâi~get to เจอ~jəə~see คุณ~kun~you = I'm really glad to see you.
+E ผม~pǒm~I (m) เสียใจ~sǐa-jai~sorry ด้วย~dûai~(for you) นะ~ná~(soft) = I'm so sorry.
+E ตกใจ~dtòk-jai~startled หมด~mòt~completely เลย~ləəi~totally = You scared me!
+B เขา~kǎo~he ทำให้~tam-hâi~make ผม~pǒm~me มี~mii~have ความสุข~kwaam-sùk~happiness = He makes me happy.
+B ผม~pǒm~I (m) เป็นห่วง~bpen-hùang~worry about พี่~pîi~you (older) = I'm worried about you.
+E เขา~kǎo~he ใจร้อน~jai-rɔ́ɔn~hot-tempered ไป~bpai~too หน่อย~nɔ̀i~a bit = He's a bit short-tempered.
+S ผม~pǒm~I (m) เครียด~kríat~stressed เรื่อง~rʉ̂ang~about สอบ~sɔ̀ɔp~exam = I'm stressed about the exam.
+B เรา~rao~we เลิก~lə̂ək~break up กัน~gan~each other แล้ว~lɛ́ɛo~already = We broke up.
+E เหงา~ngǎo~lonely จัง~jang~so = I'm so lonely.
+B ไม่~mâi~not ต้อง~dtɔ̂ng~need ขอโทษ~kɔ̌ɔ-tôot~apologise หรอก~rɔ̀ɔk~(softened) = You don't need to apologise.
+B ผม~pǒm~I (m) อยู่~yùu~be ตรงนี้~dtrong-níi~here เสมอ~sà-mə̌ə~always = I'm always here for you.
+
+## u17 | A2 | 17 · ให้ and asking for help | ให้ = give; after a verb, "for (someone)": ซื้อให้ "buy for (you)". Before a person and verb, "have / let / want (someone) do": ให้เขารอ "have him wait". ช่วย … หน่อย / ด้วย = please (do for me). ขอให้ = (I) wish that.
+E ผม~pǒm~I (m) ให้~hâi~give ของขวัญ~kɔ̌ɔng-kwǎn~gift เขา~kǎo~him = I gave him a present.
+B พี่~pîi~I (older) ซื้อ~sʉ́ʉ~buy ให้~hâi~for (you) = I bought it for you.
+T ช่วย~chûai~help เขียน~kǐan~write ให้~hâi~for (me) หน่อย~nɔ̀i~please ได้~dâi~can ไหม~mái~(question) = Could you write it down for me?
+T ช่วย~chûai~help เรียก~rîak~call แท็กซี่~tɛ́k-sîi~taxi ให้~hâi~for (me) หน่อย~nɔ̀i~please ครับ~kráp~(polite) = Could you call me a taxi, please?
+S อาจารย์~aa-jaan~professor ให้~hâi~have นักศึกษา~nák-sʉ̀k-sǎa~students อ่าน~àan~read บท~bòt~chapter นี้~níi~this = The professor had us read this chapter.
+E แม่~mɛ̂ɛ~mum ไม่~mâi~not ให้~hâi~let ผม~pǒm~me ไป~bpai~go = Mum won't let me go.
+E บอก~bɔ̀ɔk~tell เขา~kǎo~him ให้~hâi~to รอ~rɔɔ~wait หน่อย~nɔ̀i~a bit = Tell him to wait a moment.
+B อยาก~yàak~want ให้~hâi~(you) to พี่~pîi~you (older) มา~maa~come หา~hǎa~see = I want you to come see me.
+T ช่วย~chûai~help ด้วย~dûai~please ครับ~kráp~(polite) / กระเป๋า~grà-bpǎo~bag ผม~pǒm~my หาย~hǎai~lost = Please help, my bag's gone.
+S ช่วย~chûai~help อธิบาย~à-tí-baai~explain อีก~ìik~again ที~tii~once ได้~dâi~can ไหม~mái~(question) ครับ~kráp~(polite) = Could you explain that once more?
+E ขอให้~kɔ̌ɔ-hâi~(I) wish that มี~mii~have ความสุข~kwaam-sùk~happiness มากๆ~mâak-mâak~very much = Wishing you lots of happiness.
+E สุขสันต์~sùk-sǎn~happy วันเกิด~wan-gə̀ət~birthday ครับ~kráp~(polite) = Happy birthday.
+E ปล่อย~bplɔ̀i~let ให้~hâi~(it) เขา~kǎo~him ตัดสินใจ~dtàt-sǐn-jai~decide เอง~eeng~himself = Let him decide for himself.
+T ขอ~kɔ̌ɔ~ask ให้~hâi~(let) ผม~pǒm~me ดู~duu~see หน่อย~nɔ̀i~a bit = Let me see.
+
+## u18 | A2 | 18 · Chains of verbs and directions | Verbs follow one another in the order things happen: ไปซื้อ "go buy", กลับมากิน "come back and eat". ไป / มา after a verb show direction, away from or towards the speaker: เอามา "bring", เอาไป "take". ขึ้น up · ลง down · เข้า in · ออก out · กลับ back.
+E ผม~pǒm~I (m) ไป~bpai~go ซื้อ~sʉ́ʉ~buy กาแฟ~gaa-fɛɛ~coffee = I'm going to get a coffee.
+E เอา~ao~take ร่ม~rôm~umbrella ไป~bpai~(away) ด้วย~dûai~too = Take an umbrella with you.
+S อย่า~yàa~don't ลืม~lʉʉm~forget เอา~ao~take หนังสือ~nǎng-sʉ̌ʉ~book มา~maa~(here) นะ~ná~(okay?) = Don't forget to bring the book.
+T ผม~pǒm~I (m) ลืม~lʉʉm~forget กระเป๋าตังค์~grà-bpǎo-dtang~wallet ไว้~wái~(left) ใน~nai~in รถ~rót~car = I left my wallet in the car.
+T เดิน~dəən~walk ขึ้น~kʉ̂n~up ไป~bpai~go ชั้น~chán~floor สอง~sɔ̌ɔng~two = Walk up to the second floor.
+E เขา~kǎo~he วิ่ง~wîng~run ออก~ɔ̀ɔk~out ไป~bpai~(away) ข้างนอก~kâang-nɔ̂ɔk~outside = He ran outside.
+B พี่~pîi~I (older) ขับรถ~kàp-rót~drive ไป~bpai~go รับ~ráp~pick up นะ~ná~(soft) = I'll drive over and pick you up.
+E กลับ~glàp~back มา~maa~come กิน~gin~eat ข้าว~kâao~food ที่~tîi~at บ้าน~bâan~home = Come home for dinner.
+T ผม~pǒm~I (m) จะ~jà~will นั่ง~nâng~ride เรือ~rʉa~boat ไป~bpai~go เกาะ~gɔ̀~island = I'm taking the boat to the island.
+E หยิบ~yìp~pick up ขวด~kùat~bottle นั้น~nán~that มา~maa~(here) ให้~hâi~for (me) หน่อย~nɔ̀i~please = Pass me that bottle.
+S ผม~pǒm~I (m) ไป~bpai~go ห้องสมุด~hɔ̂ng-sà-mùt~library มา~maa~(and back) = I've been to the library.
+E ขึ้น~kʉ̂n~go up ไป~bpai~(away) ข้างบน~kâang-bon~upstairs ก่อน~gɔ̀ɔn~first นะ~ná~(soft) = I'll head upstairs first.
+B เข้า~kâo~enter มา~maa~(in) ใกล้ๆ~glâi-glâi~close สิ~sì~go on = Come closer.
+T ลง~long~get down จาก~jàak~from รถ~rót~car ตรงนี้~dtrong-níi~here = Get out of the car here.
+E ส่ง~sòng~send ข้อความ~kɔ̂ɔ-kwaam~message มา~maa~(to me) บอก~bɔ̀ɔk~tell นะ~ná~(okay?) = Send me a message to let me know.
+
+## u19 | A2 | 19 · Family, and talking about yourself | ครอบครัว family · พ่อ แม่ father, mother · สามี ภรรยา husband, wife · ลูกชาย ลูกสาว son, daughter · พี่น้อง siblings. คนเดียว = alone, only one. มาจาก = come from. โสด = single. บ้าง = some, any (in questions: "any?"). ทราบ is the polite, formal รู้ (know).
+E ครอบครัว~krɔ̂ɔp-kruua~family ผม~pǒm~my มี~mii~have ห้า~hâa~five คน~kon~people = There are five people in my family.
+E คุณ~kun~you มี~mii~have พี่น้อง~pîi-nɔ́ɔng~siblings กี่~gìi~how many คน~kon~(clf people) = How many brothers and sisters do you have?
+E เขา~kǎo~he มี~mii~have ลูกชาย~lûuk-chaai~son หนึ่ง~nʉ̀ng~one คน~kon~(clf) กับ~gàp~and ลูกสาว~lûuk-sǎao~daughter สอง~sɔ̌ɔng~two คน~kon~(clf) = He has a son and two daughters.
+E ภรรยา~pan-rá-yaa~wife ของ~kɔ̌ɔng~of เขา~kǎo~him เป็น~bpen~be คนไทย~kon-tai~Thai (person) = His wife is Thai.
+T ผม~pǒm~I (m) มาจาก~maa-jàak~come from แคนาดา~kɛɛ-naa-daa~Canada ครับ~kráp~(polite) = I'm from Canada.
+T ผม~pǒm~I (m) มา~maa~come เที่ยว~tîao~travel คนเดียว~kon-diao~alone = I'm travelling alone.
+B ผม~pǒm~I (m) ยัง~yang~still โสด~sòot~single ครับ~kráp~(polite) = I'm still single.
+B พี่~pîi~you (older) มี~mii~have คู่รัก~kûu-rák~partner หรือยัง~rʉ̌ʉ-yang~yet = Are you seeing anyone?
+S เวลาว่าง~wee-laa-wâang~free time คุณ~kun~you ชอบ~chɔ̂ɔp~like ทำ~tam~do อะไร~à-rai~what = What do you like doing in your free time?
+S ผม~pǒm~I (m) ชอบ~chɔ̂ɔp~like ฟัง~fang~listen to เพลง~pleeng~music กับ~gàp~and ดู~duu~watch ซีรีส์~sii-rîi~series = I like listening to music and watching series.
+E ผม~pǒm~I (m) คิดถึง~kít-tʉ̌ng~miss บ้าน~bâan~home มากๆ~mâak-mâak~very much = I'm really homesick.
+E คุณ~kun~you ชอบ~chɔ̂ɔp~like เมือง~mʉang~country ไทย~tai~Thai ไหม~mái~(question) = Do you like Thailand?
+E ผม~pǒm~I (m) ไม่~mâi~not ทราบ~sâap~know ครับ~kráp~(polite) = I don't know. (polite)
+E ผม~pǒm~I (m) อยู่~yùu~live อพาร์ทเมนท์~à-páat-mén~apartment เล็กๆ~lék-lék~small = I live in a small apartment.
+E ผม~pǒm~I (m) กำลัง~gam-lang~in the middle of ลดน้ำหนัก~lót-nám-nàk~diet อยู่~yùu~(ongoing) = I'm on a diet.
+E คุณ~kun~you มี~mii~have เพื่อน~pʉ̂an~friends คนไทย~kon-tai~Thai บ้าง~bâang~any ไหม~mái~(question) = Do you have any Thai friends?
+
+## u20 | A2 | 20 · Money, meals and plans | Big numbers: ร้อย 100 · พัน 1,000 · หมื่น 10,000 · แสน 100,000 · ล้าน 1,000,000 (สี่หมื่น = 40,000). ละ = per, each. พอ = enough. เงินทอน change · เหรียญ coins · แบงค์ notes. ถ้า … ก็ / งั้น = then, in that case. …ก็แล้วกัน = "…, let's settle on that". สัก + amount = just (about) one: สักแก้ว "just a glass".
+T ห้อง~hɔ̂ng~room คืน~kʉʉn~night ละ~lá~per เท่าไหร่~tâo-rài~how much ครับ~kráp~(polite) = How much is the room per night?
+T คืน~kʉʉn~night ละ~lá~per หนึ่งพันห้าร้อย~nʉ̀ng-pan-hâa-rɔ́ɔi~fifteen hundred บาท~bàat~baht = Fifteen hundred baht a night.
+T ผม~pǒm~I (m) จะ~jà~will พัก~pák~stay สาม~sǎam~three คืน~kʉʉn~nights = I'll stay three nights.
+T ผม~pǒm~I (m) อยาก~yàak~want to พัก~pák~stay ต่อ~dtɔ̀ɔ~on อีก~ìik~another คืน~kʉʉn~night = I'd like to stay one more night.
+T ตั๋ว~dtǔa~ticket เครื่องบิน~krʉ̂ang-bin~plane ราคา~raa-kaa~price สี่หมื่น~sìi-mʉ̀ʉn~forty thousand บาท~bàat~baht = The plane ticket costs forty thousand baht.
+T เงิน~ngən~money ไม่~mâi~not พอ~pɔɔ~enough = I don't have enough money.
+T ไม่~mâi~not ต้อง~dtɔ̂ng~need ทอน~tɔɔn~give change ครับ~kráp~(polite) = Keep the change.
+T ขอ~kɔ̌ɔ~ask for เป็น~bpen~as เหรียญ~rǐan~coins ได้~dâi~can ไหม~mái~(question) ครับ~kráp~(polite) = Could I have it in coins?
+T ผม~pǒm~I (m) มี~mii~have แต่~dtɛ̀ɛ~only แบงค์~bɛ́ng~notes พัน~pan~thousand = I only have a thousand-baht note.
+T งั้น~ngán~then ขอ~kɔ̌ɔ~ask for กาแฟ~gaa-fɛɛ~coffee ก็แล้วกัน~gɔ̂ɔ-lɛ́ɛo-gan~(let's settle on) = Then I'll have a coffee.
+T ผม~pǒm~I (m) ไม่~mâi~not ดื่ม~dʉ̀ʉm~drink เหล้า~lâo~alcohol / ขอ~kɔ̌ɔ~ask for น้ำผลไม้~nám-pǒn-lá-mái~juice ครับ~kráp~(polite) = I don't drink alcohol, a juice please.
+T เบียร์~bia~beer เย็นๆ~yen-yen~cold สัก~sàk~just ขวด~kùat~bottle ไหม~mái~(question) = How about a cold beer?
+E ไป~bpai~go หา~hǎa~find อะไร~à-rai~something กิน~gin~eat กัน~gan~together ไหม~mái~(question) = Shall we get something to eat?
+E เรา~rao~we ไป~bpai~go นั่ง~nâng~sit กิน~gin~drink ชาเย็น~chaa-yen~Thai iced tea คุย~kui~chat กัน~gan~together ดีกว่า~dii-gwàa~better = Let's go have an iced tea and chat.
+B พรุ่งนี้~prûng-níi~tomorrow พี่~pîi~you (older) มี~mii~have แผน~pɛ̌ɛn~plans อะไร~à-rai~any หรือเปล่า~rʉ̌ʉ-bplàao~or not = Do you have any plans tomorrow?
+B ถ้า~tâa~if ว่าง~wâang~free / ไป~bpai~go กิน~gin~eat อาหารเย็น~aa-hǎan-yen~dinner กัน~gan~together นะ~ná~(soft) = If you're free, let's have dinner.
+B เจอ~jəə~meet กัน~gan~each other ที่~tîi~at เดิม~dəəm~usual place นะ~ná~(okay?) = See you at the usual place.
+E ผม~pǒm~I (m) กิน~gin~eat อาหารกลางวัน~aa-hǎan-glaang-wan~lunch คนเดียว~kon-diao~alone = I had lunch alone.
+
+## u21 | A2 | 21 · On the road, and when you don't understand | ตาม = along, follow · ไปเรื่อยๆ = keep going · ข้างหน้า ahead · ทางขวา / ทางซ้าย on the right / left · ตรงนั้น there (by you) · ที่โน่น over there (far). Late: สาย late (morning, for an appointment) · ดึก late at night · ช้า slow. รีบ = hurry. Asking about words: แปลว่าอะไร "what does it mean?", หมายความว่า "(it) means".
+T ขับ~kàp~drive ตาม~dtaam~along ถนน~tà-nǒn~road นี้~níi~this ไป~bpai~go เรื่อยๆ~rʉ̂ai-rʉ̂ai~keep on = Keep driving along this road.
+T แล้วก็~lɛ́ɛo-gɔ̂ɔ~and then เลี้ยว~líao~turn ขวา~kwǎa~right ที่~tîi~at สี่แยก~sìi-yɛ̂ɛk~crossroads = Then turn right at the crossroads.
+T โรงแรม~roong-rɛɛm~hotel อยู่~yùu~be ทางซ้าย~taang-sáai~on the left = The hotel is on the left.
+T แถว~tɛ̌ɛo~around นี้~níi~here มี~mii~there is ปั๊มน้ำมัน~bpám-nám-man~petrol station ไหม~mái~(question) = Is there a petrol station around here?
+T นี่~nîi~this เป็น~bpen~be รถเช่า~rót-châo~rental car / ใช้~chái~use ดีเซล~dii-sen~diesel หรือเปล่า~rʉ̌ʉ-bplàao~or not = It's a rental car. Does it take diesel?
+T ถนน~tà-nǒn~road ไหน~nǎi~which ไป~bpai~go กรุงเทพ~grung-têep~Bangkok = Which road goes to Bangkok?
+T คุณ~kun~you จะ~jà~will ออกจาก~ɔ̀ɔk-jàak~leave กรุงเทพ~grung-têep~Bangkok เมื่อไหร่~mʉ̂a-rài~when = When are you leaving Bangkok?
+T ไป~bpai~go รถบัส~rót-bát~bus หรือ~rʉ̌ʉ~or เครื่องบิน~krʉ̂ang-bin~plane = Are you going by bus or by plane?
+E ผม~pǒm~I (m) ต้อง~dtɔ̂ng~have to รีบ~rîip~hurry ไป~bpai~go แล้ว~lɛ́ɛo~now = I have to hurry off.
+E ดึก~dʉ̀k~late (night) แล้ว~lɛ́ɛo~already / กลับ~glàp~go back บ้าน~bâan~home ดีกว่า~dii-gwàa~better = It's late, I'd better go home.
+S พรุ่งนี้~prûng-níi~tomorrow ต้อง~dtɔ̂ng~have to ตื่น~dtʉ̀ʉn~get up แต่เช้า~dtɛ̀ɛ-cháao~early = I have to get up early tomorrow.
+S ผม~pǒm~I (m) จะ~jà~will ท่อง~tɔ̂ng~memorise ศัพท์~sàp~vocabulary สักหน่อย~sàk-nɔ̀i~a little = I'm going to learn some vocab.
+S คำ~kam~word นี้~níi~this แปล~bplɛɛ~translate ว่า~wâa~as อะไร~à-rai~what = What does this word mean?
+S หมายความ~mǎai-kwaam~mean ว่า~wâa~that อะไร~à-rai~what ครับ~kráp~(polite) = What do you mean?
+T ขอโทษ~kɔ̌ɔ-tôot~sorry ครับ~kráp~(polite) / ผม~pǒm~I (m) ฟัง~fang~hear ไม่~mâi~not ชัด~chát~clearly = Sorry, I didn't catch that.
+T ช่วย~chûai~help พูด~pûut~say แบบ~bɛ̀ɛp~in a way ง่ายๆ~ngâai-ngâai~simple หน่อย~nɔ̀i~please ได้~dâi~can ไหม~mái~(question) = Could you say it more simply?
+E ไม่~mâi~not ต้อง~dtɔ̂ng~need คิดมาก~kít-mâak~overthink นะ~ná~(soft) = Don't worry about it.
+E ไม่~mâi~not ใช่~châi~be เรื่องใหญ่~rʉ̂ang-yài~big deal = It's not a big deal.

@@ -1,0 +1,117 @@
+# Thai course · B1. Same line format as course_a1.txt.
+
+## u22 | B1 | 22 · If, when, then: ถ้า … ก็ | ถ้า = if; the result often takes ก็ (then) or จะ: ถ้าฝนตก ผมก็ไม่ไป. เมื่อ / ตอนที่ = when. ถ้าไม่ … ก็ = if not…, (then). ไม่งั้น = otherwise. พอ … ก็ = as soon as. ยังไงก็ = anyway, no matter what.
+E ถ้า~tâa~if ฝน~fǒn~rain ตก~dtòk~fall / ผม~pǒm~I (m) ก็~gɔ̂ɔ~then ไม่~mâi~not ไป~bpai~go = If it rains, I won't go.
+T ถ้า~tâa~if มี~mii~have เวลา~wee-laa~time / ผม~pǒm~I (m) จะ~jà~will ไป~bpai~go เกาะเต่า~gɔ̀-dtào~Koh Tao = If I have time, I'll go to Koh Tao.
+S ถ้า~tâa~if ไม่~mâi~not อ่าน~àan~read หนังสือ~nǎng-sʉ̌ʉ~books / ก็~gɔ̂ɔ~then สอบ~sɔ̀ɔp~exam ไม่~mâi~not ผ่าน~pàan~pass = If you don't study, you won't pass.
+B ถ้า~tâa~if พี่~pîi~you (older) ไม่~mâi~not ว่าง~wâang~free / ก็~gɔ̂ɔ~then ไม่~mâi~not เป็นไร~bpen-rai~matter นะ~ná~(soft) = If you're not free, that's fine.
+E รีบ~rîip~hurry ไป~bpai~go เถอะ~tə̀~(let's) / ไม่งั้น~mâi-ngán~otherwise จะ~jà~will ไม่~mâi~not ทัน~tan~in time = Hurry up, or we'll be late.
+E พอ~pɔɔ~as soon as ถึง~tʉ̌ng~arrive บ้าน~bâan~home / ผม~pǒm~I (m) ก็~gɔ̂ɔ~then หลับ~làp~fall asleep เลย~ləəi~right away = As soon as I got home, I fell asleep.
+S ตอนที่~dtɔɔn-tîi~when ผม~pǒm~I (m) มา~maa~come ถึง~tʉ̌ng~arrive / อาจารย์~aa-jaan~professor สอน~sɔ̌ɔn~teach ไป~bpai~(off) แล้ว~lɛ́ɛo~already = When I arrived, the lecture had already started.
+B ยังไง~yang-ngai~whatever ก็~gɔ̂ɔ~still จะ~jà~will รอ~rɔɔ~wait พี่~pîi~you (older) = I'll wait for you no matter what.
+T ถ้า~tâa~if หลง~lǒng~lost / โทร~too~call หา~hǎa~(to) ผม~pǒm~me ได้~dâi~can เลย~ləəi~go ahead = If you get lost, just call me.
+E ถ้า~tâa~if ผม~pǒm~I (m) เป็น~bpen~be คุณ~kun~you / ผม~pǒm~I (m) จะ~jà~would ไม่~mâi~not ซื้อ~sʉ́ʉ~buy = If I were you, I wouldn't buy it.
+E ถ้า~tâa~if รู้~rúu~know อย่างนี้~yàang-níi~like this / ผม~pǒm~I (m) คง~kong~probably ไม่~mâi~not มา~maa~come = If I'd known, I wouldn't have come.
+T เมื่อไหร่~mʉ̂a-rài~whenever ถึง~tʉ̌ng~arrive แล้ว~lɛ́ɛo~(done) / บอก~bɔ̀ɔk~tell ด้วย~dûai~please นะ~ná~(okay?) = Let me know when you get there.
+
+## u23 | B1 | 23 · Because, so, but, although | เพราะ(ว่า) = because · เลย / ก็เลย = so (as a result) · แต่ = but · ถึงแม้ว่า … ก็ = although … still · เพื่อ = in order to · ทั้งๆ ที่ = even though, despite · ไม่ … แต่ … = not…, but…. เลย before a verb means "so, therefore".
+E ผม~pǒm~I (m) ไม่~mâi~not ได้~dâi~(actually) ไป~bpai~go / เพราะว่า~prɔ́-wâa~because ป่วย~bpùai~sick = I didn't go because I was sick.
+T ฝน~fǒn~rain ตก~dtòk~fall / เรา~rao~we ก็เลย~gɔ̂ɔ-ləəi~so อยู่~yùu~stay ที่~tîi~at โรงแรม~roong-rɛɛm~hotel = It was raining, so we stayed at the hotel.
+S เมื่อคืน~mʉ̂a-kʉʉn~last night นอน~nɔɔn~sleep ดึก~dʉ̀k~late / วันนี้~wan-níi~today เลย~ləəi~so ง่วง~ngûang~sleepy = I went to bed late last night, so I'm sleepy today.
+E อาหาร~aa-hǎan~food อร่อย~à-rɔ̀i~tasty / แต่~dtɛ̀ɛ~but เผ็ด~pèt~spicy ไป~bpai~too หน่อย~nɔ̀i~a bit = The food's good, but a bit too spicy.
+B ถึงแม้ว่า~tʉ̌ng-mɛ́ɛ-wâa~although เรา~rao~we อยู่~yùu~be ไกล~glai~far กัน~gan~from each other / ผม~pǒm~I (m) ก็~gɔ̂ɔ~still คิดถึง~kít-tʉ̌ng~miss ทุกวัน~túk-wan~every day = Even though we're far apart, I miss you every day.
+S ผม~pǒm~I (m) มา~maa~come เมืองไทย~mʉang-tai~Thailand / เพื่อ~pʉ̂a~in order to เรียน~rian~study ภาษา~paa-sǎa~language = I came to Thailand to study the language.
+E ทั้งๆที่~táng-táng-tîi~even though เหนื่อย~nʉ̀ai~tired / เขา~kǎo~he ก็~gɔ̂ɔ~still มา~maa~come ช่วย~chûai~help = Even though he was tired, he still came to help.
+T ผม~pǒm~I (m) ไม่ได้~mâi-dâi~not มา~maa~come ทำงาน~tam-ngaan~work / แต่~dtɛ̀ɛ~but มา~maa~come เที่ยว~tîao~for fun = I'm not here for work, I'm here on holiday.
+S ผม~pǒm~I (m) ตั้งใจ~dtâng-jai~intend จะ~jà~to พูด~pûut~speak ภาษาไทย~paa-sǎa-tai~Thai ให้~hâi~(so that) เก่ง~gèng~well = I'm determined to speak Thai well.
+B เขา~kǎo~he ไม่~mâi~not ตอบ~dtɔ̀ɔp~reply / ผม~pǒm~I (m) เลย~ləəi~so ไม่~mâi~not กล้า~glâa~dare ทัก~ták~message ไป~bpai~(to him) อีก~ìik~again = He didn't reply, so I didn't dare message him again.
+E ทำไม~tam-mai~why ถึง~tʉ̌ng~(come to) ไม่~mâi~not บอก~bɔ̀ɔk~tell ผม~pǒm~me = Why didn't you tell me?
+E เพราะ~prɔ́~because ไม่~mâi~not อยาก~yàak~want ให้~hâi~(you) to เป็นห่วง~bpen-hùang~worry = Because I didn't want you to worry.
+
+## u24 | B1 | 24 · ที่, การ, ความ: describing and naming | ที่ joins a description to a noun: คนที่ผมชอบ "the person (that) I like". การ + verb = the act of: การเดินทาง "travelling". ความ + adjective or feeling = the quality: ความสุข "happiness", ความรัก "love". อย่าง = kind, way; แบบ = style, like.
+B คน~kon~person ที่~tîi~that ผม~pǒm~I (m) ชอบ~chɔ̂ɔp~like คือ~kʉʉ~is พี่~pîi~you (older) = The one I like is you.
+T ร้าน~ráan~place ที่~tîi~that เรา~rao~we กิน~gin~eat เมื่อวาน~mʉ̂a-waan~yesterday อร่อย~à-rɔ̀i~tasty มาก~mâak~very = The place we ate at yesterday was really good.
+S หนังสือ~nǎng-sʉ̌ʉ~book ที่~tîi~that อาจารย์~aa-jaan~professor ให้~hâi~have อ่าน~àan~read ยาก~yâak~hard มาก~mâak~very = The book the professor set is really hard.
+E ผม~pǒm~I (m) ไม่~mâi~not เข้าใจ~kâo-jai~understand สิ่ง~sìng~thing ที่~tîi~that เขา~kǎo~he พูด~pûut~say = I don't understand what he said.
+T การ~gaan~(the act of) เดินทาง~dəən-taang~travel ใน~nai~in เมืองไทย~mʉang-tai~Thailand สะดวก~sà-dùak~convenient มาก~mâak~very = Getting around Thailand is very easy.
+S การ~gaan~(the act of) เรียน~rian~learn ภาษา~paa-sǎa~language ต้อง~dtɔ̂ng~need ใช้~chái~use เวลา~wee-laa~time = Learning a language takes time.
+B ความรัก~kwaam-rák~love ไม่~mâi~not ง่าย~ngâai~easy เลย~ləəi~at all = Love isn't easy at all.
+E ความสุข~kwaam-sùk~happiness ของ~kɔ̌ɔng~of ผม~pǒm~me คือ~kʉʉ~is การ~gaan~(the act of) ได้~dâi~get to อยู่~yùu~be กับ~gàp~with ครอบครัว~krɔ̂ɔp-kruua~family = My happiness is being with my family.
+E ขอบคุณ~kɔ̀ɔp-kun~thank you สำหรับ~sǎm-ràp~for ความ~kwaam~(the quality of) ช่วยเหลือ~chûai-lʉ̌a~help ครับ~kráp~(polite) = Thank you for your help.
+T มี~mii~have อาหาร~aa-hǎan~food อย่าง~yàang~kind อื่น~ʉ̀ʉn~other ที่~tîi~that ไม่~mâi~not เผ็ด~pèt~spicy ไหม~mái~(question) = Is there anything else that isn't spicy?
+B ผม~pǒm~I (m) ชอบ~chɔ̂ɔp~like ผู้ชาย~pûu-chaai~guys แบบ~bɛ̀ɛp~like พี่~pîi~you (older) = I like guys like you.
+S ปัญหา~bpan-hǎa~problem ที่~tîi~that ใหญ่~yài~big ที่สุด~tîi-sùt~the most คือ~kʉʉ~is เวลา~wee-laa~time = The biggest problem is time.
+
+## u25 | B1 | 25 · Saying what people said and think: ว่า | ว่า after a verb of saying, thinking or knowing introduces its content: บอกว่า say that · คิดว่า think that · รู้ว่า know that · ได้ยินว่า heard that · หวังว่า hope that · ไม่แน่ใจว่า not sure whether. ถาม … ว่า = ask … whether. เขาว่า / ได้ข่าวว่า = they say, I hear.
+E เขา~kǎo~he บอก~bɔ̀ɔk~say ว่า~wâa~that จะ~jà~will มา~maa~come สาย~sǎai~late = He said he'd be late.
+E ผม~pǒm~I (m) คิด~kít~think ว่า~wâa~that พรุ่งนี้~prûng-níi~tomorrow ฝน~fǒn~rain จะ~jà~will ตก~dtòk~fall = I think it'll rain tomorrow.
+B พี่~pîi~you (older) รู้~rúu~know ไหม~mái~(question) ว่า~wâa~that ผม~pǒm~I (m) ชอบ~chɔ̂ɔp~like พี่~pîi~you (older) = Do you know that I like you?
+S ได้ยิน~dâi-yin~hear ว่า~wâa~that สอบ~sɔ̀ɔp~exam ถูก~tùuk~be เลื่อน~lʉ̂an~postponed = I heard the exam's been postponed.
+E หวัง~wǎng~hope ว่า~wâa~that จะ~jà~will ได้~dâi~get to เจอ~jəə~see กัน~gan~each other อีก~ìik~again = I hope we'll meet again.
+T ผม~pǒm~I (m) ไม่~mâi~not แน่ใจ~nɛ̂ɛ-jai~sure ว่า~wâa~whether รถ~rót~bus ไป~bpai~go ที่นั่น~tîi-nân~there หรือเปล่า~rʉ̌ʉ-bplàao~or not = I'm not sure whether the bus goes there.
+T ถาม~tǎam~ask เขา~kǎo~him ว่า~wâa~whether มี~mii~have ห้อง~hɔ̂ng~room ว่าง~wâang~free ไหม~mái~(question) = Ask him if there's a room free.
+E เขา~kǎo~they ว่า~wâa~say ร้าน~ráan~place นี้~níi~this อร่อย~à-rɔ̀i~good = They say this place is good.
+B ผม~pǒm~I (m) ไม่~mâi~not รู้~rúu~know ว่า~wâa~that จะ~jà~will พูด~pûut~say ยังไง~yang-ngai~how = I don't know how to say it.
+S อาจารย์~aa-jaan~professor ถาม~tǎam~ask ว่า~wâa~whether ใคร~krai~who ทำ~tam~do การบ้าน~gaan-bâan~homework มา~maa~(done) = The professor asked who had done the homework.
+E ผม~pǒm~I (m) ลืม~lʉʉm~forget ไป~bpai~(completely) ว่า~wâa~that วันนี้~wan-níi~today วันหยุด~wan-yùt~holiday = I forgot that today's a holiday.
+E เรียก~rîak~call อันนี้~an-níi~this ว่า~wâa~as อะไร~à-rai~what = What do you call this?
+
+## u26 | B1 | 26 · Maybe, must be, should | อาจจะ = might · น่าจะ = probably, should (be) · คงจะ / คง = must, probably (a guess) · ควร(จะ) = should · ต้อง … แน่ๆ = must, surely · ไม่แน่ = not sure, maybe. น่า + verb = worth, -able: น่ากิน "looks tasty", น่ารัก "lovable".
+E พรุ่งนี้~prûng-níi~tomorrow ผม~pǒm~I (m) อาจจะ~àat-jà~might ไม่~mâi~not ว่าง~wâang~free = I might not be free tomorrow.
+E ตอนนี้~dtɔɔn-níi~now น่าจะ~nâa-jà~probably ดึก~dʉ̀k~late แล้ว~lɛ́ɛo~already = It must be late by now.
+B เขา~kǎo~he คง~kong~must ชอบ~chɔ̂ɔp~like พี่~pîi~you (older) แน่ๆ~nɛ̂ɛ-nɛ̂ɛ~for sure = He must like you, for sure.
+S คุณ~kun~you ควร~kuan~should พัก~pák~rest บ้าง~bâang~some = You should get some rest.
+T เรา~rao~we ควร~kuan~should ออก~ɔ̀ɔk~leave ก่อน~gɔ̀ɔn~before เจ็ด~jèt~seven โมง~moong~o'clock = We should leave before seven.
+E ไม่~mâi~not ควร~kuan~should พูด~pûut~say แบบนี้~bɛ̀ɛp-níi~like this = You shouldn't talk like that.
+T น่ากิน~nâa-gin~looks delicious จัง~jang~so = That looks so good!
+T ที่นี่~tîi-nîi~here น่า~nâa~worth เที่ยว~tîao~visit มาก~mâak~very = This place is really worth visiting.
+S เขา~kǎo~he ต้อง~dtɔ̂ng~must สอบ~sɔ̀ɔp~exam ผ่าน~pàan~pass แน่ๆ~nɛ̂ɛ-nɛ̂ɛ~surely = He's bound to pass.
+B ไม่แน่~mâi-nɛ̂ɛ~not sure / เขา~kǎo~he อาจจะ~àat-jà~might มี~mii~have แฟน~fɛɛn~partner แล้ว~lɛ́ɛo~already = You never know, he might already be seeing someone.
+E ป่านนี้~bpàan-níi~by now เขา~kǎo~he คงจะ~kong-jà~must ถึง~tʉ̌ng~arrive แล้ว~lɛ́ɛo~already = He must have arrived by now.
+E ไม่~mâi~not น่า~nâa~(should) เชื่อ~chʉ̂a~believe เลย~ləəi~at all = Unbelievable.
+
+## u27 | B1 | 27 · Can, manage, in time: ได้, ไหว, ทัน, ออก, เป็น | After a verb: ได้ = can, get to · ไหว = can manage (strength) · ทัน = in time · ออก = can figure out, make out · เป็น = know how. Negated in the middle: ไม่ได้, ไม่ไหว, ไม่ทัน, คิดไม่ออก "can't think of it". ขึ้น also: อ่านออก "can read (it)", จำไม่ได้ "can't remember".
+T ผม~pǒm~I (m) เดิน~dəən~walk ไม่ไหว~mâi-wǎi~can't manage แล้ว~lɛ́ɛo~anymore = I can't walk any further.
+T เผ็ด~pèt~spicy ขนาด~kà-nàat~as much as นี้~níi~this / ผม~pǒm~I (m) กิน~gin~eat ไม่ไหว~mâi-wǎi~can't manage = I can't handle food this spicy.
+T เรา~rao~we จะ~jà~will ไป~bpai~go ทัน~tan~in time ไหม~mái~(question) = Will we make it in time?
+S ผม~pǒm~I (m) ทำ~tam~do การบ้าน~gaan-bâan~homework ไม่ทัน~mâi-tan~not in time = I didn't get my homework done in time.
+S ผม~pǒm~I (m) อ่าน~àan~read ภาษาไทย~paa-sǎa-tai~Thai ออก~ɔ̀ɔk~(can make out) แล้ว~lɛ́ɛo~now = I can read Thai now.
+E ผม~pǒm~I (m) คิด~kít~think ไม่ออก~mâi-ɔ̀ɔk~can't come up with = I can't think of it.
+E ผม~pǒm~I (m) จำ~jam~remember ชื่อ~chʉ̂ʉ~name เขา~kǎo~his ไม่ได้~mâi-dâi~can't = I can't remember his name.
+B พี่~pîi~you (older) ทำ~tam~cook อาหาร~aa-hǎan~food เป็น~bpen~know how ด้วย~dûai~too เหรอ~rə̌ə~(really?) = You can cook too?
+E ผม~pǒm~I (m) มอง~mɔɔng~look ไม่~mâi~not เห็น~hěn~see = I can't see it.
+S ผม~pǒm~I (m) ฟัง~fang~listen อาจารย์~aa-jaan~professor ไม่~mâi~not ทัน~tan~keep up = I can't keep up with the lecturer.
+E ไม่~mâi~not ไหว~wǎi~manage แล้ว~lɛ́ɛo~anymore / ง่วง~ngûang~sleepy มาก~mâak~very = I can't anymore, I'm so sleepy.
+T ได้~dâi~get to ไป~bpai~go ทะเล~tá-lee~sea บ้าง~bâang~at all หรือยัง~rʉ̌ʉ-yang~yet = Have you got to the beach yet?
+
+## u28 | B1 | 28 · Things that happen to you: โดน and ถูก | โดน / ถูก + (someone) + verb = get (verb)ed, mostly for bad things: โดนหลอก "got cheated". โดน is more spoken. For neutral passives Thai usually just says it actively, or uses ได้รับ "receive". ทำ … หาย/แตก/เสีย = lose, break, damage (by accident).
+T ผม~pǒm~I (m) โดน~doon~get หลอก~lɔ̀ɔk~cheat = I got ripped off.
+T กระเป๋าตังค์~grà-bpǎo-dtang~wallet ผม~pǒm~my โดน~doon~get ขโมย~kà-mǒi~steal = My wallet was stolen.
+E ผม~pǒm~I (m) โดน~doon~get ยุง~yung~mosquito กัด~gàt~bite = I got bitten by mosquitoes.
+S ผม~pǒm~I (m) โดน~doon~get อาจารย์~aa-jaan~professor ดุ~dù~scold = I got told off by the professor.
+B เขา~kǎo~he ถูก~tùuk~get ทิ้ง~tíng~dump = He got dumped.
+E ผม~pǒm~I (m) ทำ~tam~(by accident) โทรศัพท์~too-rá-sàp~phone หาย~hǎai~lost = I lost my phone.
+E ใคร~krai~who ทำ~tam~(cause) แก้ว~gɛ̂ɛo~glass แตก~dtɛ̀ɛk~broken = Who broke the glass?
+T เที่ยวบิน~tîao-bin~flight ถูก~tùuk~get ยกเลิก~yók-lə̂ək~cancel = The flight was cancelled.
+S ผม~pǒm~I (m) ได้รับ~dâi-ráp~receive ทุน~tun~scholarship ไป~bpai~go เรียน~rian~study ที่~tîi~at ญี่ปุ่น~yîi-bpùn~Japan = I got a scholarship to study in Japan.
+E เขา~kǎo~he โดน~doon~get ไล่~lâi~chase ออก~ɔ̀ɔk~out จาก~jàak~from งาน~ngaan~job = He got fired.
+T ระวัง~rá-wang~be careful นะ~ná~(okay?) / เดี๋ยว~dǐao~or else โดน~doon~get ตำรวจ~dtam-rùat~police จับ~jàp~catch = Careful, or you'll get caught by the police.
+B ผม~pǒm~I (m) ไม่~mâi~not อยาก~yàak~want โดน~doon~get ทิ้ง~tíng~dump อีก~ìik~again = I don't want to get dumped again.
+
+## u29 | B1 | 29 · How people really talk | Spoken Thai shortens and softens: ไหม → มั้ย, หรือ → รึ, อย่างนี้ → งี้, อย่างนั้น → งั้น, เปล่า → ป่าว. Everyday words: เจ๋ง cool · ชิลๆ chill · อิน into it · เฟล fail · มโน imagine things · ฟิน blissful (from fin/finale; fans use it for BL) · ปัง a hit · แกง prank · เท hang up on, flake · ชิป ship (a couple).
+E ไป~bpai~go ด้วยกัน~dûai-gan~together มั้ย~mái~(question) = Wanna come along?
+E เป็น~bpen~be อะไร~à-rai~what รึเปล่า~rʉ́-bplàao~or not = Is something wrong?
+E ป่าว~bpàao~no / ไม่~mâi~not ได้~dâi~(actually) เป็น~bpen~be อะไร~à-rai~anything = Nah, I'm fine.
+E งั้น~ngán~then ไป~bpai~go กัน~gan~together เลย~ləəi~right now = Then let's go right now.
+T ไป~bpai~go เที่ยว~tîao~out ชิลๆ~chiu-chiu~chill ที่~tîi~at ทะเล~tá-lee~beach = Just chilling at the beach.
+B ฉาก~chàak~scene นี้~níi~this ฟิน~fin~blissful มาก~mâak~very = This scene is so good!
+B ผม~pǒm~I (m) ชิป~chíp~ship คู่~kûu~couple นี้~níi~this มาก~mâak~very = I really ship this couple.
+B ดู~duu~watch แล้ว~lɛ́ɛo~and อิน~in~into it มาก~mâak~very = I got so into it.
+B อย่า~yàa~don't มโน~má-noo~imagine things เอง~eeng~yourself = Don't get ahead of yourself.
+S สอบ~sɔ̀ɔp~exam เฟล~feen~fail เลย~ləəi~totally = I totally flunked the exam.
+E เพลง~pleeng~song นี้~níi~this ปัง~bpang~a hit มาก~mâak~very = This song is a massive hit.
+B โดน~doon~get แกง~gɛɛng~prank แล้ว~lɛ́ɛo~already = I got pranked!
+B เขา~kǎo~he เท~tee~flake on ผม~pǒm~me อีก~ìik~again แล้ว~lɛ́ɛo~already = He stood me up again.
+E เจ๋ง~jěng~cool มาก~mâak~very = That's so cool.
+E เอางี้~ao-ngíi~(let's do) this way / เดี๋ยว~dǐao~in a moment ผม~pǒm~I (m) จัดการ~jàt-gaan~handle เอง~eeng~myself = Tell you what, I'll sort it out.
+E แล้ว~lɛ́ɛo~so เป็นไง~bpen-ngai~how is it บ้าง~bâang~(at all) = So, how's it going?

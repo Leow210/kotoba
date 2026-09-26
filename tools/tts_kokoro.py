@@ -28,14 +28,22 @@ def simplifier():
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--set', required=True)
-    ap.add_argument('--voice', default='zm_010')
+    ap.add_argument('--voice', default='')
+    ap.add_argument('--lang', default='zh', choices=['zh', 'en'], help='the translation language to voice')
     ap.add_argument('--speed', type=float, default=1.0)
     args = ap.parse_args()
     from kokoro import KModel, KPipeline
-    model = KModel(repo_id=REPO).to('cpu').eval()
-    en = KPipeline(lang_code='a', repo_id=REPO, model=False)
-    zh = KPipeline(lang_code='z', repo_id=REPO, model=model, en_callable=lambda t: next(en(t)).phonemes)
-    simp = simplifier()
+    if args.lang == 'en':
+        # English: Kokoro's own English model (hexgrad/Kokoro-82M), a male American voice by default.
+        voice = args.voice or 'am_michael'
+        pipe = KPipeline(lang_code='a', repo_id='hexgrad/Kokoro-82M')
+        simp = lambda t: t
+    else:
+        voice = args.voice or 'zm_010'
+        model = KModel(repo_id=REPO).to('cpu').eval()
+        en = KPipeline(lang_code='a', repo_id=REPO, model=False)
+        pipe = KPipeline(lang_code='z', repo_id=REPO, model=model, en_callable=lambda t: next(en(t)).phonemes)
+        simp = simplifier()
     out = DATA / args.set
     s = json.loads((out / 'set.json').read_text())
     n = 0
@@ -51,7 +59,7 @@ def main():
             rel = f"l1/{g['id']}/{it['id']}.m4a"
             dest = out / rel
             if not dest.exists():
-                audio = np.concatenate([r.audio for r in zh(say, voice=args.voice, speed=args.speed)])
+                audio = np.concatenate([r.audio for r in pipe(say, voice=voice, speed=args.speed)])
                 with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as f:
                     sf.write(f.name, audio, 24000)
                 dest.parent.mkdir(parents=True, exist_ok=True)
@@ -64,9 +72,9 @@ def main():
             if n % 25 == 0:
                 (out / 'set.json').write_text(json.dumps(s, ensure_ascii=False, indent=0))
                 print(n, 'voiced', flush=True)
-    s['l1'] = 'zh'
+    s['l1'] = args.lang
     (out / 'set.json').write_text(json.dumps(s, ensure_ascii=False, indent=0))
-    print('done', n, 'Mandarin lines')
+    print('done', n, 'lines voiced')
 
 
 if __name__ == '__main__':

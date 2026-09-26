@@ -1,0 +1,183 @@
+# Thai course · A1. One line per sentence: TAG thai~roman~gloss … = English
+# TAG: T Travel · B BL · S Student · E Everyday; a trailing f (Tf) is a woman speaking (a handful of staff and vendor lines,
+# so ค่ะ/คะ are heard). "/" is a phrase break (a space in Thai). Otherwise male speech (ผม, ครับ).
+# Romanization: Paiboon-style (à low, â falling, á high, ǎ rising, no mark mid; long vowels doubled).
+
+## u01 | A1 | 1 · Greetings and politeness | Thai adds ครับ (kráp, said by men) or ค่ะ (kâ, by women; คะ ká on questions) to be polite. นะ (ná) softens a sentence. Adjectives work as verbs: สบายดี = "am well", no word for "am".
+E สวัสดี~sà-wàt-dii~hello ครับ~kráp~(polite) = Hello.
+Tf สวัสดี~sà-wàt-dii~hello ค่ะ~kâ~(polite, f) = Hello. (a woman)
+E ขอบคุณ~kɔ̀ɔp-kun~thank you ครับ~kráp~(polite) = Thank you.
+T ขอโทษ~kɔ̌ɔ-tôot~sorry ครับ~kráp~(polite) = Sorry. / Excuse me.
+E ไม่~mâi~not เป็นไร~bpen-rai~matter ครับ~kráp~(polite) = It's okay. / No problem.
+E คุณ~kun~you สบายดี~sà-baai-dii~be well ไหม~mái~(question) ครับ~kráp~(polite) = How are you?
+E ผม~pǒm~I (m) สบายดี~sà-baai-dii~be well ครับ~kráp~(polite) = I'm fine.
+E ผม~pǒm~I (m) ชื่อ~chʉ̂ʉ~be named ลีโอ~lii-oo~Leo ครับ~kráp~(polite) = My name is Leo.
+S คุณ~kun~you ชื่อ~chʉ̂ʉ~be named อะไร~à-rai~what ครับ~kráp~(polite) = What's your name?
+S ยินดี~yin-dii~glad ที่~tîi~that ได้~dâi~get to รู้จัก~rúu-jàk~know ครับ~kráp~(polite) = Nice to meet you.
+E แล้ว~lɛ́ɛo~and คุณ~kun~you ล่ะ~lâ~(what about) ครับ~kráp~(polite) = And you?
+B พี่~pîi~you (older) ชื่อ~chʉ̂ʉ~be named อะไร~à-rai~what ครับ~kráp~(polite) = What's your name? (to someone older)
+B น้อง~nɔ́ɔng~you (younger) ชื่อ~chʉ̂ʉ~be named อะไร~à-rai~what = What's your name? (to someone younger)
+E ไว้~wái~later เจอ~jəə~meet กัน~gan~each other ใหม่~mài~again นะ~ná~(soft) ครับ~kráp~(polite) = See you again.
+E ราตรีสวัสดิ์~raa-dtrii-sà-wàt~good night ครับ~kráp~(polite) = Good night.
+E โชคดี~chôok-dii~good luck นะ~ná~(soft) ครับ~kráp~(polite) = Good luck.
+T ขอโทษ~kɔ̌ɔ-tôot~sorry ครับ~kráp~(polite) / พูด~pûut~speak ช้าๆ~cháa-cháa~slowly ได้~dâi~can ไหม~mái~(question) ครับ~kráp~(polite) = Sorry, could you speak slowly?
+T ผม~pǒm~I (m) ไม่~mâi~not เข้าใจ~kâo-jai~understand ครับ~kráp~(polite) = I don't understand.
+T ผม~pǒm~I (m) พูด~pûut~speak ภาษาไทย~paa-sǎa-tai~Thai ได้~dâi~can นิดหน่อย~nít-nɔ̀i~a little ครับ~kráp~(polite) = I can speak a little Thai.
+
+## u02 | A1 | 2 · Who you are: เป็น and คือ | เป็น (bpen) links a person to what they are (a student, Thai…); คือ (kʉʉ) says what something IS, often introducing or defining. Adjectives need neither: เขาใจดี "he (is) kind". Possession: noun + ของ + owner, and ของ is often dropped: เพื่อนผม "my friend".
+S ผม~pǒm~I (m) เป็น~bpen~be นักศึกษา~nák-sʉ̀k-sǎa~university student ครับ~kráp~(polite) = I'm a university student.
+E เขา~kǎo~he, she เป็น~bpen~be คน~kon~person ไทย~tai~Thai = He's Thai.
+T คุณ~kun~you เป็น~bpen~be คน~kon~person ที่ไหน~tîi-nǎi~where ครับ~kráp~(polite) = Where are you from?
+T ผม~pǒm~I (m) มา~maa~come จาก~jàak~from อเมริกา~à-mee-rí-gaa~America ครับ~kráp~(polite) = I'm from America.
+E เธอ~təə~she เป็น~bpen~be คน~kon~person ญี่ปุ่น~yîi-bpùn~Japanese หรือเปล่า~rʉ̌ʉ-bplàao~or not = Is she Japanese?
+E ไม่ใช่~mâi-châi~no (not so) ครับ~kráp~(polite) / เขา~kǎo~he, she เป็น~bpen~be คน~kon~person เกาหลี~gao-lǐi~Korean = No, he's Korean.
+E นี่~nîi~this คือ~kʉʉ~is เพื่อน~pʉ̂an~friend ผม~pǒm~my ครับ~kráp~(polite) = This is my friend.
+S นั่น~nân~that คือ~kʉʉ~is อาจารย์~aa-jaan~professor ของ~kɔ̌ɔng~of ผม~pǒm~me = That's my professor.
+E พี่~pîi~you (older) ทำงาน~tam-ngaan~work อะไร~à-rai~what ครับ~kráp~(polite) = What do you do for work?
+S ผม~pǒm~I (m) เรียน~rian~study ภาษาไทย~paa-sǎa-tai~Thai ที่~tîi~at มหาวิทยาลัย~má-hǎa-wít-tá-yaa-lai~university = I study Thai at university.
+B เขา~kǎo~he เป็น~bpen~be แฟน~fɛɛn~boyfriend ผม~pǒm~my = He's my boyfriend.
+B เรา~rao~we เป็น~bpen~be เพื่อน~pʉ̂an~friends กัน~gan~each other = We're friends.
+S น้อง~nɔ́ɔng~you (younger) เรียน~rian~study ปี~bpii~year ไหน~nǎi~which = What year are you in?
+S ผม~pǒm~I (m) เรียน~rian~study ปี~bpii~year สอง~sɔ̌ɔng~two ครับ~kráp~(polite) = I'm in second year.
+E ผม~pǒm~I (m) อายุ~aa-yú~age ยี่สิบ~yîi-sìp~twenty ปี~bpii~years ครับ~kráp~(polite) = I'm twenty.
+E คุณ~kun~you อายุ~aa-yú~age เท่าไหร่~tâo-rài~how much ครับ~kráp~(polite) = How old are you?
+E เขา~kǎo~he เป็น~bpen~be พี่ชาย~pîi-chaai~older brother ผม~pǒm~my = He's my older brother.
+E หมอ~mɔ̌ɔ~doctor คน~kon~(clf) นั้น~nán~that ใจดี~jai-dii~kind มาก~mâak~very = That doctor is very kind.
+
+## u03 | A1 | 3 · Yes/no questions | Add ไหม (mái) to ask "…?"; answer by repeating the verb (หิว / ไม่หิว), not with yes/no. ใช่ไหม = "…, right?"; หรือเปล่า = "…or not?"; หรือยัง = "…yet?", answered ยัง "not yet" or …แล้ว "already". เหรอ (rə̌ə) = "really?".
+E คุณ~kun~you หิว~hǐu~hungry ไหม~mái~(question) = Are you hungry?
+E หิว~hǐu~hungry ครับ~kráp~(polite) = Yes, I am.
+E ไม่~mâi~not หิว~hǐu~hungry ครับ~kráp~(polite) = No, I'm not.
+S คุณ~kun~you เป็น~bpen~be นักศึกษา~nák-sʉ̀k-sǎa~student ใช่ไหม~châi-mái~right = You're a student, right?
+S ใช่~châi~yes (that's so) ครับ~kráp~(polite) = Yes, that's right.
+E เขา~kǎo~he มา~maa~come หรือยัง~rʉ̌ʉ-yang~yet = Has he come yet?
+E ยัง~yang~not yet ครับ~kráp~(polite) = Not yet.
+E มา~maa~come แล้ว~lɛ́ɛo~already ครับ~kráp~(polite) = He's here already.
+E ร้อน~rɔ́ɔn~hot ไหม~mái~(question) = Is it hot?
+E ร้อน~rɔ́ɔn~hot มาก~mâak~very เลย~ləəi~(really) = It's really hot!
+T อัน~an~one (thing) นี้~níi~this เผ็ด~pèt~spicy ไหม~mái~(question) ครับ~kráp~(polite) = Is this spicy?
+T ไม่~mâi~not เผ็ด~pèt~spicy เลย~ləəi~at all ครับ~kráp~(polite) = Not spicy at all.
+B คืนนี้~kʉʉn-níi~tonight พี่~pîi~you (older) ว่าง~wâang~free ไหม~mái~(question) = Are you free tonight?
+B พี่~pîi~you (older) ชอบ~chɔ̂ɔp~like ผม~pǒm~me หรือเปล่า~rʉ̌ʉ-bplàao~or not = Do you like me?
+B จริง~jing~true เหรอ~rə̌ə~(really?) = Really?
+S เข้าใจ~kâo-jai~understand ไหม~mái~(question) ครับ~kráp~(polite) = Do you understand?
+T ได้~dâi~can ไหม~mái~(question) ครับ~kráp~(polite) = Is that okay? / Can I?
+
+## u04 | A1 | 4 · มี, and saying no | มี (mii) = "have" and "there is". Negation: ไม่ (mâi) before a verb or adjective; ไม่ใช่ for "is not (a…)"; ไม่ได้ + verb = "didn't" (a past action) or "not actually".
+T มี~mii~have ห้อง~hɔ̂ng~room ว่าง~wâang~free ไหม~mái~(question) ครับ~kráp~(polite) = Do you have a free room?
+Tf มี~mii~have ค่ะ~kâ~(polite, f) = Yes, we do.
+T ไม่มี~mâi-mii~not have ครับ~kráp~(polite) = No, we don't.
+T ที่นี่~tîi-nîi~here มี~mii~there is ไวไฟ~wai-fai~Wi-Fi ไหม~mái~(question) = Is there Wi-Fi here?
+T ผม~pǒm~I (m) ไม่มี~mâi-mii~not have เงินสด~ngən-sòt~cash = I don't have cash.
+E ผม~pǒm~I (m) มี~mii~have พี่สาว~pîi-sǎao~older sister หนึ่ง~nʉ̀ng~one คน~kon~(clf people) = I have one older sister.
+B เขา~kǎo~he ไม่มี~mâi-mii~not have แฟน~fɛɛn~partner = He's single.
+E ผม~pǒm~I (m) ไม่~mâi~not ชอบ~chɔ̂ɔp~like กาแฟ~gaa-fɛɛ~coffee = I don't like coffee.
+S เมื่อวาน~mʉ̂a-waan~yesterday ผม~pǒm~I (m) ไม่ได้~mâi-dâi~didn't ไป~bpai~go เรียน~rian~class = I didn't go to class yesterday.
+E เขา~kǎo~he ไม่ใช่~mâi-châi~is not คน~kon~person ไทย~tai~Thai = He's not Thai.
+S วันนี้~wan-níi~today ไม่มี~mâi-mii~there's no เรียน~rian~class = There's no class today.
+E ไม่มี~mâi-mii~there's no ปัญหา~bpan-hǎa~problem ครับ~kráp~(polite) = No problem.
+T ร้าน~ráan~shop นี้~níi~this ไม่มี~mâi-mii~not have เมนู~mee-nuu~menu ภาษาอังกฤษ~paa-sǎa-ang-grìt~English = This place has no English menu.
+E มี~mii~there is คน~kon~someone รอ~rɔɔ~wait คุณ~kun~you อยู่~yùu~(ongoing) = Someone is waiting for you.
+E ผม~pǒm~I (m) ไม่มี~mâi-mii~not have เวลา~wee-laa~time = I don't have time.
+
+## u05 | A1 | 5 · Question words | Question words sit where the answer would go, usually at the end: ไปไหน "go where?". อะไร what · ที่ไหน / ไหน where · ใคร who · เมื่อไหร่ when · ทำไม why (at the start) · ยังไง how · เท่าไหร่ how much · กี่ + classifier how many.
+E นี่~nîi~this คือ~kʉʉ~is อะไร~à-rai~what ครับ~kráp~(polite) = What is this?
+T ห้องน้ำ~hɔ̂ng-náam~toilet อยู่~yùu~be at ที่ไหน~tîi-nǎi~where ครับ~kráp~(polite) = Where's the toilet?
+E คุณ~kun~you จะ~jà~will ไป~bpai~go ไหน~nǎi~where = Where are you going?
+E เขา~kǎo~he เป็น~bpen~be ใคร~krai~who = Who is he?
+S สอบ~sɔ̀ɔp~exam เมื่อไหร่~mʉ̂a-rài~when = When is the exam?
+S ทำไม~tam-mai~why มา~maa~come สาย~sǎai~late = Why are you late?
+T ไป~bpai~go สนามบิน~sà-nǎam-bin~airport ยังไง~yang-ngai~how ครับ~kráp~(polite) = How do I get to the airport?
+T อัน~an~one (thing) นี้~níi~this ราคา~raa-kaa~price เท่าไหร่~tâo-rài~how much ครับ~kráp~(polite) = How much is this?
+E มี~mii~there are กี่~gìi~how many คน~kon~people = How many people are there?
+E ตอนนี้~dtɔɔn-níi~now กี่~gìi~how many โมง~moong~o'clock แล้ว~lɛ́ɛo~already = What time is it?
+B พี่~pîi~you (older) คิด~kít~think อะไร~à-rai~what อยู่~yùu~(ongoing) = What are you thinking about?
+E ใคร~krai~who บอก~bɔ̀ɔk~tell คุณ~kun~you = Who told you?
+E คุณ~kun~you ชอบ~chɔ̂ɔp~like กิน~gin~eat อะไร~à-rai~what = What do you like to eat?
+S อาจารย์~aa-jaan~professor อยู่~yùu~be in ห้อง~hɔ̂ng~room ไหน~nǎi~which ครับ~kráp~(polite) = Which room is the professor in?
+B ทำไม~tam-mai~why ไม่~mâi~not ตอบ~dtɔ̀ɔp~reply ข้อความ~kɔ̂ɔ-kwaam~message = Why didn't you reply to my message?
+E เรา~rao~we จะ~jà~will เจอ~jəə~meet กัน~gan~each other ที่ไหน~tîi-nǎi~where ดี~dii~(best) = Where should we meet?
+
+## u06 | A1 | 6 · Numbers and shopping | Numbers: หนึ่ง 1 สอง 2 สาม 3 สี่ 4 ห้า 5 หก 6 เจ็ด 7 แปด 8 เก้า 9 สิบ 10; 20 is ยี่สิบ, 11, 21… end in เอ็ด; ร้อย 100, พัน 1,000. หน่อย "a bit" softens requests; ไป after an adjective = "too (much)".
+E หนึ่ง~nʉ̀ng~one สอง~sɔ̌ɔng~two สาม~sǎam~three สี่~sìi~four ห้า~hâa~five = One, two, three, four, five.
+T อัน~an~one (thing) นี้~níi~this ร้อย~rɔ́ɔi~hundred บาท~bàat~baht = This one is a hundred baht.
+T ลด~lót~reduce หน่อย~nɔ̀i~a bit ได้~dâi~can ไหม~mái~(question) ครับ~kráp~(polite) = Can you give me a discount?
+Tf ลด~lót~reduce ให้~hâi~for (you) สิบ~sìp~ten บาท~bàat~baht ค่ะ~kâ~(polite, f) = I'll take ten baht off.
+T แพง~pɛɛng~expensive ไป~bpai~too หน่อย~nɔ̀i~a bit ครับ~kráp~(polite) = It's a bit too expensive.
+T สองร้อยห้าสิบ~sɔ̌ɔng-rɔ́ɔi-hâa-sìp~two hundred fifty บาท~bàat~baht ได้~dâi~can ไหม~mái~(question) = How about two hundred and fifty baht?
+T ผม~pǒm~I (m) เอา~ao~take อัน~an~one (thing) นี้~níi~this ครับ~kráp~(polite) = I'll take this one.
+T มี~mii~have สี~sǐi~colour อื่น~ʉ̀ʉn~other ไหม~mái~(question) ครับ~kráp~(polite) = Do you have other colours?
+T มี~mii~have ไซส์~sai~size ใหญ่~yài~big กว่า~gwàa~more than นี้~níi~this ไหม~mái~(question) = Do you have a bigger size?
+T จ่าย~jàai~pay ด้วย~dûai~with บัตร~bàt~card ได้~dâi~can ไหม~mái~(question) = Can I pay by card?
+T ขอ~kɔ̌ɔ~ask for ถุง~tǔng~bag ด้วย~dûai~too ครับ~kráp~(polite) = A bag too, please.
+T ทั้งหมด~táng-mòt~altogether เท่าไหร่~tâo-rài~how much ครับ~kráp~(polite) = How much is it altogether?
+B ผม~pǒm~I (m) ซื้อ~sʉ́ʉ~buy ของขวัญ~kɔ̌ɔng-kwǎn~gift ให้~hâi~for แฟน~fɛɛn~partner = I'm buying a present for my boyfriend.
+E ถูก~tùuk~cheap จัง~jang~so = So cheap!
+T แถว~tɛ̌ɛo~around นี้~níi~here มี~mii~there is เซเว่น~see-wên~7-Eleven ไหม~mái~(question) ครับ~kráp~(polite) = Is there a 7-Eleven around here?
+
+## u07 | A1 | 7 · Classifiers | Counting uses noun + number + classifier: น้ำ สอง ขวด "water, two bottles". คน people · ตัว animals, clothes · อัน small things · ใบ tickets, cards, bags · ขวด bottles · แก้ว glasses · จาน plates · เล่ม books · คัน vehicles · ห้อง rooms. Classifier + นี้/นั้น = "this/that one".
+T ขอ~kɔ̌ɔ~ask for น้ำ~náam~water สอง~sɔ̌ɔng~two ขวด~kùat~bottles ครับ~kráp~(polite) = Two bottles of water, please.
+T กาแฟ~gaa-fɛɛ~coffee เย็น~yen~iced หนึ่ง~nʉ̀ng~one แก้ว~gɛ̂ɛo~glass = One iced coffee.
+E ผม~pǒm~I (m) มี~mii~have แมว~mɛɛo~cat สอง~sɔ̌ɔng~two ตัว~dtua~(clf animals) = I have two cats.
+T เรา~rao~we มา~maa~come สี่~sìi~four คน~kon~people ครับ~kráp~(polite) = There are four of us.
+T ขอ~kɔ̌ɔ~ask for ข้าวผัด~kâao-pàt~fried rice หนึ่ง~nʉ̀ng~one จาน~jaan~plate = One plate of fried rice, please.
+S ผม~pǒm~I (m) ซื้อ~sʉ́ʉ~buy หนังสือ~nǎng-sʉ̌ʉ~book สาม~sǎam~three เล่ม~lêm~(clf books) = I bought three books.
+E รถ~rót~car คัน~kan~(clf vehicles) นั้น~nán~that ของ~kɔ̌ɔng~of ใคร~krai~who = Whose car is that?
+T ขอ~kɔ̌ɔ~ask for ตั๋ว~dtǔa~ticket สอง~sɔ̌ɔng~two ใบ~bai~(clf tickets) ครับ~kráp~(polite) = Two tickets, please.
+E เสื้อ~sʉ̂a~shirt ตัว~dtua~(clf clothes) นี้~níi~this สวย~sǔay~pretty มาก~mâak~very = This shirt is really nice.
+S นักศึกษา~nák-sʉ̀k-sǎa~student คน~kon~(clf people) นั้น~nán~that เก่ง~gèng~clever มาก~mâak~very = That student is really clever.
+T อยากได้~yàak-dâi~want อัน~an~one (thing) ไหน~nǎi~which = Which one do you want?
+T เอา~ao~take อัน~an~one (thing) เล็ก~lék~small = I'll take the small one.
+B ผู้ชาย~pûu-chaai~guy คน~kon~(clf people) นั้น~nán~that หล่อ~lɔ̀ɔ~handsome จัง~jang~so = That guy is so handsome.
+T โต๊ะ~dtó~table สำหรับ~sǎm-ràp~for สอง~sɔ̌ɔng~two คน~kon~people ครับ~kráp~(polite) = A table for two, please.
+
+## u08 | A1 | 8 · Want, need, can | อยาก + verb "want to"; อยากได้ + noun "want (to have)"; ต้อง "have to"; ไม่ต้อง "don't have to"; verb + ได้ "can"; verb + เป็น "know how to" (skills); ขอ … หน่อย "may I have…"; ช่วย … หน่อย "please (help) …"; ห้าม "must not".
+T ผม~pǒm~I (m) อยาก~yàak~want to ไป~bpai~go ทะเล~tá-lee~sea = I want to go to the beach.
+T ผม~pǒm~I (m) อยาก~yàak~want to กิน~gin~eat ส้มตำ~sôm-dtam~papaya salad = I want to eat som tam.
+E ผม~pǒm~I (m) ต้อง~dtɔ̂ng~have to ไป~bpai~go แล้ว~lɛ́ɛo~now = I have to go now.
+T คุณ~kun~you พูด~pûut~speak ภาษาอังกฤษ~paa-sǎa-ang-grìt~English ได้~dâi~can ไหม~mái~(question) = Can you speak English?
+E ผม~pǒm~I (m) ว่ายน้ำ~wâai-náam~swim ไม่เป็น~mâi-bpen~not know how = I can't swim.
+T ขอ~kɔ̌ɔ~ask for เมนู~mee-nuu~menu หน่อย~nɔ̀i~please ครับ~kráp~(polite) = Can I have the menu, please?
+T ช่วย~chûai~help ถ่ายรูป~tàai-rûup~take a photo ให้~hâi~for (me) หน่อย~nɔ̀i~please ได้~dâi~can ไหม~mái~(question) ครับ~kráp~(polite) = Could you take a photo for me?
+T ผม~pǒm~I (m) ไม่~mâi~not ต้องการ~dtɔ̂ng-gaan~need ถุง~tǔng~bag ครับ~kráp~(polite) = I don't need a bag.
+S พรุ่งนี้~prûng-níi~tomorrow ผม~pǒm~I (m) ต้อง~dtɔ̂ng~have to ส่ง~sòng~hand in การบ้าน~gaan-bâan~homework = I have to hand in my homework tomorrow.
+B ผม~pǒm~I (m) อยาก~yàak~want to เจอ~jəə~see พี่~pîi~you (older) = I want to see you.
+B อยาก~yàak~want ให้~hâi~(you) to พี่~pîi~you (older) อยู่~yùu~stay ด้วย~dûai~with (me) = I want you to stay with me.
+T ใช้~chái~use บัตรเครดิต~bàt-kree-dìt~credit card ได้~dâi~can ไหม~mái~(question) = Can I use a credit card?
+T ห้าม~hâam~forbidden ถ่ายรูป~tàai-rûup~take photos = No photos.
+S ขอ~kɔ̌ɔ~ask to ยืม~yʉʉm~borrow ปากกา~bpàak-gaa~pen หน่อย~nɔ̀i~please ได้~dâi~can ไหม~mái~(question) = Can I borrow a pen?
+E คุณ~kun~you ไม่ต้อง~mâi-dtɔ̂ng~don't have to จ่าย~jàai~pay ครับ~kráp~(polite) = You don't have to pay.
+
+## u09 | A1 | 9 · Food and ordering | ไม่เอา "don't want (it)"; ไม่ใส่ "without (don't put in)"; เผ็ด spicy · อร่อย tasty · อิ่ม full; กินที่นี่ "eat here", กลับบ้าน "take away". เอง "myself" stresses who: พี่เลี้ยงเอง "I'll treat".
+T แนะนำ~nɛ́-nam~recommend อะไร~à-rai~what ดี~dii~(good) ครับ~kráp~(polite) = What do you recommend?
+T ไม่~mâi~not เอา~ao~want เผ็ด~pèt~spicy นะ~ná~(soft) ครับ~kráp~(polite) = Not spicy, please.
+T เผ็ด~pèt~spicy นิดหน่อย~nít-nɔ̀i~a little ได้~dâi~is okay = A little spicy is fine.
+T ไม่~mâi~not ใส่~sài~put in ผักชี~pàk-chii~coriander ครับ~kráp~(polite) = No coriander, please.
+E อร่อย~à-rɔ̀i~delicious มาก~mâak~very ครับ~kráp~(polite) = It's delicious.
+E อิ่ม~ìm~full แล้ว~lɛ́ɛo~already ครับ~kráp~(polite) = I'm full.
+T ขอ~kɔ̌ɔ~ask for น้ำแข็ง~nám-kɛ̌ng~ice ด้วย~dûai~too = Ice too, please.
+Tf กิน~gin~eat ที่นี่~tîi-nîi~here หรือ~rʉ̌ʉ~or กลับบ้าน~glàp-bâan~take away คะ~ká~(polite question, f) = Eat here or take away?
+T กลับบ้าน~glàp-bâan~take away ครับ~kráp~(polite) = Take away.
+T ผม~pǒm~I (m) แพ้~pɛ́ɛ~be allergic to ถั่ว~tùa~peanuts = I'm allergic to peanuts.
+T ผม~pǒm~I (m) กิน~gin~eat มังสวิรัติ~mang-sà-wí-rát~vegetarian = I'm vegetarian.
+B ไป~bpai~go กิน~gin~eat ข้าว~kâao~food ด้วยกัน~dûai-gan~together ไหม~mái~(question) = Do you want to go eat together?
+B พี่~pîi~I (older) เลี้ยง~líang~treat เอง~eeng~myself = My treat.
+E หิวน้ำ~hǐu-náam~thirsty จัง~jang~so = I'm so thirsty.
+T เช็คบิล~chék-bin~check, bill ด้วย~dûai~please ครับ~kráp~(polite) = The bill, please.
+
+## u10 | A1 | 10 · Getting around | ไป + place, no "to" needed: ไปสยาม. ตรงไป straight on · เลี้ยวซ้าย/ขวา turn left/right · ใกล้ near · ไกล far · ขึ้น get on · ลง get off. เดี๋ยว "in a moment": what the speaker is about to do.
+T ไป~bpai~go สยาม~sà-yǎam~Siam ครับ~kráp~(polite) = To Siam, please.
+T ใช้~chái~use มิเตอร์~mí-dtə̂ə~meter ได้~dâi~can ไหม~mái~(question) ครับ~kráp~(polite) = Can you use the meter?
+T ตรงไป~dtrong-bpai~go straight ครับ~kráp~(polite) = Go straight on.
+T เลี้ยว~líao~turn ซ้าย~sáai~left ตรงนี้~dtrong-níi~here = Turn left here.
+T เลี้ยว~líao~turn ขวา~kwǎa~right ที่~tîi~at ไฟแดง~fai-dɛɛng~traffic lights = Turn right at the lights.
+T จอด~jɔ̀ɔt~stop ตรงนี้~dtrong-níi~here ได้~dâi~can ไหม~mái~(question) ครับ~kráp~(polite) = Can you stop here?
+T สถานี~sà-tǎa-nii~station รถไฟฟ้า~rót-fai-fáa~skytrain ไกล~glai~far ไหม~mái~(question) = Is the skytrain station far?
+Tf เดิน~dəən~walk ไป~bpai~go ได้~dâi~can ค่ะ~kâ~(polite, f) = You can walk there.
+T อยู่~yùu~be ใกล้ๆ~glâi-glâi~nearby ครับ~kráp~(polite) = It's close by.
+T ไป~bpai~go เชียงใหม่~chiang-mài~Chiang Mai ใช้เวลา~chái-wee-laa~take (time) กี่~gìi~how many ชั่วโมง~chûa-moong~hours = How many hours does it take to Chiang Mai?
+T ผม~pǒm~I (m) หลงทาง~lǒng-taang~lost ครับ~kráp~(polite) = I'm lost.
+T ขึ้น~kʉ̂n~get on รถไฟฟ้า~rót-fai-fáa~skytrain ไป~bpai~go อโศก~à-sòok~Asok = Take the skytrain to Asok.
+T ลง~long~get off ป้าย~bpâai~stop หน้า~nâa~next = Get off at the next stop.
+B เดี๋ยว~dǐao~in a moment พี่~pîi~I (older) ไป~bpai~go ส่ง~sòng~drop off ที่~tîi~at หอ~hɔ̌ɔ~dorm นะ~ná~(soft) = I'll take you back to your dorm.
+S มหาวิทยาลัย~má-hǎa-wít-tá-yaa-lai~university อยู่~yùu~be ตรงข้าม~dtrong-kâam~opposite ห้าง~hâang~mall = The university is opposite the mall.

@@ -214,14 +214,14 @@
     let k=0,html='';
     for(const w of it.words){
       const n=[...w.w].length,inner=cps.slice(k,k+n).map((_,j)=>span(k+j)).join('');
-      const romanized=/[a-z][1-6]/i.test(w.j||'');
+      const romanized=/[a-z]/i.test(w.j||'');
       html+=romanized?`<ruby>${inner}<rt>${romanHtml(w.j)}</rt></ruby>`:inner;
       k+=n;
     }
     while(k<cps.length){html+=span(k);k++;}
     return html;
   }
-  const LANG_NAME={yue:['粵','Cantonese'],zh:['普','Mandarin'],ja:['日','Japanese'],ko:['韓','Korean'],th:['泰','Thai'],en:['英','English']};
+  const LANG_NAME={th:['ไทย','Thai'],yue:['粵','Cantonese'],zh:['普','Mandarin'],ja:['日','Japanese'],ko:['韓','Korean'],en:['英','English']};
   const lookupLang=l=>l==='yue'?'zh':l;// Cantonese: the Chinese dictionaries (CantoDict, CC-CEDICT…)
 
   /** Mac: holding the hover key (Shift) over a word looks it up, as in books and videos; the last popup gives way. */
@@ -321,7 +321,7 @@
         <div><span>After a ${unit.toLowerCase()}</span>${chip('chain','next','next one')}${chip('chain','loop','again')}${chip('chain','stop','stop')}</div>
         <div><span>At the end</span>${chip('end','loop','start over')}${chip('end','stop','stop')}</div>
         <div><span>Pause on lookup</span>${chip('pause',true,'on')}${chip('pause',false,'off')}</div>
-        ${set.roman?`<div><span>Jyutping</span>${chip('roman','show','show')}${chip('roman','after','after hearing')}${chip('roman','hide','hide')}</div>
+        ${set.roman?`<div><span>${set.roman==='jyutping'?'Jyutping':'Romanization'}</span>${chip('roman','show','show')}${chip('roman','after','after hearing')}${chip('roman','hide','hide')}</div>
         <div><span>Word gloss</span>${chip('gloss',true,'show')}${chip('gloss',false,'hide')}</div>`:''}
         ${set.lang==='ja'?`<div><span>Pitch accent</span>${chip('accent',true,'show')}${chip('accent',false,'hide')}</div>`:''}`;
       f('opts').querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>{

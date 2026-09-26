@@ -1,0 +1,96 @@
+{
+  "about": "Sentences for judging text-to-speech voices in Kotoba's six learning languages. Each has the text to speak, what a good voice says (reading/romanization), and what it tests. The usual failures are marked hard: true.",
+  "languages": [
+    {
+      "lang": "ja", "name": "Japanese", "voice": "ja-JP",
+      "items": [
+        {"id": "ja-01", "text": "箸を持って、橋の端を渡る。", "expect": "HA-shi o motte, ha-SHI no hashi o wataru", "tests": "Pitch accent: 箸 (drop after ha), 橋 (drop after shi), 端 (flat)", "hard": true},
+        {"id": "ja-02", "text": "今日は四月一日で、二十日には八日ぶりに雨が降るらしい。", "expect": "kyō wa shigatsu tsuitachi de, hatsuka ni wa yōka-buri ni ame ga furu rashii", "tests": "Irregular date readings (一日 tsuitachi, 二十日 hatsuka, 八日 yōka); は read as wa", "hard": true},
+        {"id": "ja-03", "text": "生ビールを一杯と、焼き鳥を六本ください。", "expect": "nama-bīru o ippai to, yakitori o roppon kudasai", "tests": "Counters with sound changes (一杯 ippai, 六本 roppon); loanword"},
+        {"id": "ja-04", "text": "朝の市場で魚を買った後、株式市場のニュースを見た。", "expect": "asa no ichiba de … kabushiki shijō no nyūsu o mita", "tests": "Same kanji, two readings by context: 市場 ichiba / shijō", "hard": true},
+        {"id": "ja-05", "text": "彼は上手に日本語を話すけど、生まれは大阪です。", "expect": "kare wa jōzu ni nihongo o hanasu kedo, umare wa Ōsaka desu", "tests": "上手 jōzu (not uwate/kamite); 生 as umare; devoiced su in desu"},
+        {"id": "ja-06", "text": "昨日そこに行ったって言ってたよ。", "expect": "kinō soko ni ittatte itteta yo", "tests": "Casual contractions; 行った and 言って both with small っ"},
+        {"id": "ja-07", "text": "明日の会議は午後三時からですよね？", "expect": "ashita no kaigi wa gogo sanji kara desu yo ne?", "tests": "Question intonation with よね; 三時 sanji"},
+        {"id": "ja-08", "text": "申し訳ございませんが、ただいま担当者が席を外しております。", "expect": "mōshiwake gozaimasen ga, tadaima tantōsha ga seki o hazushite orimasu", "tests": "Formal keigo: long, even rhythm"},
+        {"id": "ja-09", "text": "スマホのバッテリーがヤバいから、ちょっとコンビニ寄っていい？", "expect": "sumaho no batterī ga yabai kara, chotto konbini yotte ii?", "tests": "Casual speech, katakana loanwords, rising question"},
+        {"id": "ja-10", "text": "「ええっ、マジで!?」って思わず叫んじゃった。", "expect": "ē', maji de!? tte omowazu sakenjatta", "tests": "Emotion and interjections: does it sound surprised or flat?", "hard": true}
+      ]
+    },
+    {
+      "lang": "ko", "name": "Korean", "voice": "ko-KR",
+      "items": [
+        {"id": "ko-01", "text": "국물이 정말 맛있네요.", "expect": "[궁무리 정말 마신네요]", "tests": "Nasalization and liaison (국물 → 궁물, 맛있네요 → 마신네요)", "hard": true},
+        {"id": "ko-02", "text": "신라 시대 유물을 보러 한라산 근처 박물관에 갔어요.", "expect": "[실라 … 할라산 … 방물관에 가써요]", "tests": "ㄴ+ㄹ → ㄹㄹ (신라 실라, 한라산 할라산); 박물관 방물관", "hard": true},
+        {"id": "ko-03", "text": "오후 세 시 삼십 분에 스물다섯 명이 모였어요.", "expect": "ohu se si samsip bun-e seumuldaseot myeong-i moyeosseoyo", "tests": "Native vs Sino numbers in the same sentence (세 시 / 삼십 분 / 스물다섯 명)", "hard": true},
+        {"id": "ko-04", "text": "오늘은 2026년 9월 24일이에요.", "expect": "오늘은 이천이십육 년 구 월 이십사 일이에요", "tests": "Reading a written date"},
+        {"id": "ko-05", "text": "민주주의의 의의를 생각해 봅시다.", "expect": "[민주주이에 의이를 …]", "tests": "The three pronunciations of 의", "hard": true},
+        {"id": "ko-06", "text": "기분이 좋지 않고 배도 고파요.", "expect": "[기부니 조치 안코 배도 고파요]", "tests": "ㅎ aspiration (좋지 조치, 않고 안코)"},
+        {"id": "ko-07", "text": "내일은 아마 할 수 있을 거예요.", "expect": "[할 쑤 이쓸 꺼예요]", "tests": "Tensification after -ㄹ (쑤, 꺼)"},
+        {"id": "ko-08", "text": "맛없는 음식은 먹기 싫어.", "expect": "[마덤는 음시근 먹끼 시러]", "tests": "맛없는 → 마덤는 (not 마섬는); 먹기 먹끼"},
+        {"id": "ko-09", "text": "할머니께서 진지 잡수셨어요?", "expect": "halmeonikkeseo jinji japsusyeosseoyo?", "tests": "Honorific vocabulary; polite question intonation"},
+        {"id": "ko-10", "text": "밥 먹었어? / 밥 먹었어.", "expect": "Same words: the first rises (question), the second falls (statement)", "tests": "Intonation alone carries the question", "hard": true}
+      ]
+    },
+    {
+      "lang": "zh", "name": "Mandarin", "voice": "zh-CN",
+      "items": [
+        {"id": "zh-01", "text": "妈、麻、马、骂、吗。", "expect": "mā má mǎ mà ma", "tests": "The four tones and the neutral tone"},
+        {"id": "zh-02", "text": "我也想买五把雨伞。", "expect": "wó yé xiáng mái wú bá yúsǎn (third-tone sandhi)", "tests": "A chain of third tones: how it groups them", "hard": true},
+        {"id": "zh-03", "text": "一天、一年、一个、一样；不去、不是。", "expect": "yì tiān, yì nián, yí gè, yí yàng; bú qù, bú shì", "tests": "Tone changes of 一 and 不", "hard": true},
+        {"id": "zh-04", "text": "银行行长还没还钱。", "expect": "yínháng hángzhǎng hái méi huán qián", "tests": "Characters with two readings: 行 háng, 长 zhǎng, 还 hái / huán", "hard": true},
+        {"id": "zh-05", "text": "我睡了一觉，觉得好多了。", "expect": "wǒ shuì le yí jiào, juéde hǎo duō le", "tests": "觉 jiào / jué"},
+        {"id": "zh-06", "text": "这件事你得好好想想，昨天考得怎么样？", "expect": "… nǐ děi hǎohǎo xiǎngxiang, zuótiān kǎo de zěnmeyàng?", "tests": "得 děi / de; reduplication 想想"},
+        {"id": "zh-07", "text": "二〇二六年九月二十四日，一杯咖啡三十八块五。", "expect": "èr líng èr liù nián jiǔ yuè èrshísì rì, yì bēi kāfēi sānshíbā kuài wǔ", "tests": "Year read digit by digit; money"},
+        {"id": "zh-08", "text": "老北京胡同儿里有个小孩儿在玩儿。", "expect": "hútòngr, xiǎoháir, wánr", "tests": "Erhua (儿化)"},
+        {"id": "zh-09", "text": "今天的meeting改到下午三点，别迟到啊。", "expect": "English word said naturally inside Mandarin", "tests": "Code-mixing"},
+        {"id": "zh-10", "text": "你是不是已经知道了？", "expect": "nǐ shì bu shì yǐjīng zhīdao le?", "tests": "A-not-A question; neutral tones (不, 道, 了)"}
+      ]
+    },
+    {
+      "lang": "yue", "name": "Cantonese", "voice": "yue-HK",
+      "items": [
+        {"id": "yue-01", "text": "詩、史、試、時、市、事。", "expect": "si1 si2 si3 si4 si5 si6", "tests": "All six tones on one syllable: 3/6 and 2/5 must not merge", "hard": true},
+        {"id": "yue-02", "text": "你食咗飯未呀？", "expect": "nei5 sik6 zo2 faan6 mei6 aa3?", "tests": "Everyday spoken Cantonese and a question particle"},
+        {"id": "yue-03", "text": "佢哋聽日唔得閒，下個禮拜先嚟啦。", "expect": "keoi5 dei6 ting1 jat6 m4 dak1 haan4, haa6 go3 lai5 baai3 sin1 lai4 laa1", "tests": "Spoken-only characters (佢哋, 唔, 嚟) that Mandarin-trained voices misread", "hard": true},
+        {"id": "yue-04", "text": "我喺銀行門口行咗好耐。", "expect": "ngo5 hai2 ngan4 hong4 mun4 hau2 haang4 zo2 hou2 noi6", "tests": "行 hong4 / haang4", "hard": true},
+        {"id": "yue-05", "text": "校長好長氣，呢個箱好重，要重新執過。", "expect": "haau6 zoeng2 hou2 coeng4 hei3, … hou2 cung5, jiu3 cung4 san1 zap1 gwo3", "tests": "長 zoeng2 / coeng4, 重 cung5 / cung4"},
+        {"id": "yue-06", "text": "今日係二〇二六年九月廿四號，一杯奶茶要三十八蚊半。", "expect": "… gau2 jyut6 jaa6 sei3 hou6, jat1 bui1 naai5 caa4 jiu3 saam1 sap6 baat3 man1 bun3", "tests": "Dates, 廿 jaa6, money (蚊, 半)"},
+        {"id": "yue-07", "text": "我 book 咗枱，聽晚七點 meet 你，唔好 late 呀。", "expect": "English words said the Hong Kong way inside Cantonese", "tests": "Code-mixing"},
+        {"id": "yue-08", "text": "買咗一條魚，戴住副眼鏡。", "expect": "… jat1 tiu4 jyu2, … ngaan5 geng2", "tests": "Changed tones in speech (魚 jyu4→jyu2, 鏡 geng3→geng2)", "hard": true},
+        {"id": "yue-09", "text": "你今晚去唔去呀？ ／ 你今晚去呀？", "expect": "Both are questions but should sound different", "tests": "Question intonation and particles"},
+        {"id": "yue-10", "text": "其實我一早就同你講咗，佢嗰個人講嘢唔算數，你信佢都冇用㗎喇。", "expect": "… nei5 seon3 keoi5 dou1 mou5 jung6 gaa3 laa3", "tests": "Long natural sentence; stacked particles 㗎喇; does it sound spoken or read?"},
+        {"id": "yue-11", "text": "他們明天不會來。 ／ 佢哋聽日唔會嚟。", "expect": "The first as formal Cantonese (taa1 mun4 …), not Mandarin; the second as speech", "tests": "Written Chinese vs spoken Cantonese"}
+      ]
+    },
+    {
+      "lang": "th", "name": "Thai", "voice": "th-TH",
+      "items": [
+        {"id": "th-01", "text": "ใครขายไข่ไก่", "expect": "khrai khǎai khài kài", "tests": "Tones (mid, rising, low, low) in a tongue twister", "hard": true},
+        {"id": "th-02", "text": "ไม้ใหม่ไม่ไหม้ใช่ไหม", "expect": "máai mài mâi mâi châi mǎi", "tests": "The same 'mai' in four tones", "hard": true},
+        {"id": "th-03", "text": "ผมเข้าไปกินข้าวกับเพื่อนนะครับ", "expect": "phǒm khâo pai kin khâao kàp phʉ̂an ná khráp", "tests": "Vowel length (เข้า khâo / ข้าว khâao); male particle ครับ", "hard": true},
+        {"id": "th-04", "text": "เด็กๆ กำลังเล่นกันอยู่ที่สวนสาธารณะ", "expect": "dèk dèk kamlang lên kan yùu thîi sǔan sǎathaaraná", "tests": "ๆ (say the word twice); word breaks without spaces"},
+        {"id": "th-05", "text": "วันที่ 24 กันยายน พ.ศ. 2569 ราคา 1,250 บาท", "expect": "wan thîi yîi-sìp-sìi kanyaayon phɔɔ-sɔ̌ɔ sɔ̌ɔng-phan-hâa-rɔ́ɔi-hòk-sìp-kâo, raakhaa nʉ̀ng-phan-sɔ̌ɔng-rɔ́ɔi-hâa-sìp bàat", "tests": "Digits, Buddhist-era year, the abbreviation พ.ศ.", "hard": true},
+        {"id": "th-06", "text": "กรุงเทพฯ รถติดมากทุกวันจันทร์", "expect": "krung-thêep rót tìt mâak thúk wan chan", "tests": "ฯ abbreviation; silent letters (จันทร์ chan); cluster กร"},
+        {"id": "th-07", "text": "หนูขอโทษค่ะ ไม่ได้ตั้งใจจริงๆ", "expect": "nǔu khɔ̌ɔ-thôot khâ, mâi dâi tâng-jai jing jing", "tests": "Female particle ค่ะ; apologetic tone"},
+        {"id": "th-08", "text": "โทรศัพท์แบตหมดแล้ว ขอยืมที่ชาร์จหน่อยได้ไหม", "expect": "thoorasàp bɛ̀t mòt lɛ́ɛo, khɔ̌ɔ yʉʉm thîi châat nɔ̀i dâi mǎi", "tests": "Loanwords (แบต, ชาร์จ); polite request question"},
+        {"id": "th-09", "text": "ผลไม้ เช่น มะม่วง ทุเรียน มังคุด ฯลฯ", "expect": "… mamûang thúrian mangkhút lɛ́ ʔʉ̀ʉn ʔʉ̀ʉn", "tests": "ฯลฯ read as และอื่นๆ ('etc.')"},
+        {"id": "th-10", "text": "ถ้าคุณบอกผมก่อนหน้านี้ ผมคงช่วยได้ทันเวลา", "expect": "thâa khun bɔ̀ɔk phǒm kɔ̀ɔn nâa níi, phǒm khong chûay dâi than weelaa", "tests": "Long natural sentence: rhythm and phrasing"}
+      ]
+    },
+    {
+      "lang": "ru", "name": "Russian", "voice": "ru-RU",
+      "items": [
+        {"id": "ru-01", "text": "В старом замке сломался дверной замок.", "expect": "в ста́ром за́мке слома́лся дверно́й замо́к", "tests": "Stress decides the word: за́мок (castle) / замо́к (lock)", "hard": true},
+        {"id": "ru-02", "text": "Все пришли вовремя, и все прошло хорошо.", "expect": "Все … и всё прошло́ хорошо́", "tests": "ё written as е: the second все is всё", "hard": true},
+        {"id": "ru-03", "text": "У меня 21 рубль, у тебя 22 рубля, а у него 25 рублей.", "expect": "два́дцать оди́н рубль, два́дцать два рубля́, два́дцать пять рубле́й", "tests": "Numbers agreeing with nouns"},
+        {"id": "ru-04", "text": "Встреча 24 сентября 2026 года в 15:30.", "expect": "два́дцать четвёртого сентября́ две ты́сячи два́дцать шесто́го го́да в пятна́дцать три́дцать", "tests": "Dates and times in the right case", "hard": true},
+        {"id": "ru-05", "text": "Фрукты, овощи, молоко и т. д. — всё есть рядом, т. е. никуда ходить не надо.", "expect": "… и так да́лее … то есть …", "tests": "Abbreviations т. д., т. е."},
+        {"id": "ru-06", "text": "Ты уже поел? / Ты уже поел.", "expect": "Same words: the first rises on поел (question), the second falls", "tests": "Question by intonation only", "hard": true},
+        {"id": "ru-07", "text": "Хорошо, сегодня вечером обязательно позвоню.", "expect": "[харашо́, сиво́дня ве́черам абяза́тельна пазваню́]", "tests": "Vowel reduction (akanye/ikanye); г read as в in сегодня"},
+        {"id": "ru-08", "text": "Покупка муки стала для меня настоящей мукой.", "expect": "муки́ (flour) … му́кой (torment)", "tests": "Stress decides the word: мука́ / му́ка"},
+        {"id": "ru-09", "text": "Скинь мне ссылку в Телеграм, я вечером посмотрю видео.", "expect": "… в телегра́м …", "tests": "Loanwords; casual speech"},
+        {"id": "ru-10", "text": "Если бы ты предупредил меня заранее, я бы, конечно, приехал и помог тебе с переездом.", "expect": "Natural phrasing at the commas", "tests": "Long sentence: rhythm and pauses"}
+      ]
+    }
+  ]
+}
