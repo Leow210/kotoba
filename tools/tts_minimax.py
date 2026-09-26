@@ -62,7 +62,7 @@ def main():
     ap.add_argument('--sample')
     ap.add_argument('--set')
     ap.add_argument('--voice', action='append')
-    ap.add_argument('--model', default='speech-02-hd')
+    ap.add_argument('--model', default='speech-2.8-hd')
     ap.add_argument('--speed', type=float, default=1.0)
     args = ap.parse_args()
     if args.voices:
