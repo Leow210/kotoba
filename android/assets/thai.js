@@ -130,8 +130,8 @@
   // ---------- write: draw the letter, then flip to compare ----------
   function write(body,d,u){
     let deck=shuffle(u.items),k=0;
-    const w=learned();
     function next(){
+      const w=learned();// read fresh each letter, so Got it counts at once
       if(k>=deck.length){deck=shuffle(u.items);k=0;}
       const it=deck[k],glyph=u.kind==='vowel'?vowelGlyph(it.ch):it.ch;let again=false;
       body.innerHTML=`<div class="th-write"><div class="th-ask"><b>${esc(it.name||('vowel '+it.sound))}</b><small>${u.kind==='consonant'?`${esc(it.cls)} class · ${esc(it.init)} · final ${esc(it.final)}`:`${esc(it.sound)} · ${esc(it.len)}`} · ${esc(it.word)} <i>${esc(it.rom)}</i> ${esc(it.mean)}</small>
@@ -149,11 +149,12 @@
       c.addEventListener('pointerup',()=>drawing=false);c.addEventListener('pointercancel',()=>drawing=false);
       const $b=a=>body.querySelector(`[data-a="${a}"]`);
       $b('hear').onclick=()=>play(it.nameAudio||it.wordAudio);
+      play(it.nameAudio||it.wordAudio);// each letter says its name as it comes up
       // Clear and Again stay on this letter: a blank pad, the answer hidden again.
       const reset=()=>{ctx.clearRect(0,0,c.width,c.height);body.querySelector('[data-f="answer"]').hidden=true;body.querySelector('[data-f="grade"]').hidden=true;$b('flip').hidden=false;};
       $b('clear').onclick=reset;
       $b('guide').onclick=()=>{const g=body.querySelector('[data-f="guide"]');g.hidden=!g.hidden;};
-      $b('flip').onclick=()=>{body.querySelector('[data-f="answer"]').hidden=false;body.querySelector('[data-f="grade"]').hidden=false;$b('flip').hidden=true;play(it.nameAudio);};
+      $b('flip').onclick=()=>{body.querySelector('[data-f="answer"]').hidden=false;body.querySelector('[data-f="grade"]').hidden=false;$b('flip').hidden=true;};
       // Again: try this letter once more now (and it comes back later in the round too).
       $b('again').onclick=()=>{if(!again){deck.splice(Math.min(deck.length,k+4),0,it);again=true;}reset();};
       $b('skip').onclick=()=>{k++;next();};
