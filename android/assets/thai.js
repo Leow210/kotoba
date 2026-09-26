@@ -133,12 +133,12 @@
     const w=learned();
     function next(){
       if(k>=deck.length){deck=shuffle(u.items);k=0;}
-      const it=deck[k],glyph=u.kind==='vowel'?vowelGlyph(it.ch):it.ch;
+      const it=deck[k],glyph=u.kind==='vowel'?vowelGlyph(it.ch):it.ch;let again=false;
       body.innerHTML=`<div class="th-write"><div class="th-ask"><b>${esc(it.name||('vowel '+it.sound))}</b><small>${u.kind==='consonant'?`${esc(it.cls)} class · ${esc(it.init)} · final ${esc(it.final)}`:`${esc(it.sound)} · ${esc(it.len)}`} · ${esc(it.word)} <i>${esc(it.rom)}</i> ${esc(it.mean)}</small>
           <button class="btn small" data-a="hear">${icon('play')} Hear</button></div>
         <div class="th-pad"><canvas data-f="pad"></canvas><div class="th-answer" data-f="answer" hidden>${esc(glyph)}</div><div class="th-guide" data-f="guide" hidden>${esc(glyph)}</div></div>
         <div class="th-write-btns"><button class="btn small" data-a="clear">Clear</button><button class="btn small" data-a="guide">Trace guide</button><button class="btn primary" data-a="flip">Show answer</button></div>
-        <div class="th-write-btns" data-f="grade" hidden><button class="btn" data-a="again">Again</button><button class="btn primary" data-a="got">Got it</button></div>
+        <div class="th-write-btns" data-f="grade" hidden><button class="btn" data-a="again">Again</button><button class="btn" data-a="skip">Next</button><button class="btn primary" data-a="got">Got it</button></div>
         <small class="hint">${Object.keys(w).filter(x=>u.items.some(i=>(i.ch||i.word)===x)).length} of ${u.items.length} written correctly so far</small></div>`;
       const c=body.querySelector('[data-f="pad"]'),ctx=c.getContext('2d');
       const size=()=>{const r=c.getBoundingClientRect(),dpr=devicePixelRatio||1;c.width=r.width*dpr;c.height=r.height*dpr;ctx.scale(dpr,dpr);ctx.lineCap='round';ctx.lineJoin='round';ctx.lineWidth=Math.max(6,r.width/38);ctx.strokeStyle=getComputedStyle(document.body).getPropertyValue('--ink')||'#222';};
@@ -149,10 +149,14 @@
       c.addEventListener('pointerup',()=>drawing=false);c.addEventListener('pointercancel',()=>drawing=false);
       const $b=a=>body.querySelector(`[data-a="${a}"]`);
       $b('hear').onclick=()=>play(it.nameAudio||it.wordAudio);
-      $b('clear').onclick=()=>{ctx.clearRect(0,0,c.width,c.height);};
+      // Clear and Again stay on this letter: a blank pad, the answer hidden again.
+      const reset=()=>{ctx.clearRect(0,0,c.width,c.height);body.querySelector('[data-f="answer"]').hidden=true;body.querySelector('[data-f="grade"]').hidden=true;$b('flip').hidden=false;};
+      $b('clear').onclick=reset;
       $b('guide').onclick=()=>{const g=body.querySelector('[data-f="guide"]');g.hidden=!g.hidden;};
       $b('flip').onclick=()=>{body.querySelector('[data-f="answer"]').hidden=false;body.querySelector('[data-f="grade"]').hidden=false;$b('flip').hidden=true;play(it.nameAudio);};
-      $b('again').onclick=()=>{deck.splice(Math.min(deck.length,k+3),0,it);k++;next();};
+      // Again: try this letter once more now (and it comes back later in the round too).
+      $b('again').onclick=()=>{if(!again){deck.splice(Math.min(deck.length,k+4),0,it);again=true;}reset();};
+      $b('skip').onclick=()=>{k++;next();};
       $b('got').onclick=()=>{const m=learned();m[it.ch||it.word]=1;store.set('thai.write',m);k++;next();};
     }
     next();
