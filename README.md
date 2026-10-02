@@ -51,6 +51,10 @@ Tap a preview to play the video. Each one is silent and about 15–25 seconds lo
 - MDict versions 1 and 2 are supported, including zlib/LZO compression and encrypted key indexes. Images, audio, CSS and cross-references are read from the `.mdd` files.
 - **Yomitan dictionaries** (`.zip`, e.g. from [MarvNC's collection](https://github.com/MarvNC/yomitan-dictionaries)) import natively rather than through MDX. Entries keep the dictionary's own `styles.css`, structured content and images, which are read from the ZIP in place. Frequency dictionaries (JPDB, CC100) become frequency ranks, and pitch data becomes pitch notes. A frequency dictionary can also be browsed as a ranked word list (search screen › Frequency lists, or its ⋯ menu), with jump to rank and "only words in my dictionaries"; tapping a word opens it.
   - The Yomitan format has no appendix (付録) pages, so those dictionaries have no furoku.
+- **German** (group German 独): `tools/build_german_dict.py` turns kaikki.org's extract of the English Wiktionary into a Yomitan ZIP (110k words with principal parts, senses, examples, synonyms, conjugation and declension tables) plus `form_bank_N.json`, an index of 438k inflected forms with their grammar that Kotoba reads into its forms table.
+  - A conjugated, declined or compared word finds its dictionary form with the grammar named (gegangen → gehen · past participle; Häuser → Haus · plural). Words typed without umlauts (fuer, strasse) find für, straße.
+  - A separable verb is found from its stem when the particle ends the clause (stehe um sieben Uhr **auf** → aufstehen), not when it is just a preposition (gehe heute auf den Markt → gehen). Compounds the dictionary lacks are split into their parts (Handyhülle → Handy + Hülle, with the linking s/n/e and plural stems); phrases the dictionary lists (zum Beispiel) are matched whole.
+  - Latin-script text goes to German when a German dictionary is enabled; the words are counted for known-words too.
 - Kotoba sorts dictionaries into groups, and a language's groups can have types: Japanese 国語, Kanji 漢字, and under Japanese 発音, 古語, 四字熟語, 慣用句・ことわざ, 類語, 文法, 人名・地名, 方言, 語源, 助数詞, 擬音語, 百科 and Frequency; then Korean (Hanja, Frequency), Chinese, Thai and Russian. Yomitan collection file tags such as `[JA-JA Kogo]` choose the default type.
   - Search chips: All · Japanese 国語 · Kanji 漢字 · **More 日本語 ▾** (each type, or every Japanese dictionary) · Korean…
 - **Library › Dictionaries** shows the groups as collapsible sections. Each group has a switch that turns it off entirely (it is left out of search, lookups, tabs and frequency), a ⋯ menu to move, rename or switch it, and a ≡ handle on every dictionary for dragging it into place. That order decides which dictionary's entry comes first when several have the word (e.g. 大辞林, then 明鏡).
@@ -231,6 +235,7 @@ PaddleOCR-VL: download `PaddleOCR-VL-1.6.litertlm` from [litert-community/Paddle
 | `android/src/app/kotoba/reader/MdictFile.java` | MDX/MDD reader |
 | `…/Library.java` | Import, indexes, search, resources, audio finder, browsing |
 | `…/Deinflect.java` | Japanese / Korean / Russian conjugation rules with explanations |
+| `…/German.java` | German words in text, umlaut-free spellings, separable-verb particles, compound splitting (inflected forms come from the dictionary's form index) |
 | `…/HtmlText.java` | Splits entry text into definitions and examples; search normalization |
 | `…/Store.java`, `Fsrs.java` | Folders, cards, reviews, export and backup; scheduler |
 | `…/Books.java`, `BookParser.java`, `ZipSource.java` | E-reader: library, EPUB/TXT parsing, random-access ZIP |

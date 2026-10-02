@@ -66,6 +66,29 @@ public class CoreTests {
         String[][] ruCases={{"читала","читать"},{"книги","книга"},{"говорю","говорить"},{"красивая","красивый"},{"занимаюсь","заниматься"},{"пишу","писать"},{"хожу","ходить"},{"столом","стол"}};
         for(String[] r:ruCases)check(has(Deinflect.russian(r[0]),r[1],null),"Russian "+r[0]+" → "+r[1]);
 
+        // German: words in text, umlaut-free spellings, separable particles, compounds.
+        check(German.firstWord("  „Geht's schon?“ sagte er").equals("Geht's"),"German first word keeps geht's");
+        check(German.firstWord("E-Mail-Adresse, bitte").equals("E-Mail-Adresse"),"German hyphen compound");
+        check(German.firstWord("gehen-").equals("gehen"),"German trailing hyphen dropped");
+        check(German.startsLatin("„Haus“")&&!German.startsLatin("家")&&!German.startsLatin("дом"),"German startsLatin");
+        check(German.respellings("fuer").contains("für")&&German.respellings("strasse").contains("straße")&&German.respellings("schoen").contains("schön"),"German respellings");
+        check(German.respellings("gross").contains("groß")&&!German.respellings("haus").contains("haus"),"German respellings exclude the word itself");
+        check(German.separableParticles(" um sieben Uhr auf.").equals(java.util.Arrays.asList("auf")),"German particle closes clause");
+        check(German.separableParticles(" heute auf den Markt").isEmpty(),"German auf den Markt is not a particle");
+        check(German.separableParticles(" mich an, weil").equals(java.util.Arrays.asList("an")),"German particle before comma");
+        check(German.separableParticles(" früh auf und geht").equals(java.util.Arrays.asList("auf")),"German particle before und");
+        check(German.separableParticles(", dann kommt er mit").isEmpty(),"German particle after comma belongs to another clause");
+        check(German.splits("first-person singular present")&&German.splits("singular imperative")&&!German.splits("past participle")&&!German.splits("zu-infinitive"),"German which forms split");
+        java.util.Set<String> deKnown=new java.util.HashSet<>(java.util.Arrays.asList("arbeit","zimmer","kind","kinder","haus","tür","donau","dampf","schiff","fahrt","gesellschaft","straße","bahn","erde","beere","handy","hülle","hand","schuh","zimmern"));
+        check(German.split("Arbeitszimmer",deKnown::contains).equals(java.util.Arrays.asList("arbeits","zimmer")),"German compound with Fugen-s");
+        check(German.split("Kinderzimmern",deKnown::contains).equals(java.util.Arrays.asList("kinder","zimmern")),"German compound with plural modifier and inflected head");
+        check(German.split("Haustür",deKnown::contains).equals(java.util.Arrays.asList("haus","tür")),"German plain compound");
+        check(German.split("Straßenbahn",deKnown::contains).equals(java.util.Arrays.asList("straßen","bahn")),"German compound with Fugen-n");
+        check(German.split("Erdbeere",deKnown::contains).equals(java.util.Arrays.asList("erd","beere")),"German compound dropping final e");
+        check(German.split("Donaudampfschifffahrt",deKnown::contains).equals(java.util.Arrays.asList("donau","dampf","schiff","fahrt")),"German four-part compound");
+        check(German.split("Handschuh",deKnown::contains).equals(java.util.Arrays.asList("hand","schuh")),"German Handschuh");
+        check(German.split("Zimmerxyz",deKnown::contains)==null&&German.split("Haus",deKnown::contains)==null,"German non-compounds");
+
         // Markup fixes for Monokakido exports.
         check(MarkupFix.html("<用例>x</用例>").equals("<span data-name=\"用例\">x</span>"),"non-ASCII tags become spans");
         check(MarkupFix.html("<audio><a href=\"sound://1.aac\">x</a></audio>").startsWith("<span data-name=\"audio\">"),"audio wrappers become spans");

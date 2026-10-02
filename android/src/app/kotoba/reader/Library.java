@@ -121,6 +121,9 @@ public class Library {
         // The word as the dictionary spells it (norm folds katakana), and rank order for browsing a frequency list.
         try{db.execSQL("ALTER TABLE meta ADD COLUMN term TEXT NOT NULL DEFAULT ''");}catch(Exception ignored){}
         db.execSQL("CREATE INDEX IF NOT EXISTS meta_rank ON meta(dict,mode,value)");
+        // Inflected forms of a dictionary (form_bank_N.json in a Yomitan ZIP): gegangen → gehen "past participle".
+        db.execSQL("CREATE TABLE IF NOT EXISTS dforms(dict INTEGER NOT NULL,norm TEXT NOT NULL,form TEXT NOT NULL,lemma TEXT NOT NULL,label TEXT NOT NULL DEFAULT '')");
+        db.execSQL("CREATE INDEX IF NOT EXISTS dforms_norm ON dforms(norm,dict)");
         // Index version: 1 = heading spellings (【落(ち)合う】) and separator-free headings (おちあ・う → おちあう) are keys too.
         try{db.execSQL("ALTER TABLE dicts ADD COLUMN keys_v INTEGER NOT NULL DEFAULT 0");}catch(Exception ignored){}
         // Byte sizes of the dictionary's files ([mdx, mdd…]): a moved file is only relinked to an identical one.
@@ -182,6 +185,7 @@ public class Library {
         if(title.matches(".*(中日|日中|中国|Chinese|汉).*"))return "Chinese";
         if(title.matches(".*(タイ|Thai|ไทย).*"))return "Thai";
         if(title.matches(".*(ロシア|露|Russian|Русск).*"))return "Russian";
+        if(title.matches(".*(ドイツ|独和|German|Deutsch|\\bDE-).*"))return "German";
         if(title.matches(".*(英和|和英|English).*"))return "English";
         return "Japanese";
     }
@@ -452,6 +456,8 @@ public class Library {
         }finally{i.end();}
     }
 
+    /** An inflected-form index: rows [form, lemma, grammar]. Not part of Yomitan's format; Kotoba's German dictionary has one. */
+    static final Pattern FORM_BANK=Pattern.compile("(?i)(?:.*/)?form_bank_(\\d+)\\.json");
     static final Pattern BANK=Pattern.compile("(?i)(?:.*/)?(term|kanji|term_meta|kanji_meta|tag)_bank_(\\d+)\\.json");
 
     /** Title of a Yomitan ZIP (from index.json), or null when the ZIP isn't a Yomitan dictionary. */
@@ -466,7 +472,8 @@ public class Library {
     static String yomitanGroup(String file,String title,String kind){
         String f=file+" "+title;
         String lang=f.matches("(?s).*(\\[KO|KO-|KRDICT|STDICT|OPENDICT|[Hh]anja|Korean|[\\uac00-\\ud7a3]).*")?"Korean"
-            :f.matches("(?s).*(\\[ZH|ZH-|CEDICT|Mandarin|Cantonese|CantoDict|粵|汉|漢語|國語辭典|现代汉语).*")?"Chinese":"Japanese";
+            :f.matches("(?s).*(\\[ZH|ZH-|CEDICT|Mandarin|Cantonese|CantoDict|粵|汉|漢語|國語辭典|现代汉语).*")?"Chinese"
+            :f.matches("(?s).*(\\[DE|DE-|German|Deutsch).*")?"German":"Japanese";
         String sub="";
         if(kind.equals("freq")||f.matches("(?is).*(\\bFreq|Frequency|CC100).*"))sub="Frequency";
         else if(f.matches("(?is).*\\bPitch.*"))return PRONUNCIATION;
@@ -504,10 +511,12 @@ public class Library {
         try{
             Yomitan.Index index=Yomitan.index(utf8(zip.bytes("index.json")));
             String title=index.title;
-            ArrayList<ZipSource.Entry> terms=new ArrayList<>(),kanjis=new ArrayList<>(),metas=new ArrayList<>(),tagBanks=new ArrayList<>();
+            ArrayList<ZipSource.Entry> terms=new ArrayList<>(),kanjis=new ArrayList<>(),metas=new ArrayList<>(),tagBanks=new ArrayList<>(),formBanks=new ArrayList<>();
             java.util.Map<ZipSource.Entry,Integer> number=new HashMap<>();
             long total=0;int media=0;
             for(ZipSource.Entry e:zip.entries.values()){
+                Matcher fm=FORM_BANK.matcher(e.name);
+                if(fm.matches()){number.put(e,Integer.parseInt(fm.group(1)));formBanks.add(e);continue;}
                 Matcher m=BANK.matcher(e.name);
                 if(!m.matches()){if(!e.name.endsWith("/")&&!e.name.endsWith(".json"))media++;continue;}
                 number.put(e,Integer.parseInt(m.group(2)));
@@ -516,7 +525,7 @@ public class Library {
                 if(!type.equals("tag"))total+=e.size;
             }
             java.util.Comparator<ZipSource.Entry> byNumber=(a,b)->number.get(a)-number.get(b);
-            terms.sort(byNumber);kanjis.sort(byNumber);metas.sort(byNumber);tagBanks.sort(byNumber);
+            terms.sort(byNumber);kanjis.sort(byNumber);metas.sort(byNumber);tagBanks.sort(byNumber);formBanks.sort(byNumber);
             if(terms.isEmpty()&&kanjis.isEmpty()&&metas.isEmpty())throw new Exception("This ZIP has no Yomitan term, kanji or frequency banks.");
             String kind=!terms.isEmpty()?"term":!kanjis.isEmpty()?"kanji":"freq";
             ZipSource.Entry styles=zip.find("styles.css");
@@ -621,6 +630,22 @@ public class Library {
                     }catch(RuntimeException x){throw x.getCause() instanceof Exception?(Exception)x.getCause():x;}
                 }
                 writer.finish();
+                SQLiteStatement insertForm=db.compileStatement("INSERT INTO dforms(dict,norm,form,lemma,label) VALUES(?,?,?,?,?)");
+                for(ZipSource.Entry e:formBanks){
+                    try(java.io.Reader r=new java.io.InputStreamReader(zip.stream(e),StandardCharsets.UTF_8)){
+                        new Yomitan.Json(r).eachInArray(row->{
+                            List<Object> x=Yomitan.list(row);
+                            String form=Yomitan.str(Yomitan.at(x,0)).trim(),lemma=Yomitan.str(Yomitan.at(x,1)).trim(),n=HtmlText.normalize(form);
+                            if(n.isEmpty()||lemma.isEmpty())return;
+                            insertForm.bindLong(1,dictId);insertForm.bindString(2,n);insertForm.bindString(3,form);insertForm.bindString(4,lemma);insertForm.bindString(5,Yomitan.str(Yomitan.at(x,2)));
+                            insertForm.executeInsert();
+                            if(++done[1]%20000==0){
+                                if(progress.cancelled())throw new RuntimeException(new InterruptedException("Import cancelled"));
+                                progress.update("Indexing inflected forms",done[0],totalChars);
+                            }
+                        });
+                    }catch(RuntimeException x){throw x.getCause() instanceof Exception?(Exception)x.getCause():x;}
+                }
                 for(ZipSource.Entry e:kanjis){
                     try(CountingReader r=new CountingReader(new java.io.InputStreamReader(zip.stream(e),StandardCharsets.UTF_8))){
                         new Yomitan.Json(r).eachInArray(row->{
@@ -1026,6 +1051,7 @@ public class Library {
             db.execSQL("DELETE FROM ytext WHERE rec IN (SELECT id FROM records WHERE dict=?)",new Object[]{id});
             db.execSQL("DELETE FROM ydict WHERE dict=?",new Object[]{id});
             db.execSQL("DELETE FROM meta WHERE dict=?",new Object[]{id});
+            db.execSQL("DELETE FROM dforms WHERE dict=?",new Object[]{id});
             db.execSQL("DELETE FROM records WHERE dict=?",new Object[]{id});
             db.execSQL("DELETE FROM anchors WHERE dict=?",new Object[]{id});
             db.execSQL("DELETE FROM resources WHERE dict=?",new Object[]{id});
@@ -1986,7 +2012,234 @@ public class Library {
             return list;
         });
     }
-    void dictionariesChanged(){verbCache.clear();mixedCache.clear();}
+    void dictionariesChanged(){verbCache.clear();mixedCache.clear();germanPresent=null;germanIdSet=null;germanKnownCache.clear();}
+
+    // ---------- German ----------
+    // German comes from the dictionary's own form index (dforms): every inflected form with its grammar, so gegangen
+    // finds gehen as "past participle". What the index can't hold is found by rule: words typed without umlauts, a
+    // separable verb split across a clause (stehe … auf), compounds (Arbeitszimmer), hyphenated compounds.
+    static final String DE_DICT="(d.grp='German' OR d.grp LIKE 'German/%')";
+    volatile Boolean germanPresent;
+    volatile java.util.Set<Long> germanIdSet;
+    final java.util.Map<String,Boolean> germanKnownCache=new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** Whether a German dictionary is enabled (Latin-script text is only treated as German then). */
+    public boolean germanOn(){
+        Boolean g=germanPresent;
+        if(g==null){
+            try(Cursor c=db.rawQuery("SELECT 1 FROM dicts d WHERE d.enabled=1 AND d.status='ready' AND d.kind='term' AND "+DE_DICT+" LIMIT 1",null)){g=c.moveToFirst();}
+            germanPresent=g;
+        }
+        return g;
+    }
+    java.util.Set<Long> germanIds() throws Exception {
+        java.util.Set<Long> ids=germanIdSet;
+        if(ids==null){
+            ids=new java.util.HashSet<>();
+            JSONArray r=Store.rows(db,"SELECT id FROM dicts d WHERE d.enabled=1 AND d.status='ready' AND d.kind='term' AND "+DE_DICT);
+            for(int i=0;i<r.length();i++)ids.add(r.getJSONObject(i).getLong("id"));
+            germanIdSet=ids;
+        }
+        return ids;
+    }
+    /** {lemma, grammar} for an inflected form (normalized spelling), from every enabled German dictionary. */
+    List<String[]> germanFormRows(String norm){
+        ArrayList<String[]> out=new ArrayList<>();
+        if(norm.isEmpty())return out;
+        try(Cursor c=db.rawQuery("SELECT f.lemma,f.label FROM dforms f JOIN dicts d ON d.id=f.dict WHERE f.norm=? AND d.enabled=1 AND d.status='ready'",new String[]{norm})){
+            while(c.moveToNext())out.add(new String[]{c.getString(0),c.getString(1)});
+        }
+        return out;
+    }
+    /** A headword or inflected form in a German dictionary. */
+    boolean germanKnown(String word){
+        String n=HtmlText.normalize(word);
+        if(n.isEmpty())return false;
+        Boolean k=germanKnownCache.get(n);
+        if(k!=null)return k;
+        boolean found;
+        try(Cursor c=db.rawQuery("SELECT 1 FROM keys k JOIN dicts d ON d.id=k.dict WHERE k.norm=? AND d.enabled=1 AND d.status='ready' AND d.kind='term' AND "+DE_DICT+" LIMIT 1",new String[]{n})){found=c.moveToFirst();}
+        if(!found)found=!germanFormRows(n).isEmpty();
+        if(germanKnownCache.size()>50000)germanKnownCache.clear();
+        germanKnownCache.put(n,found);
+        return found;
+    }
+    /** The German pages for a lemma; the page spelled exactly so (Essen, not essen) when there is one. */
+    JSONArray germanEntries(String lemma) throws Exception {
+        java.util.Set<Long> ids=germanIds();
+        JSONArray rows=wordEntries(exact(lemma,null,false)),mine=new JSONArray(),same=new JSONArray();
+        for(int i=0;i<rows.length();i++){
+            JSONObject r=rows.getJSONObject(i);
+            if(!ids.contains(r.optLong("dict")))continue;
+            mine.put(r);
+            if(r.optString("page").equals(lemma))same.put(r);
+        }
+        return same.length()>0?same:mine;
+    }
+    static long biggest(JSONArray rows){long m=0;for(int i=0;i<rows.length();i++)m=Math.max(m,rows.getJSONObject(i).optLong("size"));return m;}
+
+    /** "label one; label two (+3)" from the form index's " | "-joined grammar. */
+    static String germanExplain(List<String> labels){
+        if(labels.isEmpty())return "";
+        return labels.size()>1?labels.get(0)+" (+"+(labels.size()-1)+")":labels.get(0);
+    }
+    JSONObject germanAnalysis(String base,String explain,String chain,JSONArray items,int rank) throws Exception {
+        JSONArray steps=new JSONArray();
+        if(!explain.isEmpty())steps.put(new JSONObject().put("suffix","").put("label",explain));
+        return new JSONObject().put("base",base).put("explain",explain).put("chain",chain).put("steps",steps).put("items",items).put("size",biggest(items)).put("rank",rank);
+    }
+
+    /**
+     * What a German word can be, best first: the word itself, each dictionary form it is an inflection of (with the
+     * grammar), the separable verb it belongs to when the clause ends with the particle (after), else a compound.
+     * With includeExact false the word's own pages are left out (a search already shows them).
+     */
+    List<JSONObject> germanAnalyses(String word,String after,boolean includeExact) throws Exception {
+        ArrayList<JSONObject> out=new ArrayList<>();
+        java.util.LinkedHashSet<String> variants=new java.util.LinkedHashSet<>();
+        variants.add(word);
+        if(after.startsWith("'")||after.startsWith("’"))variants.add(word+"e");// hab' → habe
+        String w1=word.replaceFirst("['’]s$","");
+        if(!w1.equals(word)&&w1.length()>1){variants.add(w1);}// geht's → geht
+        boolean found=false;
+        ArrayList<String> tried=new ArrayList<>(variants);
+        for(int pass=0;pass<2&&!found;pass++){
+            if(pass==1){tried.clear();for(String v:variants)tried.addAll(German.respellings(v));}
+            for(String v:tried){
+                String vn=HtmlText.normalize(v);
+                if(includeExact){
+                    JSONArray rows=germanEntries(v);
+                    if(rows.length()>0){
+                        found=true;
+                        // A lower-case word that only matches a noun's capitalized page (hab' → Habe) is rarely that noun.
+                        String page=rows.getJSONObject(0).optString("page",v);
+                        boolean clash=!page.isEmpty()&&Character.isLowerCase(v.charAt(0))&&Character.isUpperCase(page.charAt(0));
+                        out.add(germanAnalysis(rows.getJSONObject(0).optString("key",v),"","",rows,clash||!v.equals(word)?1:0));
+                    }
+                }
+                java.util.LinkedHashMap<String,List<String>> byLemma=new java.util.LinkedHashMap<>();
+                for(String[] f:germanFormRows(vn)){
+                    if(HtmlText.normalize(f[0]).equals(vn))continue;
+                    List<String> labels=byLemma.computeIfAbsent(f[0],k->new ArrayList<>());
+                    for(String l:f[1].split(" \\| "))if(!l.isEmpty()&&!labels.contains(l))labels.add(l);
+                }
+                for(java.util.Map.Entry<String,List<String>> e:byLemma.entrySet()){
+                    JSONArray rows=germanEntries(e.getKey());
+                    if(rows.length()==0)continue;
+                    found=true;
+                    String lemma=rows.getJSONObject(0).optString("key",e.getKey());
+                    JSONObject a=germanAnalysis(lemma,germanExplain(e.getValue()),v+" ← "+lemma,rows,1);
+                    // A separable verb's forms: stehe … auf is aufstehen when auf closes the clause.
+                    if(!after.isEmpty()&&!lemma.contains(" ")&&e.getValue().stream().anyMatch(German::splits)){
+                        for(String particle:German.separableParticles(after)){
+                            String prefixed=particle+lemma;
+                            boolean listed=false;
+                            for(String[] f:germanFormRows(HtmlText.normalize(v+" "+particle)))if(f[0].equalsIgnoreCase(prefixed)){listed=true;break;}
+                            if(!listed)continue;
+                            JSONArray sep=germanEntries(prefixed);
+                            if(sep.length()==0)continue;
+                            List<String> sl=new ArrayList<>();
+                            for(String l:e.getValue())if(German.splits(l))sl.add(l);
+                            JSONObject s=germanAnalysis(sep.getJSONObject(0).optString("key",prefixed),germanExplain(sl)+" · separable: "+v+" … "+particle,v+" … "+particle+" ← "+prefixed,sep,-1);
+                            s.put("separable",particle);
+                            out.add(s);
+                        }
+                    }
+                    out.add(a);
+                }
+            }
+        }
+        if(out.isEmpty()&&!germanKnown(word)){
+            JSONObject c=germanCompound(word);
+            if(c!=null)out.add(c);
+        }
+        // Separable first, then the word as written, then forms: the fuller entry first among those.
+        // Nouns are capitalized: a capitalized word weighs towards a noun (nach Hause → Haus, not hausen), a lower-case one away.
+        boolean upper=Character.isUpperCase(word.charAt(0));
+        for(JSONObject a:out){
+            String base=a.optString("base","");
+            boolean same=!base.isEmpty()&&Character.isUpperCase(base.charAt(0))==upper;
+            a.put("score",a.optLong("size")*(same?4:1));
+        }
+        out.sort((a,b)->a.optInt("rank")!=b.optInt("rank")?a.optInt("rank")-b.optInt("rank"):Long.compare(b.optLong("score"),a.optLong("score")));
+        return out;
+    }
+
+    /** A compound (Arbeitszimmer → Arbeit + Zimmer; E-Mail-Adresse), with the pages of each part. Null when it isn't one. */
+    JSONObject germanCompound(String word) throws Exception {
+        List<String> parts=null;
+        if(word.indexOf('-')>0&&word.indexOf('-')<word.length()-1){
+            List<String> h=new ArrayList<>(java.util.Arrays.asList(word.split("-")));
+            boolean all=h.size()>=2;
+            for(String p:h)if(p.isEmpty()||!germanKnown(p)){all=false;break;}
+            if(all)parts=h;
+        }
+        if(parts==null)parts=German.split(word,this::germanKnown);
+        if(parts==null)return null;
+        JSONArray items=new JSONArray();
+        java.util.Set<Long> seen=new java.util.HashSet<>();
+        ArrayList<String> names=new ArrayList<>();
+        String lastKey=word;
+        for(int i=parts.size()-1;i>=0;i--){
+            String piece=parts.get(i);
+            String stem=German.stem(piece,this::germanKnown);
+            JSONArray rows=germanEntries(stem);
+            if(rows.length()==0){
+                List<String[]> f=germanFormRows(HtmlText.normalize(stem));
+                if(!f.isEmpty())rows=germanEntries(f.get(0)[0]);
+            }
+            if(rows.length()==0)return null;
+            if(i==parts.size()-1)lastKey=rows.getJSONObject(0).optString("key",stem);
+            for(int k=0;k<rows.length()&&k<2;k++)if(seen.add(rows.getJSONObject(k).getLong("rec")))items.put(rows.get(k));
+            names.add(0,rows.getJSONObject(0).optString("key",stem));
+        }
+        if(items.length()==0)return null;
+        return germanAnalysis(lastKey,"compound: "+German.show(parts),String.join(" + ",names),items,2);
+    }
+
+    JSONArray germanForms(String q) throws Exception {
+        String word=German.firstWord(q);
+        JSONArray out=new JSONArray();
+        if(word.isEmpty()||!HtmlText.normalize(word).equals(HtmlText.normalize(q.replaceAll("[^\\p{L}'’-]","")))||word.length()<2)return out;
+        for(JSONObject a:germanAnalyses(word,"",false)){
+            if(out.length()>=3)break;
+            a.remove("size");a.remove("rank");a.remove("score");out.put(a);
+        }
+        return out;
+    }
+
+    /**
+     * Latin-script text in a German dictionary's language: a phrase the dictionary lists (zum Beispiel), else the
+     * first word with its dictionary form, separable verb or compound. Null when the word isn't German (the caller carries on).
+     */
+    JSONObject germanLookup(String clean) throws Exception {
+        List<String> words=German.words(clean,5);
+        if(words.isEmpty())return null;
+        // The text with its own spacing, cut after the n-th word.
+        int[] ends=new int[words.size()];
+        int at=0;
+        for(int i=0;i<words.size();i++){at=clean.indexOf(words.get(i),at)+words.get(i).length();ends[i]=at;}
+        for(int k=Math.min(4,words.size());k>=2;k--){
+            String phrase=clean.substring(clean.indexOf(words.get(0)),ends[k-1]);
+            JSONArray rows=germanEntries(phrase);
+            if(rows.length()>0)return new JSONObject().put("matched",phrase).put("key",rows.getJSONObject(0).optString("key",phrase)).put("items",rows).put("forms",new JSONArray()).put("kanji",new JSONArray());
+        }
+        String word=words.get(0);
+        String after=clean.substring(ends[0]);
+        List<JSONObject> analyses=germanAnalyses(word,after,true);
+        if(analyses.isEmpty())return null;
+        JSONObject a0=analyses.get(0);
+        JSONArray items=new JSONArray(),forms=new JSONArray();
+        java.util.Set<Long> seen=new java.util.HashSet<>();
+        for(JSONObject a:analyses){
+            JSONArray rows=a.getJSONArray("items");
+            for(int i=0;i<rows.length();i++)if(seen.add(rows.getJSONObject(i).getLong("rec")))items.put(rows.get(i));
+            if(forms.length()<4)forms.put(a);
+        }
+        String matched=word;
+        // A separable verb matches only its stem here: the particle is another tap.
+        return new JSONObject().put("matched",matched).put("key",a0.getString("base")).put("items",items).put("explain",a0.optString("explain","")).put("forms",forms).put("kanji",new JSONArray());
+    }
 
     /**
      * Dictionary forms for a conjugated word (食べさせられた, 추웠어요, читала), each with its grammatical explanation.
@@ -2005,6 +2258,8 @@ public class Library {
             return out2;
         }else if(q.chars().anyMatch(c->c>=0x0400&&c<=0x04FF)){
             candidates=Deinflect.russian(q.replace("\u0301","").replace("\u0300",""));
+        }else if(German.startsLatin(q)&&germanOn()){
+            return germanForms(q);
         }else if(q.chars().anyMatch(c->(c>=0x3040&&c<=0x30ff)||(c>=0x4e00&&c<=0x9fff))){
             candidates=Deinflect.japanese(q);
         }else return out;
@@ -2080,7 +2335,7 @@ public class Library {
     }
     static String langOfGroup(String g){
         g=g.split("/")[0];
-        return g.equals("Japanese")||g.equals("Kanji")?"ja":g.equals("Korean")?"ko":g.equals("Chinese")?"zh":g.equals("Thai")?"th":g.equals("Russian")?"ru":"";
+        return g.equals("Japanese")||g.equals("Kanji")?"ja":g.equals("Korean")?"ko":g.equals("Chinese")?"zh":g.equals("Thai")?"th":g.equals("Russian")?"ru":g.equals("German")?"de":"";
     }
     /** The language a word is written in when its script says so (Hangul, kana, Thai, Cyrillic), else the fallback. */
     public static String langOfWord(String w,String fallback){
@@ -2112,6 +2367,21 @@ public class Library {
                     JSONObject r=lookup(w,"");
                     base=r.getJSONArray("items").length()>0?r.optString("key",""):"";
                     baseCache.put("ko:"+w,base);
+                }
+                if(!base.isEmpty())count(out,base,w);
+            }
+            return out;
+        }
+        if("de".equals(lang)){
+            Matcher m=Pattern.compile("\\p{L}[\\p{L}'\u2019-]*").matcher(text);
+            while(m.find()){
+                String w=German.firstWord(m.group());
+                if(w.length()<2)continue;
+                String base=baseCache.get("de:"+w);
+                if(base==null){
+                    JSONObject r=lookup(w,"de");
+                    base=r.getJSONArray("items").length()>0?r.optString("key",""):"";
+                    baseCache.put("de:"+w,base);
                 }
                 if(!base.isEmpty())count(out,base,w);
             }
@@ -2155,6 +2425,11 @@ public class Library {
     /** lang (zh, th): text scanned from a Chinese or Thai screen looks in that language's dictionaries first. */
     public JSONObject lookup(String text,String lang) throws Exception {
         String clean=text.trim();
+        // Latin-script text goes to a German dictionary when one is enabled (and the caller doesn't say it's another language).
+        if((lang==null||lang.isEmpty()||"de".equals(lang))&&German.startsLatin(clean)&&germanOn()){
+            JSONObject de=germanLookup(clean);
+            if(de!=null)return de;
+        }
         String group="zh".equals(lang)?"Chinese":"th".equals(lang)?"Thai":null;
         if(group!=null){
             java.util.Set<Long> ids=new java.util.HashSet<>();

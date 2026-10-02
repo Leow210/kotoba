@@ -280,6 +280,10 @@ img,svg{max-height:calc(100vh - ${2*m}px)!important}`;
     }else{
       css+=`body{padding:${m+30}px ${m}px ${m+70}px!important;max-width:none!important}`;
     }
+    // Some books put their text straight in <body> (no <p>): `body *` doesn't reach it, so the body itself must be selectable.
+    const bare=state.doc&&[...state.doc.body.childNodes].some(n=>n.nodeType===3&&n.nodeValue.trim());
+    if(bare)css+=`
+html,body{-webkit-user-select:text!important;user-select:text!important}`;
     return css;
   }
   function applyStyle(){
@@ -527,8 +531,10 @@ img,svg{max-height:calc(100vh - ${2*m}px)!important}`;
     if(/[가-힣Ѐ-ӿA-Za-z]/.test(ch)){while(off>0&&/[\p{L}\p{N}]/u.test(text[off-1]))off--;}
     // Collect up to 30 characters across following text nodes.
     let chunk=text.slice(off);const walker=doc.createTreeWalker(doc.body,NodeFilter.SHOW_TEXT);walker.currentNode=node;
-    let t;while(chunk.length<30&&(t=walker.nextNode()))if(!inRuby(t))chunk+=t.nodeValue;
-    chunk=chunk.slice(0,30);
+    // Latin text reads further (a German verb's particle ends its clause: "stehe um sieben Uhr auf").
+    const reach=/[A-Za-zÀ-ÿ]/.test(ch)?120:30;
+    let t;while(chunk.length<reach&&(t=walker.nextNode()))if(!inRuby(t))chunk+=t.nodeValue;
+    chunk=chunk.slice(0,reach);
     handle(async()=>{
       const res=await api('lookup',{text:chunk});
       if(!res.items.length){toast('No dictionary entry here',1500);return;}

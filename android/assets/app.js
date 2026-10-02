@@ -228,8 +228,8 @@ function renderSearchThesaurusToggle(){
 // The same switch keeps thesaurus pages out of lookup popups (main window, video player, helper, overlay).
 const syncThesaurusSetting=()=>api('setting',{key:'hide_thesaurus',value:settings.search_thesaurus===false?'1':''}).catch(()=>{});
 $('search-thesaurus-toggle').onclick=()=>{settings.search_thesaurus=settings.search_thesaurus===false;saveLocalSettings();renderSearchThesaurusToggle();syncThesaurusSetting();runSearch();};
-const GROUP_ORDER=['Japanese','Kanji','Korean','Chinese','Thai','Russian','English'];
-const GROUP_LABEL={Japanese:'Japanese 国語',Kanji:'Kanji 漢字',Pronunciation:'Pronunciation 発音',Korean:'Korean 韓',Chinese:'Chinese 中',Thai:'Thai タイ',Russian:'Russian 露',English:'English 英'};
+const GROUP_ORDER=['Japanese','Kanji','Korean','Chinese','Thai','Russian','German','English'];
+const GROUP_LABEL={Japanese:'Japanese 国語',Kanji:'Kanji 漢字',Pronunciation:'Pronunciation 発音',Korean:'Korean 韓',Chinese:'Chinese 中',Thai:'Thai タイ',Russian:'Russian 露',German:'German 独',English:'English 英'};
 const MORE_LABEL={Japanese:'More 日本語',Korean:'More 한국어',Chinese:'More 中文'};
 // Groups nest one level: "Japanese/古語" is a type of Japanese dictionary. Frequency dictionaries have no entries to search.
 const parentOf=(g)=>String(g||'Japanese').split('/')[0];
@@ -1360,7 +1360,7 @@ async function saveSentence({text,image='',note='',back='',clips=null}){
 // ---------- known words ----------
 // Words you mark known plus cards you've learned (3+ week intervals). Nothing is highlighted in texts: this only
 // counts your vocabulary and estimates how much of a chapter or episode you'd know.
-const LANG_LABEL={ja:'Japanese',ko:'Korean',zh:'Chinese',th:'Thai',ru:'Russian'};
+const LANG_LABEL={ja:'Japanese',ko:'Korean',zh:'Chinese',th:'Thai',ru:'Russian',de:'German'};
 const knownOn=()=>settings.known_words!==false;
 /** A text's language: the book's own tag when it's one we know, else by its script. */
 function textLang(text,hint){
@@ -1369,6 +1369,7 @@ function textLang(text,hint){
   const n=(re)=>(t.match(re)||[]).length;
   const ko=n(/[\uac00-\ud7a3]/g),kana=n(/[\u3040-\u30ff]/g),han=n(/[\u4e00-\u9fff]/g),th=n(/[\u0e00-\u0e7f]/g),ru=n(/[\u0400-\u04ff]/g);
   const best=Math.max(ko,kana,han,th,ru);
+  if(!best&&/[äöüßÄÖÜ]|\b(?:der|die|das|und|ist|nicht|ein|eine|ich|zu|mit|von|den|auf)\b/.test(t)&&(t.match(/\b(?:der|die|das|und|ist|nicht|ein|eine|ich|zu|mit|von|den|auf)\b/g)||[]).length>=3)return 'de';
   return !best?'ja':best===ko?'ko':best===th?'th':best===ru?'ru':kana>han*0.1?'ja':'zh';
 }
 /** A ✓ button for a word: shows whether it's known, and toggles "marked known". */

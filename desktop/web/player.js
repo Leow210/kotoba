@@ -162,7 +162,7 @@ window.playerLoaded=async(info)=>{
   const saved=store.get('player.tracks:'+videoPath,null);
   if(saved)return chooseTracks(saved.main,saved.second);
   // First time: a study-language track (your generated file first), with English underneath if there is one.
-  const study=st.subs.find(s=>s.generated)||st.subs.find(s=>s.kind!=='ocr'&&['ja','zh','ko','th','ru'].includes(s.lang))||st.subs.find(s=>s.kind!=='ocr');
+  const study=st.subs.find(s=>s.generated)||st.subs.find(s=>s.kind!=='ocr'&&['ja','zh','ko','th','ru','de'].includes(s.lang))||st.subs.find(s=>s.kind!=='ocr');
   const en=st.subs.find(s=>s.lang==='en'&&s!==study);
   await chooseTracks(trackKey(study),trackKey(en));
   if(!hasTextSubs)osd('No text subtitles found · choose OCR in 字幕');
@@ -259,7 +259,7 @@ async function showPop(res,cue,r1,r2,P=pop){
     Promise.all([api('freq',{key:res.key,reading:''}),dictGroups()]).then(([f,groups])=>{
       if(P.key!==key)return;
       // Only frequency lists in the subtitle's language (JPDB ranks mean nothing for a Cantonese word).
-      const want={ja:'Japanese',zh:'Chinese',ko:'Korean',th:'Thai',ru:'Russian'}[P.level?P.lang:st.lang];
+      const want={ja:'Japanese',zh:'Chinese',ko:'Korean',th:'Thai',ru:'Russian',de:'German'}[P.level?P.lang:st.lang];
       const fq=f.find(x=>x.mode==='freq'&&want&&(groups[x.dict]||'').split('/')[0]===want);
       if(fq)P.el.querySelector('.p-freq').innerHTML=`${bars(fq.value)}<span>${esc(fq.display)}</span>`;
     }).catch(()=>{});
@@ -301,6 +301,7 @@ function textLang(t){
   if(/[\u0e00-\u0e7f]/.test(c))return 'th';
   if(/[\u0400-\u04ff]/.test(c))return 'ru';
   if(/[\u4e00-\u9fff]/.test(c))return st.lang==='zh'?'zh':'ja';
+  if(/[A-Za-z\u00c0-\u00ff]/.test(c)&&st.lang==='de')return 'de';
   return '';
 }
 let defT=0;
@@ -516,7 +517,7 @@ function menu(anchor,title,items){
   m.onclick=(e)=>{const b=e.target.closest('[data-m]');if(!b)return;const it=items[+b.dataset.m];m.hidden=true;it.run&&it.run();};
 }
 document.addEventListener('mousedown',(e)=>{if(!e.target.closest('#menu')&&!e.target.closest('[data-a="subs"],[data-a="audio"],[data-a="speed"]'))$('menu').hidden=true;});
-const LANGS=[['ja','日本語'],['zh','中文 / 粵語'],['ko','한국어'],['th','ไทย'],['ru','Русский'],['en','Other (no lookup)']];
+const LANGS=[['ja','日本語'],['zh','中文 / 粵語'],['ko','한국어'],['th','ไทย'],['ru','Русский'],['de','Deutsch'],['en','Other (no lookup)']];
 function subsMenu(anchor){
   const key1=trackKey(st.main),key2=trackKey(st.second);
   menu(anchor,'Subtitles',[

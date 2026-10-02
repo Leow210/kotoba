@@ -284,7 +284,7 @@ public class Routes {
     }
     JSONObject knownStats() throws Exception {
         JSONObject out=new JSONObject();
-        for(String lang:new String[]{"ja","ko","zh","th","ru"}){
+        for(String lang:new String[]{"ja","ko","zh","th","ru","de"}){
             java.util.Set<String> learned=learned(lang),marked=store.markedKnown(lang),all=knownSet(lang);
             if(all.isEmpty()&&learned.isEmpty())continue;
             out.put(lang,new JSONObject().put("total",all.size()).put("marked",marked.size()).put("cards",learned.size()));

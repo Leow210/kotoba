@@ -248,6 +248,14 @@ public final class BookParser {
             return total==0?0:good/total-bad*5.0/Math.max(1,total);
     }
 
+    /** Latin-script text with German's common little words (der, die, und, ist, nicht…) well above chance. */
+    static boolean looksGerman(String text){
+        java.util.regex.Matcher m=java.util.regex.Pattern.compile("(?iu)\\b(der|die|das|und|ist|nicht|ein|eine|ich|zu|mit|von|den|auf|sich|dem|auch|nicht)\\b").matcher(text.length()>20000?text.substring(0,20000):text);
+        int hits=0;while(m.find())hits++;
+        int words=text.substring(0,Math.min(text.length(),20000)).split("\\s+").length;
+        return hits>=8&&hits*100>words*8;
+    }
+
     static String guessLanguage(String text){
         int ja=0,ko=0,th=0,ru=0,zh=0;
         for(int i=0;i<Math.min(text.length(),20000);i++){
@@ -255,7 +263,7 @@ public final class BookParser {
             if(c>=0x3040&&c<=0x30ff)ja++;else if(c>=0xac00&&c<=0xd7a3)ko++;else if(c>=0x0e00&&c<=0x0e7f)th++;else if(c>=0x0400&&c<=0x04ff)ru++;else if(c>=0x4e00&&c<=0x9fff)zh++;
         }
         int max=Math.max(Math.max(ja,ko),Math.max(Math.max(th,ru),zh));
-        if(max==0)return "";
+        if(max==0)return looksGerman(text)?"de":"";
         return max==ja?"ja":max==ko?"ko":max==th?"th":max==ru?"ru":ja>0?"ja":"zh";
     }
 

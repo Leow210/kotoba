@@ -74,7 +74,7 @@ categories, read chapters) by itself. Covers come from `mihon-covers/` in the da
 ### Streaming subtitles in Firefox or Chrome
 
 Kotoba › Video › **Browser subtitle helper** copies a one-time install link (valid ten minutes). Paste it into
-Firefox or Chrome with Tampermonkey installed and accept the install. On YouTube and GagaOOLala, turn on the site's captions:
+Firefox or Chrome with Tampermonkey installed and accept the install. On YouTube, Netflix, Viki and GagaOOLala, turn on the site's captions:
 the helper redraws the current caption as text, and holding **Shift** over a word asks Kotoba for Mac for it. The
 popup is the same as the player's: the entry as the dictionary lays it out, a tab per dictionary (⤢), frequency,
 whether it's already a card, **or …** for a second reading, ＋ Card (the caption line becomes the example, the video

@@ -222,7 +222,7 @@
     while(k<cps.length){html+=span(k);k++;}
     return html;
   }
-  const LANG_NAME={th:['ไทย','Thai'],yue:['粵','Cantonese'],zh:['普','Mandarin'],ja:['日','Japanese'],ko:['韓','Korean'],ru:['Ру','Russian'],en:['EN','English']};
+  const LANG_NAME={th:['ไทย','Thai'],yue:['粵','Cantonese'],zh:['普','Mandarin'],ja:['日','Japanese'],ko:['韓','Korean'],ru:['Ру','Russian'],de:['DE','German'],en:['EN','English']};
   const lookupLang=l=>l==='yue'?'zh':l;// Cantonese: the Chinese dictionaries (CantoDict, CC-CEDICT…)
 
   /** Mac: holding the hover key (Shift) over a word looks it up, as in books and videos; the last popup gives way. */

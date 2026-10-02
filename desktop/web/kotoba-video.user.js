@@ -1,12 +1,13 @@
 // ==UserScript==
 // @name         Kotoba Video Text
 // @namespace    app.kotoba.desktop
-// @version      0.10.0
-// @description  Look up YouTube and GagaOOLala subtitles in Kotoba for Mac: hold Shift over a word; YouTube Music's song goes to Kotoba's lyrics. Works in Firefox and Chrome (Tampermonkey).
+// @version      0.11.0
+// @description  Look up YouTube, Netflix, Viki and GagaOOLala subtitles in Kotoba for Mac: hold Shift over a word; YouTube Music's song goes to Kotoba's lyrics. Works in Firefox and Chrome (Tampermonkey).
 // @match        https://www.youtube.com/watch*
 // @match        https://www.gagaoolala.com/*/videos/*
 // @match        https://music.youtube.com/*
 // @match        https://www.viki.com/*
+// @match        https://www.netflix.com/*
 // @run-at       document-idle
 // @noframes
 // @grant        GM_xmlhttpRequest
@@ -48,7 +49,9 @@
     return;
   }
   const youtube = location.hostname === 'www.youtube.com';
-  const sourceSelector = youtube ? '.ytp-caption-window-container' : '.bmpui-ui-subtitle-overlay';
+  // Netflix draws its captions in .player-timedtext (turn them on in its Audio & Subtitles menu); Viki and GagaOOLala use Bitmovin's overlay.
+  const netflix = location.hostname === 'www.netflix.com';
+  const sourceSelector = youtube ? '.ytp-caption-window-container' : netflix ? '.player-timedtext' : '.bmpui-ui-subtitle-overlay';
   const store = { get: (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} } };
   let enabled = store.get('kotoba.videoText.enabled', 'true') !== 'false';
   let language = store.get('kotoba.videoText.language', 'auto');
@@ -87,6 +90,15 @@
     #kotoba-video-toolbar { display: flex; align-items: center; gap: 5px; justify-content: flex-end; }
     #kotoba-video-toolbar button, #kotoba-video-toolbar select { pointer-events: auto; border: 1px solid rgba(255,255,255,.25); border-radius: 7px; background: rgba(19,23,21,.88); color: #fff; font: 12px -apple-system,BlinkMacSystemFont,sans-serif; padding: 4px 7px; cursor: pointer; }
     #kotoba-video-toolbar button[aria-pressed="true"] { color: #a8e1c4; }
+    /* The language list is drawn here, not by the browser: a native dropdown closes whenever the site's player re-lays
+       out or loses the pointer, which on Viki and the like made it impossible to choose outside full screen. */
+    #kotoba-video-toolbar select { display: none; }
+    #kotoba-video-langwrap { position: relative; pointer-events: auto; }
+    #kotoba-video-langmenu { position: absolute; right: 0; bottom: calc(100% + 4px); min-width: 140px; padding: 4px; border-radius: 9px; background: rgba(19,23,21,.96); border: 1px solid rgba(255,255,255,.25); box-shadow: 0 8px 24px rgba(0,0,0,.5); }
+    #kotoba-video-langmenu[hidden] { display: none; }
+    #kotoba-video-langmenu button { display: block; width: 100%; text-align: left; border: 0; background: transparent; padding: 6px 9px; }
+    #kotoba-video-langmenu button:hover { background: rgba(255,255,255,.14); }
+    #kotoba-video-langmenu button[aria-selected="true"] { color: #a8e1c4; }
     #kotoba-video-line { position: absolute; left: 0; right: 0; bottom: 24px; text-align: center; pointer-events: none; }
     #kotoba-video-text { display: inline-block; max-width: 94%; padding: 3px 8px; border-radius: 6px; background: rgba(0,0,0,.58); color: white; font: 600 28px/1.4 -apple-system,BlinkMacSystemFont,"PingFang TC","Hiragino Sans","Apple SD Gothic Neo",sans-serif; text-shadow: 0 1px 3px #000; white-space: pre-wrap; user-select: text !important; -webkit-user-select: text !important; cursor: text; pointer-events: auto; }
     #kotoba-video-text:empty { display: none; }
@@ -145,7 +157,8 @@
       <button type="button" id="kotoba-video-toggle" aria-pressed="true" title="Show the caption as text you can look up (hold Shift over a word)">文 Kotoba</button>
       <button type="button" id="kotoba-video-pause" aria-pressed="true" title="Pause the video while a word is shown">⏸ on lookup</button>
       <button type="button" id="kotoba-video-live" aria-pressed="false" title="Click to switch: the site's subtitles → 🎙 Live subs (heard from the audio on your Mac, kept for rewatching) → 🔍 Picture subs (subtitles burned into the video, read from the picture)">🎙 Live subs</button>
-      <select id="kotoba-video-lang" aria-label="Subtitle language"><option value="auto">Auto language</option><option value="ja">日本語</option><option value="zh">中文</option><option value="ko">한국어</option><option value="th">ไทย</option><option value="ru">Русский</option></select>
+      <select id="kotoba-video-lang" aria-label="Subtitle language"><option value="auto">Auto language</option><option value="ja">日本語</option><option value="zh">中文</option><option value="ko">한국어</option><option value="th">ไทย</option><option value="ru">Русский</option><option value="de">Deutsch</option></select>
+      <span id="kotoba-video-langwrap"><button type="button" id="kotoba-video-langbtn" aria-haspopup="listbox" aria-expanded="false"></button><div id="kotoba-video-langmenu" role="listbox" hidden></div></span>
     </div><div id="kotoba-video-line"><span id="kotoba-video-text"></span></div>`);
   document.body.appendChild(ui);
   const pop = document.createElement('div');
@@ -244,6 +257,26 @@
   }
   setInterval(ocrTick, 450);
   select.value = language;
+  // The language menu stays open until a choice, a click elsewhere or Esc; the caption area stops moving meanwhile.
+  let menuOpen = false;
+  const langBtn = ui.querySelector('#kotoba-video-langbtn'), langMenu = ui.querySelector('#kotoba-video-langmenu'), langWrap = ui.querySelector('#kotoba-video-langwrap');
+  const langLabel = () => { const o = select.options[select.selectedIndex]; return (o ? o.textContent : 'Language') + ' ▾'; };
+  function closeMenu() { menuOpen = false; langMenu.hidden = true; langBtn.setAttribute('aria-expanded', 'false'); }
+  function openMenu() {
+    langMenu.textContent = '';
+    for (const o of select.options) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.textContent = o.textContent; b.setAttribute('role', 'option'); b.setAttribute('aria-selected', String(o.value === select.value));
+      b.addEventListener('click', e => { e.stopPropagation(); select.value = o.value; select.dispatchEvent(new Event('change')); langBtn.textContent = langLabel(); closeMenu(); });
+      langMenu.appendChild(b);
+    }
+    menuOpen = true; langMenu.hidden = false; langBtn.setAttribute('aria-expanded', 'true');
+  }
+  langBtn.textContent = langLabel();
+  langBtn.addEventListener('click', e => { e.stopPropagation(); menuOpen ? closeMenu() : openMenu(); });
+  for (const type of ['mousedown', 'mouseup', 'pointerdown', 'pointerup', 'dblclick']) langWrap.addEventListener(type, e => e.stopPropagation());
+  document.addEventListener('mousedown', e => { if (menuOpen && !langWrap.contains(e.target)) closeMenu(); }, true);
+  document.addEventListener('keydown', e => { if (menuOpen && e.key === 'Escape') { closeMenu(); e.stopPropagation(); } }, true);
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   function guessLanguage(value) {
@@ -304,6 +337,7 @@
   }
 
   function update() {
+    if (menuOpen) return;
     const host = document.fullscreenElement || document.body;
     if (ui.parentElement !== host) host.appendChild(ui);
     for (const P of stack) if (P.el.parentElement !== host) host.appendChild(P.el);
