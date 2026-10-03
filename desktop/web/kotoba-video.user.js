@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kotoba Video Text
 // @namespace    app.kotoba.desktop
-// @version      0.13.0
+// @version      0.13.2
 // @description  Look up YouTube, Netflix, Viki and GagaOOLala subtitles in Kotoba for Mac: hold Shift over a word; YouTube Music's song goes to Kotoba's lyrics. Works in Firefox and Chrome (Tampermonkey).
 // @match        https://www.youtube.com/watch*
 // @match        https://www.gagaoolala.com/*/videos/*
@@ -96,6 +96,10 @@
     #kotoba-video-toolbar:hover, #kotoba-video-toolbar:focus-within { opacity: 1; }
     #kotoba-video-toolbar button, #kotoba-video-toolbar select { pointer-events: auto; border: 1px solid rgba(255,255,255,.25); border-radius: 7px; background: rgba(19,23,21,.88); color: #fff; font: 12px -apple-system,BlinkMacSystemFont,sans-serif; padding: 4px 7px; cursor: pointer; }
     #kotoba-video-toolbar button[aria-pressed="true"] { color: #a8e1c4; }
+    /* The subtitle source says which one is in use, in words and colour: site (plain), live (heard), picture (read). */
+    #kotoba-video-toolbar #kotoba-video-live { font-weight: 600; color: #fff; }
+    #kotoba-video-toolbar #kotoba-video-live[data-mode="live"] { background: #7a1f1f; border-color: #e06c6c; color: #ffd9d9; }
+    #kotoba-video-toolbar #kotoba-video-live[data-mode="picture"] { background: #1f3d7a; border-color: #6c9be0; color: #d9e6ff; }
     /* The language list is drawn here, not by the browser: a native dropdown closes whenever the site's player re-lays
        out or loses the pointer, which on Viki and the like made it impossible to choose outside full screen. */
     #kotoba-video-toolbar select { display: none; }
@@ -380,13 +384,15 @@
       if (ocrText !== lastText && !pinned) { lastText = ocrText; drawCaption(ocrText); hideAuto(); }
       return;
     }
-    // Live subtitles (or lines saved from an earlier watch) take the place of the site's own.
-    if (enabled && (live || liveLines.length)) {
+    // Live subtitles take the place of the site's own, and so do lines heard on an earlier watch, but only where the
+    // site has no caption of its own to read (so YouTube's subtitles are never replaced, or shown twice, by old lines).
+    const source = document.querySelector(sourceSelector);
+    if (enabled && (live || (!source && liveLines.length))) {
+      if (source) hideNative(source); else showNative();
       const current = liveLineAt(video.currentTime);
       if (current !== lastText && !pinned) { lastText = current; drawCaption(current); hideAuto(); }
       return;
     }
-    const source = document.querySelector(sourceSelector);
     if (!enabled || !source) { showNative(); if (!pinned) { text.textContent = ''; lastText = ''; } return; }
     const current = readCaption(source);
     hideNative(source);
@@ -735,8 +741,11 @@
   toggle.addEventListener('click', () => { enabled = !enabled; store.set('kotoba.videoText.enabled', String(enabled)); toggle.setAttribute('aria-pressed', String(enabled)); if (!enabled) hidePop(); update(); });
   pauseBtn.addEventListener('click', () => { pauseOnLookup = !pauseOnLookup; store.set('kotoba.videoText.pause', String(pauseOnLookup)); pauseBtn.setAttribute('aria-pressed', String(pauseOnLookup)); });
   select.addEventListener('change', () => { language = select.value; store.set('kotoba.videoText.language', language); text.lang = guessLanguage(lastText); });
-  const MODES = { site: ['🎙 Live subs', false], live: ['🎙 Live subs', true], picture: ['🔍 Picture subs', true] };
-  function showMode() { liveBtn.textContent = MODES[subsMode][0]; liveBtn.setAttribute('aria-pressed', String(MODES[subsMode][1])); }
+  const MODES = { site: ['💬 Subtitles: site', false], live: ['🎙 Subtitles: live (heard)', true], picture: ['🔍 Subtitles: picture (read)', true] };
+  function showMode() {
+    liveBtn.textContent = MODES[subsMode][0]; liveBtn.setAttribute('aria-pressed', String(MODES[subsMode][1])); liveBtn.dataset.mode = subsMode;
+    liveBtn.title = 'Where the subtitles come from (click to change): ' + { site: "the site's own subtitles (YouTube's CC, Netflix's captions)", live: 'heard from the audio on your Mac', picture: 'read from subtitles burned into the video' }[subsMode];
+  }
   liveBtn.addEventListener('click', () => {
     subsMode = { site: 'live', live: 'picture', picture: 'site' }[subsMode] || 'site';
     store.set('kotoba.subs.' + location.hostname, subsMode); store.set('kotoba.live.' + location.hostname, String(subsMode === 'live'));
