@@ -5,6 +5,8 @@ import Vision
 // kotoba-ocr: Apple's text recognizer for the Java core (Ocr.external). Stays running; one request per line on stdin,
 // "<lang>\t<image path>", answered by one JSON line: {"w","h","lines":[{"x","y","w","h","text","conf"}]} in pixels.
 setvbuf(stdout, nil, _IOLBF, 0)
+// A helper inside Kotoba.app that uses AppKit would otherwise get a Dock tile of its own (a second, blank "Kotoba").
+NSApplication.shared.setActivationPolicy(.prohibited)
 let languages = ["ko": ["ko-KR"], "ja": ["ja-JP"], "zh": ["zh-Hans", "zh-Hant"], "th": ["th-TH"], "ru": ["ru-RU"], "en": ["en-US"]]
 
 func answer(_ object: Any) {

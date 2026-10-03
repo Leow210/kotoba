@@ -127,6 +127,15 @@ public class DesktopServer {
             case "video.sub":return new JSONObject().put("text",videoSub(new File(d.getString("path")),d.optInt("stream",-1),d.optString("file","")));
             case "video.ocr":return videoOcr(new File(d.getString("path")),d.getDouble("time"),d.optString("lang","ja"));
             case "video.still":return new JSONObject().put("image",videoStill(new File(d.getString("path")),d.getDouble("time")));
+            case "lyrics.importPaths":{
+                JSONArray ps=d.getJSONArray("paths");int ok=0;String last="",err="";
+                for(int i=0;i<ps.length();i++){
+                    File f=new File(ps.getString(i));
+                    try{last=routes.lyrics().importLrc(f.getName(),new String(Files.readAllBytes(f.toPath()),StandardCharsets.UTF_8)).optString("title");ok++;}
+                    catch(Exception e){err=f.getName()+": "+e.getMessage();}
+                }
+                return new JSONObject().put("count",ok).put("failed",ps.length()-ok).put("last",last).put("error",err);
+            }
             case "wordlist.importPath":{
                 File f=new File(d.getString("path"));
                 return routes.wordlists.importText(f.getName(),new String(Files.readAllBytes(f.toPath()),StandardCharsets.UTF_8));
@@ -728,10 +737,18 @@ public class DesktopServer {
             // so it's only served through a one-time link the Video tab makes (helper.link), valid for ten minutes.
             if(path.equals("/kotoba-video.user.js")){
                 String q=x.getRequestURI().getRawQuery();
-                String once=q!=null&&q.startsWith("once=")?q.substring(5):"";
-                Long made=installLinks.remove(once);
+                // The key may come with other parameters (a browser or Tampermonkey adding its own): find it among them.
+                String once="";
+                if(q!=null)for(String part:q.split("&"))if(part.startsWith("once=")){once=part.substring(5);break;}
+                // Not removed on use: Tampermonkey fetches the script more than once while installing (the install page, then
+                // the install itself), and a second fetch of a spent link opened an "expired" tab. Ten minutes covers it.
+                installLinks.values().removeIf(t->System.currentTimeMillis()-t>600_000);
+                Long made=installLinks.get(once);
                 File script=new File(web,"kotoba-video.user.js");
-                if(made==null||System.currentTimeMillis()-made>600_000||!script.isFile()){send(x,404,"text/plain","This install link has expired. Make a new one in Kotoba › Video.".getBytes(StandardCharsets.UTF_8),null);return;}
+                if(made==null||!script.isFile()){
+                    try{Files.writeString(new File(data,"helper-install.log").toPath(),new java.util.Date()+" refused: query="+q+" known="+installLinks.size()+" agent="+x.getRequestHeaders().getFirst("User-Agent")+"\n",StandardOpenOption.CREATE,StandardOpenOption.APPEND);}catch(Exception ignored){}
+                    send(x,404,"text/plain","This install link has expired. Make a new one in Kotoba › Video.".getBytes(StandardCharsets.UTF_8),null);return;
+                }
                 String js=Files.readString(script.toPath()).replace("__KOTOBA_KEY__",helperKey()).replace("__KOTOBA_PORT__",Integer.toString(HELPER_PORT));
                 send(x,200,"text/javascript",js.getBytes(StandardCharsets.UTF_8),null);
                 return;

@@ -39,7 +39,8 @@ public class Books {
     public JSONObject importBook(byte[] bytes,String name) throws Exception {
         boolean zip=bytes.length>4&&bytes[0]=='P'&&bytes[1]=='K';
         String lower=name.toLowerCase(Locale.ROOT);
-        if(!zip&&!(lower.endsWith(".txt")||lower.endsWith(".text")||!lower.contains(".")))throw new Exception(name+": only EPUB and TXT books are supported.");
+        // Any plain text will do (.txt, .md, an article saved without an extension…); binary files are refused.
+        if(!zip&&!(lower.endsWith(".txt")||lower.endsWith(".text")||!lower.contains(".")||looksLikeText(bytes)))throw new Exception(name+": only EPUB and text files are supported.");
         // Reserve an id first so the file can be named after it.
         ContentValues v=new ContentValues();
         v.put("title",name);v.put("format",zip?"epub":"txt");v.put("file","");v.put("meta","{}");v.put("added",now());
@@ -68,6 +69,23 @@ public class Books {
         }
     }
 
+    /** No NUL bytes in the first 8 KB (UTF-16 text has them, but BookParser.txt reads that too, so it passes by a BOM). */
+    static boolean looksLikeText(byte[] b){
+        if(b.length>=2&&((b[0]==(byte)0xFF&&b[1]==(byte)0xFE)||(b[0]==(byte)0xFE&&b[1]==(byte)0xFF)))return true;
+        for(int i=0;i<Math.min(b.length,8192);i++)if(b[i]==0)return false;
+        return true;
+    }
+
+    /** Pasted text becomes a book (a TXT) named after its title, or its first line. */
+    public JSONObject importText(String title,String text) throws Exception {
+        if(text==null||text.trim().isEmpty())throw new Exception("Nothing to add: the text is empty.");
+        String name=title==null||title.trim().isEmpty()?text.trim().split("\\R",2)[0]:title.trim();
+        if(name.length()>60)name=name.substring(0,60).trim();
+        name=name.replaceAll("[\\\\/:*?\"<>|]"," ").trim();
+        if(name.isEmpty())name="Pasted text";
+        return importBook(text.getBytes(StandardCharsets.UTF_8),name+".txt");
+    }
+
     static void write(File f,byte[] b) throws Exception {try(FileOutputStream out=new FileOutputStream(f)){out.write(b);}}
 
     static JSONObject meta(BookParser.Book b) throws Exception {
@@ -82,11 +100,52 @@ public class Books {
         return Store.rows(db,"SELECT id,title,author,lang,format,cover!='' has_cover,added,opened,progress FROM books WHERE file!='' ORDER BY opened=0,opened DESC,added DESC");
     }
 
+    // ---------- text added to the end of a book ----------
+    // Any book, EPUB or TXT, can take more text after its last chapter (the next chapter pasted from somewhere, notes). It is
+    // kept beside the book in <id>.added.txt and shown as a final chapter, so the book file itself is never rewritten.
+    static final String ADDED_HREF="kotoba-added.xhtml";
+    File addedFile(long id){return new File(dir,id+".added.txt");}
+    void requireBook(long id) throws Exception {
+        if(Store.rows(db,"SELECT 1 FROM books WHERE id=?",Long.toString(id)).length()==0)throw new Exception("This book is no longer in your library.");
+    }
+    public String added(long id) throws Exception {
+        File f=addedFile(id);
+        return f.isFile()?new String(java.nio.file.Files.readAllBytes(f.toPath()),StandardCharsets.UTF_8):"";
+    }
+    /** Replaces the added text; empty removes it. */
+    public synchronized void setAdded(long id,String text) throws Exception {
+        requireBook(id);
+        File f=addedFile(id);
+        if(text==null||text.trim().isEmpty()){f.delete();return;}
+        write(f,text.replace("\r\n","\n").trim().getBytes(StandardCharsets.UTF_8));
+    }
+    /** Adds text after what is already there (a blank line between). */
+    public synchronized void addText(long id,String text) throws Exception {
+        if(text==null||text.trim().isEmpty())throw new Exception("Nothing to add: the text is empty.");
+        String now=added(id);
+        setAdded(id,now.isEmpty()?text:now+"\n\n"+text.replace("\r\n","\n").trim());
+    }
+    static String addedChapter(String text){
+        StringBuilder b=new StringBuilder("<?xml version=\"1.0\" encoding=\"utf-8\"?><!DOCTYPE html><html xmlns=\"http://www.w3.org/1999/xhtml\"><head><meta charset=\"utf-8\"/><title>Added text</title></head><body class=\"kotoba-txt\">");
+        for(String line:text.split("\n",-1)){
+            String t=line.trim();
+            if(t.isEmpty()){b.append("<p class=\"blank\"> </p>");continue;}
+            b.append("<p>").append(BookParser.escape(line.replaceAll("^[ \\t]+",""))).append("</p>");
+        }
+        return b.append("</body></html>").toString();
+    }
+
     public JSONObject open(long id) throws Exception {
         JSONArray r=Store.rows(db,"SELECT * FROM books WHERE id=?",Long.toString(id));
         if(r.length()==0)throw new Exception("This book is no longer in your library.");
         JSONObject b=r.getJSONObject(0);
         b.put("meta",new JSONObject(b.getString("meta")));
+        String more=added(id);
+        if(!more.isEmpty()){
+            JSONObject m=b.getJSONObject("meta");
+            m.getJSONArray("spine").put(new JSONObject().put("href",ADDED_HREF).put("size",more.length()).put("linear",true));
+            m.getJSONArray("toc").put(new JSONObject().put("title","Added text").put("href",ADDED_HREF).put("level",0));
+        }
         b.put("settings",new JSONObject(b.optString("settings","{}")));
         db.execSQL("UPDATE books SET opened=? WHERE id=?",new Object[]{now(),id});
         return b;
@@ -107,6 +166,7 @@ public class Books {
         JSONArray r=Store.rows(db,"SELECT file FROM books WHERE id=?",Long.toString(id));
         ZipSource z=zips.remove(id);if(z!=null)try{z.close();}catch(Exception ignored){}
         texts.remove(id);
+        addedFile(id).delete();
         if(r.length()>0&&!r.getJSONObject(0).getString("file").isEmpty())new File(dir,r.getJSONObject(0).getString("file")).delete();
         db.execSQL("DELETE FROM highlights WHERE book_id=?",new Object[]{id});
         db.execSQL("DELETE FROM bookmarks WHERE book_id=?",new Object[]{id});
@@ -145,6 +205,10 @@ public class Books {
         JSONArray r=Store.rows(db,"SELECT format,cover FROM books WHERE id=?",Long.toString(id));
         if(r.length()==0)return null;
         String format=r.getJSONObject(0).getString("format");
+        if(path.equals(ADDED_HREF)){
+            String more=added(id);
+            return more.isEmpty()?null:new Object[]{inject(addedChapter(more)).getBytes(StandardCharsets.UTF_8),"application/xhtml+xml"};
+        }
         if(path.equals("cover")){
             String cover=r.getJSONObject(0).getString("cover");
             if(cover.isEmpty()||!format.equals("epub"))return null;

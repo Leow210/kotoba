@@ -207,7 +207,7 @@
   const toneOf=syl=>{const m=/([1-6])$/.exec(syl);return m?m[1]:'';};
   const romanHtml=r=>esc(r).replace(/[a-z]+[1-6]/gi,m=>`<span class="tn t${toneOf(m)}">${m}</span>`);
   /** Words as ruby (tappable characters, their jyutping above), or the whole line's jyutping under it. */
-  function wordsHtml(it){
+  function wordsHtml(it,furi){
     const split=window.graphemes||(s=>[...s]);// letter clusters: Thai marks stay on their letters
     const cps=split(it.text),off=[];let o=0;for(const c of cps){off.push(o);o+=c.length;}
     const span=k=>`<span class="mu-w" data-o="${off[k]}">${esc(cps[k])}</span>`;
@@ -215,7 +215,7 @@
     let k=0,html='';
     for(const w of it.words){
       const n=split(w.w).length,inner=cps.slice(k,k+n).map((_,j)=>span(k+j)).join('');
-      const romanized=/[a-z]/i.test(w.j||'');
+      const romanized=/[a-z]/i.test(w.j||'')||(furi&&!!w.j&&w.j!==w.w);// furigana: kana over kanji
       html+=romanized?`<ruby>${inner}<rt>${romanHtml(w.j)}</rt></ruby>`:inner;
       k+=n;
     }
@@ -322,7 +322,7 @@
         <div><span>After a ${unit.toLowerCase()}</span>${chip('chain','next','next one')}${chip('chain','loop','again')}${chip('chain','stop','stop')}</div>
         <div><span>At the end</span>${chip('end','loop','start over')}${chip('end','stop','stop')}</div>
         <div><span>Pause on lookup</span>${chip('pause',true,'on')}${chip('pause',false,'off')}</div>
-        ${set.roman?`<div><span>${set.roman==='jyutping'?'Jyutping':set.roman==='cases'?'Cases':'Romanization'}</span>${chip('roman','show','show')}${chip('roman','after','after hearing')}${chip('roman','hide','hide')}</div>
+        ${set.roman?`<div><span>${set.roman==='jyutping'?'Jyutping':set.roman==='cases'?'Cases':set.roman==='furigana'?'Furigana':'Romanization'}</span>${chip('roman','show','show')}${chip('roman','after','after hearing')}${chip('roman','hide','hide')}</div>
         <div><span>Word gloss</span>${chip('gloss',true,'show')}${chip('gloss',false,'hide')}</div>`:''}
         ${set.lang==='ja'?`<div><span>Pitch accent</span>${chip('accent',true,'show')}${chip('accent',false,'hide')}</div>`:''}`;
       f('opts').querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>{
@@ -355,11 +355,11 @@
       const sameTitle=it.title===g.name;
       f('who').innerHTML=`${g.icon?`<img src="${url(set.id,g.icon)}" alt="">`:''}<span><b>${esc(g.name)}</b>${sameTitle?'':` · ${esc(it.title)}`}${it.titleEn||g.nameEn?`<small>${esc(g.nameEn||'')}${it.titleEn&&!sameTitle?` · ${esc(it.titleEn)}`:''}</small>`:''}</span>`;
       const romanOn=set.roman&&opts.roman!=='hide';
-      f('text').innerHTML=set.roman&&it.words&&it.words.length&&romanOn?wordsHtml(it):window.tappableText?tappableText(it.text):esc(it.text);
+      f('text').innerHTML=set.roman&&it.words&&it.words.length&&romanOn?wordsHtml(it,set.roman==='furigana'):window.tappableText?tappableText(it.text):esc(it.text);
       f('text').dataset.lang=set.lang||'';f('text').classList.toggle('acc',set.lang==='ja'&&!!opts.accent||!!(romanOn&&it.words&&it.words.length));
       // A line without word-by-word jyutping has it underneath; the gloss (I · be · Fung) under that.
       f('roman').innerHTML=romanOn&&it.roman&&!(it.words&&it.words.length)?romanHtml(it.roman):'';
-      f('gloss').innerHTML=set.roman&&opts.gloss!==false&&it.words&&it.words.some(w=>w.g)?it.words.filter(w=>/\S/.test(w.w)&&!/^[。，？！、…「」,.?!]+$/.test(w.w)).map(w=>`<span><b>${esc(w.w)}</b>${esc(w.g||'')}</span>`).join(''):'';
+      f('gloss').innerHTML=set.roman&&opts.gloss!==false&&it.words&&it.words.some(w=>w.g)?it.words.filter(w=>/\S/.test(w.w)&&!/^[。，？！、…「」『』（）・〜～,.?!]+$/.test(w.w)).map(w=>`<span><b>${esc(w.w)}</b>${esc(w.g||'')}</span>`).join(''):'';
       if(set.lang==='ja'&&opts.accent){const at=i;accents([it.text],set.id).then(r=>{if(at===i&&el.isConnected)f('text').innerHTML=accentHtml(it.text,r[0]);}).catch(e=>toast(e.message));}
       f('tr').textContent=it.translation||'';
       f('note').textContent=it.note||'';
@@ -399,7 +399,7 @@
       if(!playing||closed)return;
       if(si>=steps.length){lineDone();return;}
       const st=steps[si],it=queue[i].it;
-      f('cue').textContent=st.say?'說 Say it in Cantonese':st.think?'懂 What does it mean?':'';
+      f('cue').textContent=st.say?`說 Say it in ${(LANG_NAME[set.lang]||['','the language'])[1]}`:st.think?'懂 What does it mean?':'';
       if(st.wait){timer=setTimeout(()=>{si++;run();},st.wait);return;}
       const src=st.play==='l1'?it.l1audio:it.audio;
       // No recording yet (still to be voiced): about as long as it would take to say.

@@ -38,8 +38,8 @@ public class Lyrics {
     public JSONObject get(String title,String artist,String album,double duration,boolean refresh) throws Exception {
         String key=key(title,artist);
         if(!refresh){
-            JSONArray hit=Store.rows(store.db,"SELECT data FROM lyrics_cache WHERE key=?",key);
-            if(hit.length()>0)return new JSONObject(hit.getJSONObject(0).getString("data")).put("cached",true);
+            JSONObject c=cached(title,artist);
+            if(c!=null)return c;
         }
         JSONObject r=null;
         try{r=lrclib(title,artist,album,duration);}catch(Exception ignored){}
@@ -57,6 +57,79 @@ public class Lyrics {
             store.db.insertWithOnConflict("lyrics_cache",null,v,android.database.sqlite.SQLiteDatabase.CONFLICT_REPLACE);
         }
         return r;
+    }
+
+    /** This song's cached lyrics, by artist and title, or by title alone (a .lrc imported without an artist). */
+    JSONObject cached(String title,String artist) throws Exception {
+        for(String k:new String[]{key(title,artist),key(title,"")}){
+            JSONArray hit=Store.rows(store.db,"SELECT data FROM lyrics_cache WHERE key=?",k);
+            if(hit.length()>0)return new JSONObject(hit.getJSONObject(0).getString("data")).put("cached",true).put("title",title).put("artist",artist);
+        }
+        return null;
+    }
+
+    void save(String key,JSONObject r){
+        android.content.ContentValues v=new android.content.ContentValues();
+        v.put("key",key);v.put("data",r.toString());v.put("fetched",System.currentTimeMillis());
+        store.db.insertWithOnConflict("lyrics_cache",null,v,android.database.sqlite.SQLiteDatabase.CONFLICT_REPLACE);
+    }
+
+    /**
+     * A .lrc (or plain text) file becomes a song's lyrics, offline. Title and artist come from its [ti:] and [ar:]
+     * tags, else from the file name ("Artist - Title.lrc", or just "Title.lrc"). Kept under artist|title and, so a
+     * player that spells the artist another way still finds it, under the title alone.
+     */
+    public JSONObject importLrc(String fileName,String text) throws Exception {
+        if(text.startsWith("\uFEFF"))text=text.substring(1);
+        String name=fileName==null?"":fileName.replaceAll("(?i)\\.(lrc|txt)$","").trim();
+        String title=tag(text,"ti"),artist=tag(text,"ar");
+        if(title.isEmpty()){
+            int d=name.indexOf(" - ");
+            if(d>0){if(artist.isEmpty())artist=name.substring(0,d).trim();title=name.substring(d+3).trim();}else title=name;
+        }
+        if(title.isEmpty())throw new Exception("This file has no title (name it “Artist - Title.lrc”)");
+        JSONArray lines=parseLrc(text,null);
+        boolean synced=lines.length()>0;
+        if(!synced)lines=plainLines(text.replaceAll("(?m)^\\[[a-zA-Z]+:[^\\]]*\\]\\s*$","").replaceAll("\\[[^\\]]*\\]",""));
+        if(lines.length()==0)throw new Exception("No lyrics in this file");
+        JSONObject r=new JSONObject().put("source","File").put("synced",synced).put("lines",lines).put("title",title).put("artist",artist);
+        save(key(title,artist),r);
+        if(!artist.isEmpty())save(key(title,""),r);
+        return r;
+    }
+    static String tag(String lrc,String name){
+        java.util.regex.Matcher m=Pattern.compile("(?m)^\\[(?i:"+name+"):([^\\]]*)\\]").matcher(lrc);
+        return m.find()?m.group(1).trim():"";
+    }
+
+    static final java.util.concurrent.atomic.AtomicBoolean prefetching=new java.util.concurrent.atomic.AtomicBoolean(false);
+    /**
+     * Fetch and cache lyrics for a list of songs ("Artist - Title" or just "Title", one per line) while online, so they
+     * show offline. Songs already cached are skipped. progress gets {done,total,found,cached,missing[]} after each song.
+     */
+    public void prefetch(String list,java.util.function.Consumer<JSONObject> progress){
+        if(!prefetching.compareAndSet(false,true))return;
+        try{
+            List<String[]> songs=new ArrayList<>();
+            for(String l:list.split("\\r?\\n")){
+                l=l.trim();if(l.isEmpty())continue;
+                int d=l.indexOf(" - ");if(d<0)d=l.indexOf(" – ");
+                songs.add(d>0?new String[]{l.substring(d+3).trim(),l.substring(0,d).trim(),l}:new String[]{l,"",l});
+            }
+            int done=0,found=0,had=0;JSONArray missing=new JSONArray();
+            for(String[] sg:songs){
+                try{
+                    if(cached(sg[0],sg[1])!=null)had++;
+                    else{
+                        JSONObject r=get(sg[0],sg[1],"",0,false);
+                        if(r.getJSONArray("lines").length()>0)found++;else missing.put(sg[2]);
+                        Thread.sleep(300);
+                    }
+                }catch(Exception e){missing.put(sg[2]);}
+                done++;
+                try{progress.accept(new JSONObject().put("done",done).put("total",songs.size()).put("found",found).put("cached",had).put("missing",missing));}catch(Exception ignored){}
+            }
+        }finally{prefetching.set(false);}
     }
 
     /** Candidates for a search typed by hand (when the automatic match is wrong or missing). */
@@ -244,6 +317,90 @@ public class Lyrics {
 
     static String clean(String title){return title==null?"":title.replaceAll("[\\(\\[（【].*?[\\)\\]）】]","").replaceAll("\\s+-\\s+.*$","").trim();}
     static String enc(String s){try{return URLEncoder.encode(s==null?"":s,"UTF-8");}catch(Exception e){return "";}}
+
+    // ---------- a YouTube / YouTube Music playlist as a list of songs ----------
+
+    static final String YT_HEADERS="User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15\nAccept-Language: en\nCookie: CONSENT=YES+1; SOCS=CAI";
+    /**
+     * The songs of a public or unlisted playlist (a music.youtube.com or youtube.com link, or the list id), one
+     * "Artist - Title" per line. Read from the playlist's page and its continuations; a private playlist can't be read
+     * (make it unlisted, or paste its songs by hand).
+     */
+    public String playlist(String link) throws Exception {
+        java.util.regex.Matcher m=Pattern.compile("[?&]list=([A-Za-z0-9_-]+)").matcher(link);
+        String id=m.find()?m.group(1):link.trim();
+        if(!id.matches("[A-Za-z0-9_-]{10,}"))throw new Exception("That doesn’t look like a playlist link");
+        String html=http("https://www.youtube.com/playlist?list="+id,YT_HEADERS);
+        int a=html.indexOf("var ytInitialData = ");
+        if(a<0)throw new Exception("Couldn’t read that playlist (is it private?)");
+        a+=20;int b=html.indexOf(";</script>",a);
+        JSONObject data=new JSONObject(html.substring(a,b));
+        Matcher vm=Pattern.compile("\"INNERTUBE_CONTEXT_CLIENT_VERSION\":\"([^\"]+)\"").matcher(html);
+        String ver=vm.find()?vm.group(1):"2.20250101.00.00";
+        java.util.LinkedHashSet<String> songs=new java.util.LinkedHashSet<>();
+        String token=null;
+        for(int page=0;page<30;page++){
+            int before=songs.size();
+            String[] tok=new String[1];
+            collectSongs(data,songs,tok);
+            token=tok[0];
+            if(token==null||songs.size()==before&&page>0)break;
+            data=new JSONObject(post("https://www.youtube.com/youtubei/v1/browse?prettyPrint=false",
+                new JSONObject().put("context",new JSONObject().put("client",new JSONObject().put("clientName","WEB").put("clientVersion",ver).put("hl","en"))).put("continuation",token).toString(),YT_HEADERS));
+        }
+        if(songs.isEmpty())throw new Exception("No songs found in that playlist (is it private?)");
+        return String.join("\n",songs);
+    }
+    static void collectSongs(Object o,java.util.Set<String> out,String[] token) throws Exception {
+        if(o instanceof JSONArray){JSONArray a=(JSONArray)o;for(int i=0;i<a.length();i++)collectSongs(a.get(i),out,token);return;}
+        if(!(o instanceof JSONObject))return;
+        JSONObject j=(JSONObject)o;
+        JSONObject pv=j.optJSONObject("playlistVideoRenderer");
+        if(pv!=null){
+            JSONArray t=pv.optJSONObject("title")==null?null:pv.getJSONObject("title").optJSONArray("runs");
+            JSONObject by=pv.optJSONObject("shortBylineText");
+            JSONArray br=by==null?null:by.optJSONArray("runs");
+            if(t!=null&&t.length()>0)addSong(out,t.getJSONObject(0).optString("text"),br!=null&&br.length()>0?br.getJSONObject(0).optString("text"):"");
+        }
+        JSONObject lv=j.optJSONObject("lockupViewModel");
+        if(lv!=null&&lv.optJSONObject("metadata")!=null){
+            JSONObject md=lv.getJSONObject("metadata").optJSONObject("lockupMetadataViewModel");
+            if(md!=null&&md.optJSONObject("title")!=null){
+                String by="";
+                try{by=md.getJSONObject("metadata").getJSONObject("contentMetadataViewModel").getJSONArray("metadataRows").getJSONObject(0).getJSONArray("metadataParts").getJSONObject(0).getJSONObject("text").optString("content");}catch(Exception ignored){}
+                addSong(out,md.getJSONObject("title").optString("content"),by);
+            }
+        }
+        for(String k:new String[]{"continuationItemRenderer","continuationItemViewModel"}){
+            JSONObject c=j.optJSONObject(k);
+            if(c!=null&&token[0]==null){
+                java.util.regex.Matcher m=Pattern.compile("\"token\":\"([^\"]+)\"").matcher(c.toString());
+                if(m.find())token[0]=m.group(1);
+            }
+        }
+        java.util.Iterator<String> it=j.keys();
+        while(it.hasNext()){String k=it.next();if(!k.equals("playlistVideoRenderer")&&!k.equals("lockupViewModel"))collectSongs(j.get(k),out,token);}
+    }
+    /** "Artist - Topic" channels are the artist; a title that already starts with "Artist - " is kept as it is. */
+    static void addSong(java.util.Set<String> out,String title,String channel){
+        title=title.trim();if(title.isEmpty()||title.equals("[Private video]")||title.equals("[Deleted video]"))return;
+        String artist=channel.replaceAll("(?i)\\s*-\\s*Topic$","").replaceAll("(?i)VEVO$","").trim();
+        out.add(title.contains(" - ")||artist.isEmpty()||title.toLowerCase().contains(artist.toLowerCase())?title:artist+" - "+title);
+    }
+
+    static String post(String url,String json,String header) throws Exception {
+        HttpURLConnection c=(HttpURLConnection)new URL(url).openConnection();
+        c.setConnectTimeout(8000);c.setReadTimeout(15000);c.setRequestMethod("POST");c.setDoOutput(true);
+        c.setRequestProperty("Content-Type","application/json");
+        if(header!=null)for(String h:header.split("\n")){int i=h.indexOf(':');if(i>0)c.setRequestProperty(h.substring(0,i).trim(),h.substring(i+1).trim());}
+        try(java.io.OutputStream o=c.getOutputStream()){o.write(json.getBytes(StandardCharsets.UTF_8));}
+        if(c.getResponseCode()>=400)throw new Exception("YouTube answered "+c.getResponseCode());
+        try(InputStream in=c.getInputStream()){
+            ByteArrayOutputStream b=new ByteArrayOutputStream();byte[] buf=new byte[16384];int n;
+            while((n=in.read(buf))>0)b.write(buf,0,n);
+            return new String(b.toByteArray(),StandardCharsets.UTF_8);
+        }
+    }
 
     static String http(String url,String header) throws Exception {
         HttpURLConnection c=(HttpURLConnection)new URL(url).openConnection();

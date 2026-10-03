@@ -9,10 +9,10 @@
 """
 import json,os,subprocess,sys,tempfile,time
 def post(name,obj):
-    literal=json.dumps(obj,ensure_ascii=False)  # JSON string escapes are valid Swift string escapes
-    swift=f'import Foundation\nDistributedNotificationCenter.default().postNotificationName(NSNotification.Name("{name}"),object:{literal},userInfo:nil,deliverImmediately:true)\n'
-    f=tempfile.NamedTemporaryFile('w',suffix='.swift',delete=False);f.write(swift);f.close()
-    subprocess.run(['swift',f.name],check=True);os.unlink(f.name)
+    # JavaScript for Automation, not `swift`: a Swift script shows a blank icon in the Dock for each command.
+    jxa=('ObjC.import("Foundation");$.NSDistributedNotificationCenter.defaultCenter.'
+         'postNotificationNameObjectUserInfoDeliverImmediately(%s,%s,$(),true);'%(json.dumps(name),json.dumps(obj,ensure_ascii=False)))
+    subprocess.run(['osascript','-l','JavaScript','-e',jxa],check=True)
 def wait(path,timeout=60):
     for _ in range(timeout*10):
         if os.path.exists(path)and os.path.getsize(path)>0:time.sleep(.1);return

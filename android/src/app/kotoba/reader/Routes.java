@@ -79,6 +79,14 @@ public class Routes {
             case "listen.set":return listening.set(d.getString("id"));
             case "lyrics.get":return japaneseLyrics(lyrics().get(d.optString("title"),d.optString("artist"),d.optString("album",""),d.optDouble("duration",0),d.optBoolean("refresh",false)));
             case "ja.kanji":return new JSONObject().put("text",library.japaneseKanji(d.getString("text")));// simplified → Japanese kanji
+            case "lyrics.import":return japaneseLyrics(lyrics().importLrc(d.optString("name"),d.getString("text")));
+            case "lyrics.playlist":return new JSONObject().put("list",lyrics().playlist(d.getString("url")));
+            case "lyrics.prefetch":{
+                final String list=d.getString("list");final Lyrics ly=lyrics();
+                if(Lyrics.prefetching.get())throw new Exception("Already fetching");
+                new Thread(()->ly.prefetch(list,p->host.event("lyrics-prefetch",p))).start();
+                return new JSONObject().put("started",true);
+            }
             case "lyrics.search":return lyrics().search(d.getString("q"));
             case "lyrics.pick":return japaneseLyrics(lyrics().pick(d.optString("title"),d.optString("artist"),d.getString("source"),d.getLong("id")));
             case "the2.index":return library.the2Index(d.optString("q",""));
@@ -131,6 +139,10 @@ public class Routes {
             case "book.settings":books.saveSettings(d.getLong("id"),d.getJSONObject("settings"));return null;
             case "book.rename":books.rename(d.getLong("id"),d.getString("title"));return null;
             case "book.delete":books.delete(d.getLong("id"));return null;
+            case "book.added":return new JSONObject().put("text",books.added(d.getLong("id")));
+            case "book.addText":books.addText(d.getLong("id"),d.getString("text"));return null;
+            case "book.setAdded":books.setAdded(d.getLong("id"),d.optString("text",""));return null;
+            case "book.importText":return books.importText(d.optString("title",""),d.getString("text"));
             case "book.importPath":{
                 File f=new File(d.getString("path"));
                 if(f.length()>300_000_000)throw new Exception("That book is too large.");

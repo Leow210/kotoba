@@ -27,13 +27,14 @@
     openUrl(url){if(/^https?:\/\//i.test(url))mac({type:'open',url});},
     openResource(dict,name){mac({type:'open',url:location.origin+'/d/'+dict+'/'+encodeURI(name)});},
     setBars(){},exitApp(){},
-    pickBooks(){mac({type:'pickFile',purpose:'books',extensions:['epub','txt'],multiple:true});},
+    pickBooks(){mac({type:'pickFile',purpose:'books',extensions:['epub','txt','text','md','markdown'],multiple:true});},
     pickComicFolder(){mac({type:'pickFile',purpose:'comicFolder',folder:true});},
     pickComicFiles(){mac({type:'pickFile',purpose:'comicFiles',extensions:['cbz','zip'],multiple:true});},
     pickComicCover(series){window.__coverSeries=series;mac({type:'pickFile',purpose:'comicCover',extensions:['jpg','jpeg','png','webp']});},
     pickMihonBackup(){mac({type:'pickFile',purpose:'mihonBackup',extensions:['tachibk','proto','gz']});},
     scanPick:phoneOnly,
     pickSyncFolder(){mac({type:'pickFile',purpose:'sync',folder:true});},
+    pickLyrics(){mac({type:'pickFile',purpose:'lyrics',extensions:['lrc','txt'],multiple:true});},
     pickWordList(){mac({type:'pickFile',purpose:'wordlist',extensions:['txt','csv','tsv']});},
   };
   // The Mac app answers pickers with these.
@@ -52,6 +53,7 @@
     if(purpose==='comicCover')done('comic.setCoverPath',{id:window.__coverSeries,path},'comic-cover');
     if(purpose==='mihonBackup')done('comic.importBackupPath',{path},'mihon-imported');
     if(purpose==='sync')post('sync.setFolder',JSON.stringify({path})).then(t=>{const r=JSON.parse(t);if(r.error)say(r.error);else{say('Sync folder set');window.__event(JSON.stringify({type:'sync-status',data:r.data}));}});
+    if(purpose==='lyrics')post('lyrics.importPaths',JSON.stringify({paths:Array.isArray(path)?path:[path]})).then(t=>{const r=JSON.parse(t);if(r.error)say(r.error);else window.__event(JSON.stringify({type:'lyrics-imported',data:r.data}));});
     if(purpose==='wordlist')post('wordlist.importPath',JSON.stringify({path})).then(t=>{const r=JSON.parse(t);if(r.error)say(r.error);else window.__event(JSON.stringify({type:'wordlist-imported',data:r.data}));});
   };
   // Events from the core (import progress, toasts) arrive as Server-Sent Events.

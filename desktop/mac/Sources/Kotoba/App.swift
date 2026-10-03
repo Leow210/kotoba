@@ -2,6 +2,12 @@ import Cocoa
 import WebKit
 import Carbon.HIToolbox
 
+/// A web view that takes the click that brings its window forward. WKWebView ignores it by default, so after working in
+/// another app the first click on a sidebar button (Write, Reader…) did nothing.
+final class FirstClickWebView: WKWebView {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+}
+
 /// Kotoba for Mac. The interface is the same HTML/JS as the phone app, served by the Java core (DesktopServer) on
 /// 127.0.0.1; this app starts the core, shows the interface in a window, and answers the interface's requests for
 /// native things: folder/file pickers, opening links, Finder, and the video player.
@@ -56,7 +62,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         let config = WKWebViewConfiguration()
         config.userContentController.add(self, name: "kotoba")
         config.preferences.setValue(true, forKey: "developerExtrasEnabled")
-        web = WKWebView(frame: .zero, configuration: config)
+        web = FirstClickWebView(frame: .zero, configuration: config)
         web.navigationDelegate = self
         web.uiDelegate = self
         if #available(macOS 13.3, *) { web.isInspectable = true }
@@ -182,11 +188,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
         guard let m = message.body as? [String: Any], let type = m["type"] as? String else { return }
         switch type {
+        case "uiLang":
+            let l = (m["lang"] as? String) == "ja" ? "ja" : "en"
+            if l != uiLang { uiLang = l; UserDefaults.standard.set(l, forKey: "UILang"); buildMenu() }
         case "pickFolder":
             let panel = NSOpenPanel()
             panel.canChooseDirectories = true
             panel.canChooseFiles = false
-            panel.message = "Choose a folder with .mdx/.mdd dictionaries or Yomitan .zip dictionaries"
+            panel.message = L("Choose a folder with .mdx/.mdd dictionaries or Yomitan .zip dictionaries")
             panel.beginSheetModal(for: window) { [weak self] r in
                 guard r == .OK, let url = panel.url else { return }
                 self?.event("folder", url.path)
@@ -290,41 +299,52 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
 
     // MARK: menu
 
+    var uiLang = UserDefaults.standard.string(forKey: "UILang") ?? "en"
+    /// Native menu text in the interface language chosen in Library › Settings.
+    func L(_ en: String) -> String {
+        guard uiLang == "ja" else { return en }
+        let ja = ["About Kotoba": "Kotoba について", "Hide Kotoba": "Kotoba を隠す", "Quit Kotoba": "Kotoba を終了", "File": "ファイル", "Open Video…": "動画を開く…",
+                  "Edit": "編集", "Undo": "取り消す", "Redo": "やり直す", "Cut": "カット", "Copy": "コピー", "Paste": "ペースト", "Select All": "すべてを選択",
+                  "View": "表示", "Reload": "再読み込み", "Enter Full Screen": "フルスクリーンにする", "Read Screen Text (works in games)": "画面のテキストを読む（ゲームでも使えます）",
+                  "Window": "ウインドウ", "Minimize": "しまう", "Close": "閉じる",
+                  "Choose a folder with .mdx/.mdd dictionaries or Yomitan .zip dictionaries": ".mdx/.mdd 辞書または Yomitan の .zip 辞書があるフォルダを選んでください"]
+        return ja[en] ?? en
+    }
     func buildMenu() {
         let main = NSMenu()
         let appItem = NSMenuItem(); main.addItem(appItem)
         let appMenu = NSMenu()
-        appMenu.addItem(withTitle: "About Kotoba", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        appMenu.addItem(withTitle: L("About Kotoba"), action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
         appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: "Hide Kotoba", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
-        appMenu.addItem(withTitle: "Quit Kotoba", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        appMenu.addItem(withTitle: L("Hide Kotoba"), action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
+        appMenu.addItem(withTitle: L("Quit Kotoba"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         appItem.submenu = appMenu
         let fileItem = NSMenuItem(); main.addItem(fileItem)
-        let file = NSMenu(title: "File")
-        file.addItem(withTitle: "Open Video…", action: #selector(chooseVideo), keyEquivalent: "o")
+        let file = NSMenu(title: L("File"))
+        file.addItem(withTitle: L("Open Video…"), action: #selector(chooseVideo), keyEquivalent: "o")
         fileItem.submenu = file
         let editItem = NSMenuItem(); main.addItem(editItem)
-        let edit = NSMenu(title: "Edit")
-        edit.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
-        edit.addItem(withTitle: "Redo", action: Selector(("redo:")), keyEquivalent: "Z")
+        let edit = NSMenu(title: L("Edit"))
+        edit.addItem(withTitle: L("Undo"), action: Selector(("undo:")), keyEquivalent: "z")
+        edit.addItem(withTitle: L("Redo"), action: Selector(("redo:")), keyEquivalent: "Z")
         edit.addItem(.separator())
-        edit.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
-        edit.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
-        edit.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
-        edit.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        edit.addItem(withTitle: L("Cut"), action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        edit.addItem(withTitle: L("Copy"), action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        edit.addItem(withTitle: L("Paste"), action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        edit.addItem(withTitle: L("Select All"), action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
         editItem.submenu = edit
         let viewItem = NSMenuItem(); main.addItem(viewItem)
-        let view = NSMenu(title: "View")
-        view.addItem(withTitle: "Reload", action: #selector(reload), keyEquivalent: "r")
-        view.addItem(withTitle: "Enter Full Screen", action: #selector(NSWindow.toggleFullScreen(_:)), keyEquivalent: "f")
+        let view = NSMenu(title: L("View"))
+        view.addItem(withTitle: L("Reload"), action: #selector(reload), keyEquivalent: "r")
+        view.addItem(withTitle: L("Enter Full Screen"), action: #selector(NSWindow.toggleFullScreen(_:)), keyEquivalent: "f")
         view.addItem(.separator())
-        let read = view.addItem(withTitle: "Read Screen Text (works in games)", action: #selector(readScreen), keyEquivalent: "")
+        let read = view.addItem(withTitle: L("Read Screen Text (works in games)"), action: #selector(readScreen), keyEquivalent: "")
         read.target = self
         viewItem.submenu = view
         let windowItem = NSMenuItem(); main.addItem(windowItem)
-        let windowMenu = NSMenu(title: "Window")
-        windowMenu.addItem(withTitle: "Minimize", action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
-        windowMenu.addItem(withTitle: "Close", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
+        let windowMenu = NSMenu(title: L("Window"))
+        windowMenu.addItem(withTitle: L("Minimize"), action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
+        windowMenu.addItem(withTitle: L("Close"), action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
         windowItem.submenu = windowMenu
         NSApp.mainMenu = main
         NSApp.windowsMenu = windowMenu

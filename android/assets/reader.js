@@ -12,12 +12,25 @@ on('books-imported',r=>{
   if(tab==='reader')renderShelf();
 });
 $('add-books').onclick=()=>Kotoba.pickBooks();
+// Paste text (an article, a chapter, subtitles…) to read it here with lookups, like any book.
+function pasteTextSheet(){
+  const s=openSheet(`<div class="sheet-body"><label class="hint" for="pt-title">Title (optional)</label><input id="pt-title" class="input" placeholder="First line if left empty" style="width:100%;margin:4px 0 10px"><label class="hint" for="pt-text">Text</label><textarea id="pt-text" placeholder="Paste or type text here" style="width:100%;min-height:42vh;margin-top:4px;font:inherit;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:inherit;resize:vertical"></textarea></div><div class="sheet-foot"><button class="btn primary wide" id="pt-add">Add to Reader</button></div>`,{title:'Paste text',tall:true});
+  const text=s.sheet.querySelector('#pt-text');setTimeout(()=>text.focus(),200);
+  s.sheet.querySelector('#pt-add').onclick=handle(async()=>{
+    if(!text.value.trim()){toast('Paste some text first');return;}
+    const r=await api('book.importText',{title:s.sheet.querySelector('#pt-title').value,text:text.value});
+    closeSheet(s);toast(`Added “${r.title}”`);
+    if(tab==='reader')renderShelf();
+    openBook(r.id);
+  });
+}
+$('paste-text').onclick=pasteTextSheet;
 
 async function renderShelf(){
   const list=await api('books');
   $('reader-sub').textContent=list.length?`${list.length} ${list.length===1?'book':'books'}`:'Books you’re reading';
   if(!list.length){
-    $('shelf').innerHTML=`<div class="empty"><span class="glyph">書</span><h2>Add a book</h2>EPUB and TXT books in Japanese, Korean, Thai and Russian. Select any word to look it up and save it as a card.<br><br><button class="btn primary" id="shelf-add">＋ Add books</button></div>`;
+    $('shelf').innerHTML=`<div class="empty"><span class="glyph">書</span><h2>Add a book</h2>EPUB and TXT books, or pasted text, in Japanese, Korean, Chinese, Thai, Russian and German. Select any word to look it up and save it as a card.<br><br><button class="btn primary" id="shelf-add">＋ Add books</button></div>`;
     $('shelf-add').onclick=()=>Kotoba.pickBooks();
     return;
   }
@@ -25,24 +38,38 @@ async function renderShelf(){
   $('shelf').innerHTML=(recent?`<div class="section-label">Continue reading</div>`:'')+
     (recent?`<div style="padding:0 16px 6px"><button class="folder-row" data-book="${recent.id}" style="border:1px solid var(--line);border-radius:14px;background:var(--surface)"><span class="fi">${icon('book')}</span><span class="fb"><b>${esc(recent.title)}</b><small>${Math.round(recent.progress*100)}% · ${esc(recent.author||'')}</small></span></button></div>`:'')+
     `<div class="section-label">All books</div><div class="shelf">${list.map(b=>`<button class="book" data-book="${b.id}">
-      <div class="cover">${b.has_cover?`<img src="/book/${b.id}/cover" alt="" loading="lazy">`:`<div class="ph">${esc(b.title)}</div>`}<span class="fmt">${esc((b.lang||b.format).toUpperCase().slice(0,2))}</span></div>
+      <div class="cover">${b.has_cover?`<img src="/book/${b.id}/cover" alt="" loading="lazy">`:`<div class="ph">${esc(b.title)}</div>`}<span class="fmt">${esc((b.lang||b.format).toUpperCase().slice(0,2))}</span><span class="book-more" role="button" aria-label="Rename or delete" title="Rename or delete">⋯</span></div>
       <b>${esc(b.title)}</b><small>${esc(b.author||'')}</small><div class="bar-p"><i style="width:${Math.round(b.progress*100)}%"></i></div></button>`).join('')}</div>`;
   $('shelf').querySelectorAll('[data-book]').forEach(el=>{
     let timer=null;const id=+el.dataset.book;
     el.addEventListener('touchstart',()=>{timer=setTimeout(()=>{timer=null;bookMenu(id,list.find(b=>b.id===id));},500);},{passive:true});
     el.addEventListener('touchend',()=>{if(timer)clearTimeout(timer);},{passive:true});
     el.addEventListener('touchmove',()=>{if(timer)clearTimeout(timer);timer=null;},{passive:true});
-    el.oncontextmenu=(e)=>{e.preventDefault();};
+    // Right-click (Mac) or the ⋯ on the cover opens the same menu as a long press: open, rename, delete.
+    el.oncontextmenu=(e)=>{e.preventDefault();bookMenu(id,list.find(b=>b.id===id));};
+    const more=el.querySelector('.book-more');
+    if(more)more.onclick=(e)=>{e.preventDefault();e.stopPropagation();bookMenu(id,list.find(b=>b.id===id));};
     el.onclick=handle(()=>openBook(id));
+  });
+}
+/** A sheet with a text box: pasted or typed text goes to onSave. */
+function textSheet({title,hint='',initial='',button='Save',allowEmpty=false,onSave}){
+  const s=openSheet(`<div class="sheet-body">${hint?`<p class="hint">${esc(hint)}</p>`:''}<textarea id="ts-text" placeholder="Paste or type text here" style="width:100%;min-height:42vh;font:inherit;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:inherit;resize:vertical">${esc(initial)}</textarea></div><div class="sheet-foot"><button class="btn primary wide" id="ts-save">${esc(button)}</button></div>`,{title,tall:true});
+  const box=s.sheet.querySelector('#ts-text');setTimeout(()=>{box.focus();if(!initial)box.setSelectionRange(0,0);},200);
+  s.sheet.querySelector('#ts-save').onclick=handle(async()=>{
+    if(!allowEmpty&&!box.value.trim()){toast('Paste some text first');return;}
+    await onSave(box.value);closeSheet(s);
   });
 }
 async function bookMenu(id,b){
   await menuSheet(b.title,[
     {label:'Open',icon:'book',run:()=>openBook(id)},
+    {label:'Add text to the end…',icon:'edit',run:()=>textSheet({title:'Add text to “'+b.title+'”',hint:'Appended after the last chapter, as a final “Added text” chapter.',button:'Add to book',onSave:async(t)=>{await api('book.addText',{id,text:t});toast('Added to “'+b.title+'”');renderShelf();}})},
+    {label:'Edit added text…',icon:'edit',run:async()=>{const cur=(await api('book.added',{id})).text;if(!cur){toast('Nothing has been added to this book yet');return;}textSheet({title:'Added text',hint:'Everything added to “'+b.title+'”. Clear it to remove the added chapter.',initial:cur,button:'Save',allowEmpty:true,onSave:async(t)=>{await api('book.setAdded',{id,text:t});toast(t.trim()?'Saved':'Added text removed');renderShelf();}});}},
     {label:'Rename',icon:'edit',run:async()=>{const t=await prompt2('Book title',b.title);if(!t)return;await api('book.rename',{id,title:t});renderShelf();}},
     {label:'Export highlights',icon:'export',run:()=>Kotoba.exportFile(b.title+' — highlights.md','highlights',JSON.stringify({book:id}))},
     '-',
-    {label:'Remove from library',icon:'trash',danger:true,run:async()=>{if(!await confirm2('Remove “'+b.title+'”?','Its highlights and bookmarks are removed too.','Remove',true))return;await api('book.delete',{id});renderShelf();}},
+    {label:'Delete book',icon:'trash',danger:true,run:async()=>{if(!await confirm2('Delete “'+b.title+'”?','The book, its highlights and its bookmarks are removed.','Delete',true))return;await api('book.delete',{id});renderShelf();}},
   ]);
 }
 

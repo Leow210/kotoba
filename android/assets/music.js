@@ -7,7 +7,13 @@
 (function(){
   const store={get(k,d){try{const v=localStorage.getItem(k);return v===null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
   const fmt=(s)=>{s=Math.max(0,Math.floor(s||0));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');};
-  let page=null;
+  let page=null,hooks={};
+  // Offline lyrics: .lrc files you pick, and a list of songs fetched ahead while online.
+  on('lyrics-imported',r=>{
+    toast(r.count?`Imported lyrics for ${r.count} song${r.count===1?'':'s'}${r.failed?` · ${r.failed} failed`:''}`:(r.error||'No lyrics imported'),3500);
+    if(hooks.reload)hooks.reload();
+  });
+  on('lyrics-prefetch',r=>{if(hooks.progress)hooks.progress(r);});
 
   /** Text as tappable characters/words, like a comic bubble: CJK and Thai by character, Korean by syllable, others by word. */
   const segmenter=typeof Intl!=='undefined'&&Intl.Segmenter?new Intl.Segmenter(undefined,{granularity:'grapheme'}):null;
@@ -39,8 +45,9 @@
         <button class="icon-btn" data-a="find" aria-label="Find lyrics">${icon('search')}</button></div>
       <div class="mu-tools"><button class="chip small" data-a="toggle">⏯</button><button class="chip small" data-a="earlier" title="The lyrics lag behind the song: move them earlier (½ s)">Earlier</button><span data-f="offset" class="mu-offset"></span><button class="chip small" data-a="later" title="The lyrics run ahead of the song: move them later (½ s)">Later</button>
         <button class="chip small" data-a="pause" title="Pause the music while a word is looked up"></button><button class="chip small" data-a="tr" title="Show translations under the lines"></button><button class="chip small" data-a="follow" title="Keep the current line in view"></button></div>
+      <div class="mu-tools"><button class="chip small" data-a="import" title="Use a .lrc file (or several) as lyrics, offline">Import .lrc</button><button class="chip small" data-a="offline" title="Fetch lyrics for a list of songs now, to read them offline">Save for offline</button></div>
       <div class="mu-scroll" data-f="scroll"><div data-f="lines" class="mu-lines"><p class="hint mu-empty">Play a song in Spotify, YouTube Music, NetEase… and its lyrics appear here.</p></div></div>`;
-    pushPage(el,{onClose:()=>{clearInterval(poll);cancelAnimationFrame(raf);page=null;}});
+    pushPage(el,{onClose:()=>{clearInterval(poll);cancelAnimationFrame(raf);page=null;hooks={};}});
     const f=(n)=>el.querySelector(`[data-f="${n}"]`);
     let now=null,nowAt=0,song='',lyrics=null,active=-1,userScrolled=0,pausedByUs=false,lang='';
     const opts={pause:store.get('music.pauseLookup',true),tr:store.get('music.showTr',true),follow:true};
@@ -155,6 +162,40 @@
     el.querySelector('[data-a="pause"]').onclick=()=>{opts.pause=!opts.pause;store.set('music.pauseLookup',opts.pause);paintTools();};
     el.querySelector('[data-a="tr"]').onclick=()=>{opts.tr=!opts.tr;store.set('music.showTr',opts.tr);paintTools();};
     el.querySelector('[data-a="follow"]').onclick=()=>{opts.follow=!opts.follow;userScrolled=0;paintTools();};
+
+    // Reload the lyrics of the song that's playing (after an import).
+    hooks.reload=()=>{song='';refresh();};
+    el.querySelector('[data-a="import"]').onclick=()=>{
+      if(window.Kotoba&&Kotoba.pickLyrics)Kotoba.pickLyrics();else toast('Not available here');
+    };
+    /** A list of songs ("Artist - Title", one per line) fetched and cached now, so their lyrics work offline. */
+    function offlineSheet(){
+      const cur=now&&now.title?`${now.artist?now.artist+' - ':''}${now.title}`:'';
+      const s=openSheet(`<div class="sheet-body"><p class="hint" style="margin-top:0">One song per line, as <b>Artist - Title</b> (or just the title). Needs internet now; afterwards their lyrics show offline. Songs already saved are skipped.</p>
+        <div style="display:flex;gap:8px;margin-bottom:10px"><input class="input" id="mu-url" placeholder="YouTube Music playlist link" style="flex:1"><button class="btn" id="mu-load">Load playlist</button></div>
+        <textarea class="input" id="mu-list" rows="9" placeholder="YOASOBI - 夜に駆ける&#10;米津玄師 - Lemon" style="width:100%">${esc(cur)}</textarea>
+        <div id="mu-prog" class="hint" style="margin:10px 0"></div>
+        <button class="btn primary wide" id="mu-go">Save for offline</button></div>`,{title:'Save lyrics for offline',tall:true});
+      const url=s.sheet.querySelector('#mu-url'),load=s.sheet.querySelector('#mu-load');
+      load.onclick=handle(async()=>{
+        if(!url.value.trim())return;
+        load.disabled=true;prog.textContent='Reading the playlist…';
+        try{const r=await api('lyrics.playlist',{url:url.value.trim()});list.value=r.list;prog.textContent=`${r.list.split('\n').length} songs · public or unlisted playlists only`;}
+        catch(e){prog.textContent=e.message;}
+        load.disabled=false;
+      });
+      const list=s.sheet.querySelector('#mu-list'),prog=s.sheet.querySelector('#mu-prog'),go=s.sheet.querySelector('#mu-go');
+      hooks.progress=r=>{
+        prog.textContent=`${r.done} / ${r.total} · ${r.found} saved${r.cached?` · ${r.cached} already saved`:''}${r.missing.length?` · not found: ${r.missing.join('; ')}`:''}`;
+        if(r.done>=r.total){go.disabled=false;toast(`Saved ${r.found} of ${r.total} songs`,3000);}
+      };
+      go.onclick=handle(async()=>{
+        if(!list.value.trim())return;
+        go.disabled=true;prog.textContent='Starting…';
+        try{await api('lyrics.prefetch',{list:list.value});}catch(e){go.disabled=false;prog.textContent=e.message;}
+      });
+    }
+    el.querySelector('[data-a="offline"]').onclick=offlineSheet;
 
     /** When the automatic match is wrong or missing: search LRCLIB and NetEase by hand and pick one. */
     function findSheet(){

@@ -36,7 +36,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class MainActivity extends Activity {
     static final String HOST="appassets.androidplatform.net";
     static final String ORIGIN="https://"+HOST;
-    static final int PICK_FOLDER=51,EXPORT=52,RESTORE=53,PICK_BOOKS=54,PICK_COMIC_TREE=55,PICK_COMIC_FILES=56,PICK_WORDLIST=57,PICK_MIHON=58,PICK_COVER=59,SCAN_PICK=61,CAMERA_PERMISSION=62,SYNC_FOLDER=63,SCREEN_CAPTURE=64;
+    static final int PICK_FOLDER=51,EXPORT=52,RESTORE=53,PICK_BOOKS=54,PICK_COMIC_TREE=55,PICK_COMIC_FILES=56,PICK_WORDLIST=57,PICK_MIHON=58,PICK_COVER=59,SCAN_PICK=61,CAMERA_PERMISSION=62,SYNC_FOLDER=63,SCREEN_CAPTURE=64,PICK_LYRICS=65;
     /** The running app, for the screen-text overlay (ScreenText), which answers its page with this app's routes. */
     static MainActivity current;
     long coverSeries;
@@ -296,6 +296,12 @@ public class MainActivity extends Activity {
             Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*");
             i.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"text/plain","text/csv","text/tab-separated-values","text/comma-separated-values","application/octet-stream"});
             startActivityForResult(i,PICK_WORDLIST);
+        });}
+        @JavascriptInterface public void pickLyrics(){runOnUiThread(()->{
+            Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*");
+            i.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"text/plain","application/octet-stream","text/*"});
+            i.putExtra(Intent.EXTRA_ALLOW_MULTIPLE,true);
+            startActivityForResult(i,PICK_LYRICS);
         });}
         @JavascriptInterface public void pickComicCover(long series){runOnUiThread(()->{
             coverSeries=series;
@@ -642,6 +648,22 @@ public class MainActivity extends Activity {
                     JSONObject r=wordlists.importText(displayName(u),text);
                     event("wordlist-imported",r);
                 }catch(Exception e){event("toast","Couldn’t import that list: "+e.getMessage());}
+            });
+            return;
+        }
+        if(request==PICK_LYRICS&&result==RESULT_OK&&intent!=null){
+            List<Uri> uris=new ArrayList<>();
+            if(intent.getClipData()!=null)for(int k=0;k<intent.getClipData().getItemCount();k++)uris.add(intent.getClipData().getItemAt(k).getUri());
+            else if(intent.getData()!=null)uris.add(intent.getData());
+            pool.execute(()->{
+                int ok=0;String last="",err="";
+                for(Uri u:uris){
+                    try{
+                        JSONObject r=routes.lyrics().importLrc(displayName(u),BookParser.decode(read(getContentResolver().openInputStream(u),5_000_000))[0]);
+                        ok++;last=r.optString("title");
+                    }catch(Exception e){err=displayName(u)+": "+e.getMessage();}
+                }
+                try{event("lyrics-imported",new JSONObject().put("count",ok).put("failed",uris.size()-ok).put("last",last).put("error",err));}catch(Exception ignored){}
             });
             return;
         }

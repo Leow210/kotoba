@@ -25,7 +25,7 @@ const fmt=(s)=>{s=Math.max(0,Math.floor(s||0));const h=Math.floor(s/3600),m=Math
 
 const st={t:0,d:0,paused:true,speed:1,vol:100,subs:[],audio:[],main:null,second:null,cues:[],cues2:[],lang:'',
   delay:0,autopause:store.get('player.autopause',false),apCue:null,shown:null,shown2:null,size:store.get('player.size',1),
-  hoverPause:store.get('player.hoverPause',true),pausedByHover:false,loaded:false};
+  hoverPause:store.get('player.hoverPause',true),popStay:store.get('player.popStay',true),pausedByHover:false,loaded:false};
 
 function osd(text){const o=$('osd');o.textContent=text;o.hidden=false;clearTimeout(osd.t);osd.t=setTimeout(()=>o.hidden=true,1300);}
 
@@ -124,7 +124,7 @@ function render(force){
     st.shown=c;
     $('sub-main').innerHTML=c?chars(c.text,'ch'):'';
     $('sub-main').dataset.cue=c?c.i:'';
-    if(!pop.pinned)hidePop();
+    if(!pop.pinned&&!st.popStay)hidePop();
     markTranscript(c);
   }
   if(force||c2!==st.shown2){st.shown2=c2;$('sub-second').textContent=c2?c2.text:'';}
@@ -182,7 +182,7 @@ const pop={el:$('pop'),pinned:false,key:null,res:null,hideT:0,cue:null};
 let hoverT=0,hoverAt=null,lastHoverPoint=null;
 function cancelHover(){
   hoverAt=null;clearTimeout(hoverT);clearTimeout(pop.hideT);
-  if(!pop.pinned){hidePop();resumeAfterHover();}
+  if(!pop.pinned&&!st.popStay){hidePop();resumeAfterHover();}
 }
 function onHover(e){
   lastHoverPoint={x:e.clientX,y:e.clientY};
@@ -206,7 +206,7 @@ async function lookupAt(lineEl,cue,i){
   try{res=await api('lookup',{text,lang:st.lang==='en'?'':st.lang});}catch(e){return;}
   if(hoverAt!==lineEl.dataset.cue+':'+i)return;
   lineEl.querySelectorAll('.ch.hl').forEach(x=>x.classList.remove('hl'));
-  if(!res.items.length){if(!pop.pinned)hidePop();return;}
+  if(!res.items.length){if(!pop.pinned&&!st.popStay)hidePop();return;}
   const n=Array.from(res.matched||text[0]).length;
   const spans=[...lineEl.querySelectorAll('.ch')].slice(i,i+n);
   spans.forEach(x=>x.classList.add('hl'));
@@ -217,7 +217,7 @@ function leaveSubs(){
   lastHoverPoint=null;
   hoverAt=null;clearTimeout(hoverT);
   clearTimeout(pop.hideT);
-  pop.hideT=setTimeout(()=>{if(!pop.pinned&&!pop.el.matches(':hover')){hidePop();resumeAfterHover();}},260);
+  pop.hideT=setTimeout(()=>{if(!pop.pinned&&!st.popStay&&!pop.el.matches(':hover')){hidePop();resumeAfterHover();}},260);
 }
 function resumeAfterHover(){if(st.pausedByHover){st.pausedByHover=false;send({cmd:'play'});}}
 function hidePop(){
@@ -308,7 +308,7 @@ let defT=0;
 function wire(P){
   const el=P.el;
   el.addEventListener('mouseenter',()=>clearTimeout(pop.hideT));
-  el.addEventListener('mouseleave',(e)=>{if(!pop.pinned&&!(e.relatedTarget&&e.relatedTarget.closest&&e.relatedTarget.closest('.kpop')))leaveSubs();});
+  el.addEventListener('mouseleave',(e)=>{if(!pop.pinned&&!st.popStay&&!(e.relatedTarget&&e.relatedTarget.closest&&e.relatedTarget.closest('.kpop')))leaveSubs();});
   el.addEventListener('click',(e)=>onPopClick(P,e));
 }
 const AUDIO_HREF=/^sound:\/\/|\.(mp3|m4a|aac|ogg|oga|opus|wav|spx)(#.*)?$/i;
@@ -474,7 +474,7 @@ document.addEventListener('keydown',(e)=>{
 // Letting go of the key closes the popup, unless the pointer is in one (reading it, or looking up inside it).
 document.addEventListener('keyup',(e)=>{if(KotobaHover.isKey(e)&&!document.querySelector('.kpop:hover'))cancelHover();});
 window.addEventListener('blur',cancelHover);
-document.addEventListener('mousedown',(e)=>{if(!pop.el.hidden&&!e.target.closest('.kpop')&&!e.target.closest('.ch')){hidePop();resumeAfterHover();}});
+document.addEventListener('mousedown',(e)=>{if(!pop.el.hidden&&!st.popStay&&!e.target.closest('.kpop')&&!e.target.closest('.ch')){hidePop();resumeAfterHover();}});
 
 // ---------- transcript ----------
 function renderTranscript(){
@@ -532,6 +532,7 @@ function subsMenu(anchor){
     '-',
     {label:`Bigger (now ${Math.round(st.size*100)}%)`,run:()=>setSize(st.size+0.1)},{label:'Smaller',run:()=>setSize(st.size-0.1)},
     {label:`Later by 0.1 s (delay ${st.delay.toFixed(1)} s) — X`,run:()=>setDelay(st.delay+0.1)},{label:'Earlier by 0.1 s — Z',run:()=>setDelay(st.delay-0.1)},
+    {label:st.popStay?'✓ Keep dictionary popup open until ×':'Keep dictionary popup open until ×',run:()=>{st.popStay=!st.popStay;store.set('player.popStay',st.popStay);osd(st.popStay?'Popup stays until ×':'Popup closes by itself');}},
     {label:st.hoverPause?'✓ Pause while hovering subtitles':'Pause while hovering subtitles',run:()=>{st.hoverPause=!st.hoverPause;store.set('player.hoverPause',st.hoverPause);}},
   ]);
 }

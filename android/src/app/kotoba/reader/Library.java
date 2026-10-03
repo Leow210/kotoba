@@ -2129,23 +2129,27 @@ public class Library {
                     found=true;
                     String lemma=rows.getJSONObject(0).optString("key",e.getKey());
                     JSONObject a=germanAnalysis(lemma,germanExplain(e.getValue()),v+" ← "+lemma,rows,1);
-                    // A separable verb's forms: stehe … auf is aufstehen when auf closes the clause.
-                    if(!after.isEmpty()&&!lemma.contains(" ")&&e.getValue().stream().anyMatch(German::splits)){
-                        for(String particle:German.separableParticles(after)){
-                            String prefixed=particle+lemma;
-                            boolean listed=false;
-                            for(String[] f:germanFormRows(HtmlText.normalize(v+" "+particle)))if(f[0].equalsIgnoreCase(prefixed)){listed=true;break;}
-                            if(!listed)continue;
-                            JSONArray sep=germanEntries(prefixed);
-                            if(sep.length()==0)continue;
-                            List<String> sl=new ArrayList<>();
-                            for(String l:e.getValue())if(German.splits(l))sl.add(l);
-                            JSONObject s=germanAnalysis(sep.getJSONObject(0).optString("key",prefixed),germanExplain(sl)+" · separable: "+v+" … "+particle,v+" … "+particle+" ← "+prefixed,sep,-1);
-                            s.put("separable",particle);
-                            out.add(s);
-                        }
-                    }
                     out.add(a);
+                }
+            }
+        }
+        // A separable verb: "stehe … auf", "stehen … auf" is aufstehen when the particle ends the clause. The form index lists
+        // the two words together, so this also finds it when the word alone is an ordinary verb (stehen) or form.
+        if(!after.isEmpty()){
+            java.util.HashSet<String> done=new java.util.HashSet<>();
+            for(String v:tried){
+                for(String particle:German.separableParticles(after)){
+                    for(String[] f:germanFormRows(HtmlText.normalize(v+" "+particle))){
+                        if(!done.add(f[0])||!f[0].toLowerCase(java.util.Locale.ROOT).startsWith(particle))continue;
+                        List<String> sl=new ArrayList<>();
+                        for(String l:f[1].split(" \\| "))if(German.splits(l))sl.add(l);
+                        if(sl.isEmpty())continue;
+                        JSONArray sep=germanEntries(f[0]);
+                        if(sep.length()==0)continue;
+                        JSONObject s=germanAnalysis(sep.getJSONObject(0).optString("key",f[0]),germanExplain(sl)+" · separable: "+v+" … "+particle,v+" … "+particle+" ← "+f[0],sep,-1);
+                        s.put("separable",particle);
+                        out.add(s);
+                    }
                 }
             }
         }

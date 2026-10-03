@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kotoba Video Text
 // @namespace    app.kotoba.desktop
-// @version      0.11.0
+// @version      0.13.0
 // @description  Look up YouTube, Netflix, Viki and GagaOOLala subtitles in Kotoba for Mac: hold Shift over a word; YouTube Music's song goes to Kotoba's lyrics. Works in Firefox and Chrome (Tampermonkey).
 // @match        https://www.youtube.com/watch*
 // @match        https://www.gagaoolala.com/*/videos/*
@@ -9,6 +9,8 @@
 // @match        https://www.viki.com/*
 // @match        https://www.netflix.com/*
 // @run-at       document-idle
+// @updateURL    none
+// @downloadURL  none
 // @noframes
 // @grant        GM_xmlhttpRequest
 // @grant        GM_getValue
@@ -54,9 +56,10 @@
   const sourceSelector = youtube ? '.ytp-caption-window-container' : netflix ? '.player-timedtext' : '.bmpui-ui-subtitle-overlay';
   const store = { get: (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} } };
   let enabled = store.get('kotoba.videoText.enabled', 'true') !== 'false';
+  let stayOpen = store.get('kotoba.videoText.stay', 'true') !== 'false';
   let language = store.get('kotoba.videoText.language', 'auto');
   let pauseOnLookup = store.get('kotoba.videoText.pause', 'true') !== 'false';
-  let concealed = null, originalVisibility = '', originalPriority = '', lastText = '';
+  let concealed = null, lastText = '';
 
   // YouTube only accepts HTML through a Trusted Types policy in Chrome; Firefox takes plain strings.
   const policy = (() => {
@@ -87,14 +90,17 @@
   style.textContent = `
     #kotoba-video-ui { position: fixed; z-index: 2147483645; pointer-events: none; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
     #kotoba-video-ui * { box-sizing: border-box; }
-    #kotoba-video-toolbar { display: flex; align-items: center; gap: 5px; justify-content: flex-end; }
+    /* Top right of the video, clear of the site's own control bar and its menus (a button of ours in the path from the
+       site's subtitle button to its menu made the site think the pointer had left, and the menu closed). */
+    #kotoba-video-toolbar { position: fixed; display: flex; align-items: center; gap: 5px; justify-content: flex-end; opacity: .55; transition: opacity .15s; }
+    #kotoba-video-toolbar:hover, #kotoba-video-toolbar:focus-within { opacity: 1; }
     #kotoba-video-toolbar button, #kotoba-video-toolbar select { pointer-events: auto; border: 1px solid rgba(255,255,255,.25); border-radius: 7px; background: rgba(19,23,21,.88); color: #fff; font: 12px -apple-system,BlinkMacSystemFont,sans-serif; padding: 4px 7px; cursor: pointer; }
     #kotoba-video-toolbar button[aria-pressed="true"] { color: #a8e1c4; }
     /* The language list is drawn here, not by the browser: a native dropdown closes whenever the site's player re-lays
        out or loses the pointer, which on Viki and the like made it impossible to choose outside full screen. */
     #kotoba-video-toolbar select { display: none; }
     #kotoba-video-langwrap { position: relative; pointer-events: auto; }
-    #kotoba-video-langmenu { position: absolute; right: 0; bottom: calc(100% + 4px); min-width: 140px; padding: 4px; border-radius: 9px; background: rgba(19,23,21,.96); border: 1px solid rgba(255,255,255,.25); box-shadow: 0 8px 24px rgba(0,0,0,.5); }
+    #kotoba-video-langmenu { position: absolute; right: 0; top: calc(100% + 4px); min-width: 140px; padding: 4px; border-radius: 9px; background: rgba(19,23,21,.96); border: 1px solid rgba(255,255,255,.25); box-shadow: 0 8px 24px rgba(0,0,0,.5); }
     #kotoba-video-langmenu[hidden] { display: none; }
     #kotoba-video-langmenu button { display: block; width: 100%; text-align: left; border: 0; background: transparent; padding: 6px 9px; }
     #kotoba-video-langmenu button:hover { background: rgba(255,255,255,.14); }
@@ -102,6 +108,11 @@
     #kotoba-video-line { position: absolute; left: 0; right: 0; bottom: 24px; text-align: center; pointer-events: none; }
     #kotoba-video-text { display: inline-block; max-width: 94%; padding: 3px 8px; border-radius: 6px; background: rgba(0,0,0,.58); color: white; font: 600 28px/1.4 -apple-system,BlinkMacSystemFont,"PingFang TC","Hiragino Sans","Apple SD Gothic Neo",sans-serif; text-shadow: 0 1px 3px #000; white-space: pre-wrap; user-select: text !important; -webkit-user-select: text !important; cursor: text; pointer-events: auto; }
     #kotoba-video-text:empty { display: none; }
+    /* A grip beside the caption: drag it to move the subtitle, double-click to reset. */
+    #kotoba-video-grip { display: inline-block; vertical-align: middle; margin-left: 4px; padding: 6px 7px; border-radius: 6px; background: rgba(19,23,21,.88); color: #fff; font: 16px/1 sans-serif; cursor: grab; pointer-events: auto; opacity: 0; transition: opacity .15s; touch-action: none; user-select: none; -webkit-user-select: none; }
+    #kotoba-video-line:hover #kotoba-video-grip, #kotoba-video-grip.k-drag { opacity: .9; }
+    #kotoba-video-grip.k-drag { cursor: grabbing; }
+    #kotoba-video-text:empty + #kotoba-video-grip { display: none; }
     #kotoba-video-text .k-ch { border-radius: 4px; }
     #kotoba-video-text .k-ch.k-hl { background: rgba(124,194,160,.5); box-shadow: 0 0 0 2px rgba(124,194,160,.5); }
     .kotoba-pop { position: fixed; z-index: 2147483646; width: min(300px, 80vw); max-height: min(62vh, 520px); overflow: auto; pointer-events: auto;
@@ -155,16 +166,22 @@
   ui.id = 'kotoba-video-ui';
   ui.innerHTML = H(`<div id="kotoba-video-toolbar">
       <button type="button" id="kotoba-video-toggle" aria-pressed="true" title="Show the caption as text you can look up (hold Shift over a word)">文 Kotoba</button>
+      <button type="button" id="kotoba-video-stay" aria-pressed="true" title="Keep the dictionary popup open until you press × (or Esc)">📌 stay open</button>
       <button type="button" id="kotoba-video-pause" aria-pressed="true" title="Pause the video while a word is shown">⏸ on lookup</button>
       <button type="button" id="kotoba-video-live" aria-pressed="false" title="Click to switch: the site's subtitles → 🎙 Live subs (heard from the audio on your Mac, kept for rewatching) → 🔍 Picture subs (subtitles burned into the video, read from the picture)">🎙 Live subs</button>
       <select id="kotoba-video-lang" aria-label="Subtitle language"><option value="auto">Auto language</option><option value="ja">日本語</option><option value="zh">中文</option><option value="ko">한국어</option><option value="th">ไทย</option><option value="ru">Русский</option><option value="de">Deutsch</option></select>
       <span id="kotoba-video-langwrap"><button type="button" id="kotoba-video-langbtn" aria-haspopup="listbox" aria-expanded="false"></button><div id="kotoba-video-langmenu" role="listbox" hidden></div></span>
-    </div><div id="kotoba-video-line"><span id="kotoba-video-text"></span></div>`);
+    </div><div id="kotoba-video-line"><span id="kotoba-video-text"></span><span id="kotoba-video-grip" title="Drag to move the subtitle (double-click to put it back)">⠿</span></div>`);
   document.body.appendChild(ui);
   const pop = document.createElement('div');
   pop.id = 'kotoba-video-pop'; pop.className = 'kotoba-pop'; pop.hidden = true;
   const toggle = ui.querySelector('#kotoba-video-toggle'), pauseBtn = ui.querySelector('#kotoba-video-pause');
-  const select = ui.querySelector('#kotoba-video-lang'), text = ui.querySelector('#kotoba-video-text');
+  const line = ui.querySelector('#kotoba-video-line'), grip = ui.querySelector('#kotoba-video-grip');
+  // Where the caption sits, as a share of the video's size from its usual place (so it follows full screen), per site.
+  const posKey = 'kotoba.captionPos.' + location.hostname;
+  let pos = { x: 0, y: 0 };
+  try { const p = JSON.parse(store.get(posKey, 'null')); if (p && isFinite(p.x) && isFinite(p.y)) pos = p; } catch (e) {}
+  const toolbar = ui.querySelector('#kotoba-video-toolbar'), select = ui.querySelector('#kotoba-video-lang'), text = ui.querySelector('#kotoba-video-text');
   const liveBtn = ui.querySelector('#kotoba-video-live');
 
   // ---------- live subtitles (made on the Mac from the show's audio) ----------
@@ -290,19 +307,21 @@
   }
 
   // ---------- the site's caption, redrawn as text ----------
+  // The site's own caption is hidden by a stylesheet rule, not by styling one node: sites redraw their caption nodes
+  // (and some keep several, or a native text track besides), and any left visible showed the line twice.
+  const hideCss = document.createElement('style');
+  hideCss.id = 'kotoba-video-hide';
+  hideCss.textContent = `${sourceSelector}, ${sourceSelector} * { visibility: hidden !important; }
+    video::cue, video::-webkit-media-text-track-display { color: transparent !important; background: transparent !important; text-shadow: none !important; opacity: 0 !important; }`;
   function showNative() {
     if (!concealed) return;
-    if (originalVisibility) concealed.style.setProperty('visibility', originalVisibility, originalPriority);
-    else concealed.style.removeProperty('visibility');
+    hideCss.remove();
     concealed = null;
   }
   function hideNative(node) {
-    if (node === concealed) return;
-    showNative();
+    if (concealed) return;
     concealed = node;
-    originalVisibility = node.style.getPropertyValue('visibility');
-    originalPriority = node.style.getPropertyPriority('visibility');
-    node.style.setProperty('visibility', 'hidden', 'important');
+    document.documentElement.appendChild(hideCss);
   }
   function readCaption(node) {
     if (!node) return '';
@@ -351,17 +370,20 @@
     ui.style.top = `${Math.max(0, rect.bottom - Math.max(90, rect.height * .16))}px`;
     ui.style.width = `${width}px`;
     ui.style.height = `${Math.max(80, Math.min(130, rect.height * .16))}px`;
+    line.style.transform = `translate(${pos.x * rect.width}px, ${pos.y * rect.height}px)`;
+    toolbar.style.top = `${Math.max(0, rect.top) + 8}px`;
+    toolbar.style.right = `${Math.max(0, document.documentElement.clientWidth - rect.right) + 8}px`;
     text.style.fontSize = `${Math.max(18, Math.min(34, rect.width / 32))}px`;
     // Subtitles read from the picture take the place of the site's own.
     if (enabled && subsMode === 'picture') {
       if (ocrError && !ocrText) { if (!pinned && text.textContent !== ocrError) { lastText = ''; text.textContent = ocrError; } return; }
-      if (ocrText !== lastText && !pinned) { lastText = ocrText; drawCaption(ocrText); hidePop(); }
+      if (ocrText !== lastText && !pinned) { lastText = ocrText; drawCaption(ocrText); hideAuto(); }
       return;
     }
     // Live subtitles (or lines saved from an earlier watch) take the place of the site's own.
     if (enabled && (live || liveLines.length)) {
       const current = liveLineAt(video.currentTime);
-      if (current !== lastText && !pinned) { lastText = current; drawCaption(current); hidePop(); }
+      if (current !== lastText && !pinned) { lastText = current; drawCaption(current); hideAuto(); }
       return;
     }
     const source = document.querySelector(sourceSelector);
@@ -369,7 +391,7 @@
     const current = readCaption(source);
     hideNative(source);
     // While a word is shown, the line it came from stays put.
-    if (current !== lastText && !pinned) { lastText = current; drawCaption(current); hidePop(); }
+    if (current !== lastText && !pinned) { lastText = current; drawCaption(current); hideAuto(); }
   }
 
   // ---------- hover lookup ----------
@@ -393,7 +415,7 @@
     try { res = await kotoba('lookup', { text: from, lang }); }
     catch (e) { showMessage(e.message, hoverSpan); return; }
     text.querySelectorAll('.k-hl').forEach(x => x.classList.remove('k-hl'));
-    if (!res.items.length) { hidePop(); return; }
+    if (!res.items.length) { hideAuto(); return; }
     const n = Array.from(res.matched || from[0]).length;
     const spans = [...text.querySelectorAll('.k-ch')].slice(i, i + n);
     spans.forEach(x => x.classList.add('k-hl'));
@@ -608,6 +630,8 @@
     if (pausedByUs && v && v.paused) v.play();
     pausedByUs = false;
   }
+  /** Closes the popup unless it's set to stay until ×. */
+  function hideAuto() { if (!stayOpen) hidePop(); }
   const inPopup = t => !!(t && t.closest && t.closest('.kotoba-pop'));
 
   // Drag across part of the line to look up exactly that (a shorter word than Shift picks, a stem, a single hanja).
@@ -625,17 +649,17 @@
   });
   for (const type of ['mousedown', 'click']) text.addEventListener(type, e => e.stopPropagation());
   text.addEventListener('mousemove', e => { shift = e.shiftKey; const s = e.target.closest('.k-ch'); if (s) { hoverSpan = s; trigger(); } });
-  text.addEventListener('mouseleave', e => { hoverSpan = null; if (inPopup(e.relatedTarget)) return; setTimeout(() => { if (!pinned && !document.querySelector('.kotoba-pop:hover')) hidePop(); }, 300); });
+  text.addEventListener('mouseleave', e => { hoverSpan = null; if (inPopup(e.relatedTarget)) return; setTimeout(() => { if (!pinned && !document.querySelector('.kotoba-pop:hover')) hideAuto(); }, 300); });
   // Holding Shift while already over a word looks it up without moving.
   addEventListener('keydown', e => {
     if (e.key === 'Shift') { shift = true; if (lastFrame && lastFrame.f.isConnected && lastFrame.f.matches(':hover')) lastFrame.probe(lastFrame.x, lastFrame.y, true); else trigger(); }
     if (e.key === 'Escape') hidePop();
   }, true);
   addEventListener('keyup', e => { if (e.key === 'Shift') shift = false; }, true);
-  addEventListener('mousedown', e => { if (!pop.hidden && !inPopup(e.target) && !text.contains(e.target)) hidePop(); }, true);
+  addEventListener('mousedown', e => { if (!pop.hidden && !inPopup(e.target) && !text.contains(e.target)) hideAuto(); }, true);
   function wire(P) {
     const el = P.el;
-    el.addEventListener('mouseleave', e => { if (!pinned && !inPopup(e.relatedTarget) && !(e.relatedTarget && text.contains(e.relatedTarget))) hidePop(); });
+    el.addEventListener('mouseleave', e => { if (!pinned && !inPopup(e.relatedTarget) && !(e.relatedTarget && text.contains(e.relatedTarget))) hideAuto(); });
     // The site mustn't treat clicks and keys in the popup as player controls.
     for (const type of ['click', 'mousedown', 'mouseup', 'dblclick', 'keydown']) el.addEventListener(type, e => e.stopPropagation());
     el.addEventListener('click', e => { if (e.target.closest('.k-folder,.k-newfolder')) { pinned = true; return; } onPopClick(P, e); });
@@ -686,6 +710,28 @@
     }
   }
 
+  grip.addEventListener('pointerdown', e => {
+    e.preventDefault(); e.stopPropagation();
+    const video = largestVideo(); if (!video) return;
+    const r = video.getBoundingClientRect(), start = { x: e.clientX, y: e.clientY, px: pos.x, py: pos.y };
+    try { grip.setPointerCapture(e.pointerId); } catch (err) {}
+    grip.classList.add('k-drag');
+    const move = ev => {
+      pos = { x: Math.max(-.45, Math.min(.45, start.px + (ev.clientX - start.x) / r.width)),
+              y: Math.max(-.88, Math.min(.12, start.py + (ev.clientY - start.y) / r.height)) };
+      line.style.transform = `translate(${pos.x * r.width}px, ${pos.y * r.height}px)`;
+    };
+    const up = () => {
+      grip.classList.remove('k-drag'); grip.removeEventListener('pointermove', move); grip.removeEventListener('pointerup', up); grip.removeEventListener('pointercancel', up);
+      store.set(posKey, JSON.stringify(pos));
+    };
+    grip.addEventListener('pointermove', move); grip.addEventListener('pointerup', up); grip.addEventListener('pointercancel', up);
+  });
+  grip.addEventListener('dblclick', e => { e.stopPropagation(); pos = { x: 0, y: 0 }; store.set(posKey, JSON.stringify(pos)); update(); });
+  for (const type of ['mousedown', 'click']) grip.addEventListener(type, e => e.stopPropagation());
+  const stayBtn = ui.querySelector('#kotoba-video-stay');
+  stayBtn.setAttribute('aria-pressed', String(stayOpen));
+  stayBtn.addEventListener('click', () => { stayOpen = !stayOpen; store.set('kotoba.videoText.stay', String(stayOpen)); stayBtn.setAttribute('aria-pressed', String(stayOpen)); if (!stayOpen && !pop.hidden && !pop.matches(':hover') && !text.matches(':hover')) hidePop(); });
   toggle.addEventListener('click', () => { enabled = !enabled; store.set('kotoba.videoText.enabled', String(enabled)); toggle.setAttribute('aria-pressed', String(enabled)); if (!enabled) hidePop(); update(); });
   pauseBtn.addEventListener('click', () => { pauseOnLookup = !pauseOnLookup; store.set('kotoba.videoText.pause', String(pauseOnLookup)); pauseBtn.setAttribute('aria-pressed', String(pauseOnLookup)); });
   select.addEventListener('change', () => { language = select.value; store.set('kotoba.videoText.language', language); text.lang = guessLanguage(lastText); });

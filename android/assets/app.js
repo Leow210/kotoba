@@ -100,6 +100,8 @@ function showTab(name){
   document.querySelectorAll('.screen').forEach(s=>s.hidden=s.id!=='screen-'+name);
   document.querySelectorAll('#tabbar button').forEach(b=>b.classList.toggle('on',b.dataset.tab===name));
   while(pageStack.length)popPage(true);
+  // Any page that is on screen but not on the stack is a leftover: it would hide the tab being opened.
+  document.querySelectorAll('#pages > .page').forEach(el=>{if(!pageStack.some(p=>p.el===el))el.remove();});
   if(name==='folders')renderFolders();
   if(name==='review')renderReviewHome();
   if(name==='library')renderLibrary();
@@ -118,7 +120,9 @@ function pushPage(el,opts={}){
 }
 function popPage(instant=false){
   const top=pageStack.pop();if(!top)return;
-  top.opts.onClose&&top.opts.onClose();
+  // A close handler that throws must not leave the page on screen: it is already off the stack, so nothing else could remove it
+  // (the sidebar then seemed dead: tabs changed underneath the stuck page).
+  try{top.opts.onClose&&top.opts.onClose();}catch(e){console.error('page close handler failed',e);}
   if(instant){top.el.remove();}
   else{top.el.classList.add(top.opts.modal?'enter':'leave');setTimeout(()=>top.el.remove(),230);}
   if(!pageStack.length)$('selbar').classList.remove('over-page');
@@ -760,7 +764,10 @@ function playAudio(dict,href){
 function playClip(clip){
   // A clip kept from a listening set plays from there; dictionary clips from their dictionary.
   if(clip.url){if(audioPlayer)audioPlayer.pause();audioPlayer=new Audio(clip.url);audioPlayer.play().catch(e=>toast('Couldn’t play this sound ('+e.message+')'));return;}
-  playAudio(clip.dict,clip.path);
+  // A clip remembers its dictionary's name too: ids change when a library is re-imported or synced.
+  const named=clip.dictionary&&dicts.find(d=>d.name===clip.dictionary);
+  const own=dictById(clip.dict);
+  playAudio(named&&(!own||own.name!==clip.dictionary)?named.id:clip.dict,clip.path);
 }
 /** NHK notation (タベ＼ル, ツメコム━) → kana with a line over high morae and a corner at the pitch drop. */
 function pitchHtml(accent){
@@ -2044,6 +2051,7 @@ async function renderLibrary(){
     <div class="settings">
       <div class="switch-row"><div><b>Entry text size</b><small>Also adjustable from any entry’s ⋯ menu</small></div><div class="stepper"><button data-z="-0.1">−</button><span id="zv">${Math.round(settings.zoom*100)}%</span><button data-z="0.1">+</button></div></div>
       <div class="switch-row"><div><b>Vertical text (縦書き)</b><small>Show entries in vertical writing</small></div><label class="toggle"><input type="checkbox" id="set-vertical" ${settings.vertical?'checked':''}><span></span></label></div>
+      <div class="switch-row"><div><b>Interface language</b></div><div class="chips">${[['en','English'],['ja','日本語']].map(([c,n])=>`<button class="chip small ${(settings.ui_lang||'en')===c?'on':''}" data-ui-lang="${c}" data-no-i18n>${n}</button>`).join('')}</div></div>
       <div class="switch-row"><div><b>Theme</b></div><div class="chips">${['light','sepia','dark'].map(t=>`<button class="chip small ${settings.theme===t?'on':''}" data-theme-set="${t}">${t[0].toUpperCase()+t.slice(1)}</button>`).join('')}</div></div>
       <div class="switch-row"><div><b>Track known words</b><small>A ✓ on entries, your vocabulary size, and how much of a chapter or episode you’d know. Nothing is highlighted while you read.</small></div><label class="toggle"><input type="checkbox" id="set-known" ${knownOn()?'checked':''}><span></span></label></div>
       <div class="switch-row"><div><b>Recent searches</b><small>Show your recent searches on the Dictionary home screen</small></div><label class="toggle"><input type="checkbox" id="set-recent" ${settings.show_recent?'checked':''}><span></span></label></div>
@@ -2078,6 +2086,7 @@ async function renderLibrary(){
   $('set-ap-entry').onchange=e=>{settings.autoplay_entry=e.target.checked;saveLocalSettings();};
   $('set-audio-front').onchange=e=>{settings.audio_front=e.target.checked;saveLocalSettings();};
   $('library-home').querySelectorAll('[data-apr]').forEach(b=>b.onclick=()=>{settings.autoplay_review=b.dataset.apr;saveLocalSettings();$('library-home').querySelectorAll('[data-apr]').forEach(x=>x.classList.toggle('on',x===b));});
+  $('library-home').querySelectorAll('[data-ui-lang]').forEach(b=>b.onclick=()=>{settings.ui_lang=b.dataset.uiLang;saveLocalSettings();window.I18N&&I18N.set(settings.ui_lang);renderLibrary();});
   $('library-home').querySelectorAll('[data-theme-set]').forEach(b=>b.onclick=()=>{settings.theme=b.dataset.themeSet;saveLocalSettings();applyTheme();renderLibrary();});
   $('backup').onclick=()=>Kotoba.exportFile(`kotoba-backup-${new Date().toISOString().slice(0,10)}.json`,'backup','{}');
   $('restore').onclick=()=>Kotoba.restoreBackup();
