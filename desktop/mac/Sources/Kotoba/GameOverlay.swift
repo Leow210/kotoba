@@ -48,7 +48,7 @@ final class GameOverlay: NSObject, WKScriptMessageHandler {
                 let cg = try await Self.grab(screen)
                 self.image = cg
                 self.show(on: screen)
-                self.send("window.gameOverlay&&gameOverlay.show(\(Self.json(["image": Self.jpeg(cg), "w": cg.width, "h": cg.height, "app": source, "lang": self.lang])))")
+                self.send("window.gameOverlay&&gameOverlay.show(\(Self.json(["image": Self.jpeg(cg), "w": cg.width, "h": cg.height, "app": source, "lang": self.lang, "inset": screen.safeAreaInsets.top])))")
                 self.recognize()
             } catch {
                 self.busy = false
@@ -121,6 +121,8 @@ final class GameOverlay: NSObject, WKScriptMessageHandler {
             p.hasShadow = false
             p.hidesOnDeactivate = false
             p.isFloatingPanel = true
+            // After isFloatingPanel, which would otherwise reset the level to .floating (3), under a game's own windows.
+            p.level = .screenSaver
             p.becomesKeyOnlyIfNeeded = false
             // See-through, yet it takes every click (explicitly false: otherwise clear areas would pass clicks to the game).
             p.ignoresMouseEvents = false
@@ -236,3 +238,4 @@ final class HotKey {
         return overlayChoices[v] == nil ? "ctrl-grave" : v
     }
 }
+

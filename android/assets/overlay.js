@@ -201,6 +201,7 @@
       closeAllOverlays();
       $$('#go-img').src=d.image;$$('#go-boxes').innerHTML='';hl.hidden=true;hoverAt='';
       $$('#go-app').textContent=d.app||'Screen';status('Reading text…');paintLangs();
+      layer.style.setProperty('--go-top',(d.inset||0)+'px');
       paintFreeze();layer.hidden=false;
     },
     lines(l){lines=mergeOverlaps(l.filter(x=>x.text&&x.text.trim()).map(withChars));render();},
