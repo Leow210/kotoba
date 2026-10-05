@@ -121,7 +121,7 @@ public class DesktopServer {
                 byte[] r=new byte[12];new SecureRandom().nextBytes(r);
                 StringBuilder b=new StringBuilder();for(byte v:r)b.append(String.format("%02x",v));
                 installLinks.put(b.toString(),System.currentTimeMillis());
-                return new JSONObject().put("url","http://127.0.0.1:"+port+"/kotoba-video.user.js?once="+b).put("helperPort",HELPER_PORT).put("helperRunning",helperRunning);
+                return new JSONObject().put("url","http://127.0.0.1:"+port+"/kotoba-video.user.js?once="+b).put("webUrl","http://127.0.0.1:"+port+"/kotoba-web.user.js?once="+b).put("helperPort",HELPER_PORT).put("helperRunning",helperRunning);
             }
             case "video.tracks":return videoTracks(new File(d.getString("path")));
             case "video.sub":return new JSONObject().put("text",videoSub(new File(d.getString("path")),d.optInt("stream",-1),d.optString("file","")));
@@ -735,7 +735,7 @@ public class DesktopServer {
             String path=x.getRequestURI().getPath();
             // The Firefox helper, installed by Tampermonkey before it has a Kotoba cookie. It carries the helper key,
             // so it's only served through a one-time link the Video tab makes (helper.link), valid for ten minutes.
-            if(path.equals("/kotoba-video.user.js")){
+            if(path.equals("/kotoba-video.user.js")||path.equals("/kotoba-web.user.js")){
                 String q=x.getRequestURI().getRawQuery();
                 // The key may come with other parameters (a browser or Tampermonkey adding its own): find it among them.
                 String once="";
@@ -744,7 +744,7 @@ public class DesktopServer {
                 // the install itself), and a second fetch of a spent link opened an "expired" tab. Ten minutes covers it.
                 installLinks.values().removeIf(t->System.currentTimeMillis()-t>600_000);
                 Long made=installLinks.get(once);
-                File script=new File(web,"kotoba-video.user.js");
+                File script=new File(web,path.substring(1));
                 if(made==null||!script.isFile()){
                     try{Files.writeString(new File(data,"helper-install.log").toPath(),new java.util.Date()+" refused: query="+q+" known="+installLinks.size()+" agent="+x.getRequestHeaders().getFirst("User-Agent")+"\n",StandardOpenOption.CREATE,StandardOpenOption.APPEND);}catch(Exception ignored){}
                     send(x,404,"text/plain","This install link has expired. Make a new one in Kotoba › Video.".getBytes(StandardCharsets.UTF_8),null);return;

@@ -90,6 +90,16 @@ The helper talks to Kotoba on 127.0.0.1:47823 through Tampermonkey (`GM_xmlhttpR
 installed script; that address only answers lookups, entries, definitions, frequency and card saves. Reinstall the helper
 from the Video tab if the key changes. It reads only the caption text shown on the page.
 
+### Any web page, like Yomitan
+
+Kotoba › Video › **Browser page lookup** copies a second one-time install link (same Tampermonkey, same key as the subtitle
+helper; the two scripts are separate so each can be updated or removed alone). On any page, hold **Shift** over Japanese,
+Chinese, Korean, Thai or Russian text: the word under the pointer is looked up in Kotoba for Mac, highlighted, and the
+same popup opens (tab per dictionary, frequency, known, ＋ Card with the sentence as the example and the page title and
+address as the note, Shift over a word inside an entry for a popup in the popup). Shift-drag across text looks up exactly
+what was selected. A popup stays until × or Esc or a click elsewhere. Latin text is left alone. Tampermonkey's menu has
+"turn off for this site". Streaming sites the subtitle helper covers are excluded. Kotoba for Mac must be open.
+
 ## Sync
 
 Library › Sync: choose a folder that a sync tool keeps identical on both devices (Syncthing works on Android and

@@ -150,7 +150,7 @@
   document.getElementById('screen-reader').after(screen);
   const hoverInstruction=()=>KotobaHover.get()==='none'?'Hover a subtitle to look words up':`Hold ${KotobaHover.label()} and hover a subtitle to look words up`;
   function updateVideoHelp(){const e=screen.querySelector('.head .sub');if(e)e.textContent=hoverInstruction();}
-  screen.innerHTML=`<div class="head head-row"><div><h1>Video</h1><p class="sub"></p></div><div><button class="btn small" id="copy-browser-helper">Browser subtitle helper</button> <button class="btn small primary" id="open-video">＋ Open video…</button></div></div><div class="scroll" id="video-home"></div>`;
+  screen.innerHTML=`<div class="head head-row"><div><h1>Video</h1><p class="sub"></p></div><div><button class="btn small" id="copy-browser-helper">Browser subtitle helper</button> <button class="btn small" id="copy-browser-web">Browser page lookup</button> <button class="btn small primary" id="open-video">＋ Open video…</button></div></div><div class="scroll" id="video-home"></div>`;
   updateVideoHelp();
   document.getElementById('open-video').onclick=()=>mac({type:'openVideo'});
   // The browser helper (Firefox or Chrome): a one-time install link (it carries the key the helper uses to ask Kotoba for lookups).
@@ -159,6 +159,13 @@
     Kotoba.copy(r.url);
     if(!r.helperRunning)toast('Another app is using port '+r.helperPort+'; quit it and reopen Kotoba for the helper to work.',6000);
     else toast('Install link copied (valid 10 minutes). Paste it into Firefox’s or Chrome’s address bar; Tampermonkey offers to install.',6000);
+  });
+  // The same for any web page (Yomitan-style: hold Shift over text): a second script, paired with the same key.
+  document.getElementById('copy-browser-web').onclick=handle(async()=>{
+    const r=await api('helper.link');
+    Kotoba.copy(r.webUrl);
+    if(!r.helperRunning)toast('Another app is using port '+r.helperPort+'; quit it and reopen Kotoba for the helper to work.',6000);
+    else toast('Install link copied (valid 10 minutes). Paste it into Firefox’s or Chrome’s address bar; Tampermonkey offers to install. Then hold Shift over text on any page.',7000);
   });
   // "Open in Kotoba" from the helper: the word opens here and the window comes forward.
   on('helper-show',r=>{mac({type:'activate'});window.externalLookup&&window.externalLookup(r.word);});
