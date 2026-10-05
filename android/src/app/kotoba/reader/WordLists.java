@@ -83,6 +83,11 @@ public class WordLists {
         if(q!=null&&!q.trim().isEmpty())return Store.rows(db,"SELECT pos,word,reading,note FROM wordlist_items WHERE list_id=? AND (instr(norm,?)>0 OR instr(reading,?)>0) ORDER BY pos LIMIT ?",Long.toString(list),HtmlText.normalize(q),q.trim(),Integer.toString(limit));
         return Store.rows(db,"SELECT pos,word,reading,note FROM wordlist_items WHERE list_id=? AND pos>? ORDER BY pos LIMIT ?",Long.toString(list),Integer.toString(offset),Integer.toString(limit));
     }
+    /** One word picked at random, shaped like an items() row. */
+    public JSONObject random(long list) throws Exception {
+        JSONArray r=Store.rows(db,"SELECT pos,word,reading,note FROM wordlist_items WHERE list_id=? ORDER BY random() LIMIT 1",Long.toString(list));
+        return r.length()==0?null:r.getJSONObject(0);
+    }
     public void delete(long id){db.execSQL("DELETE FROM wordlist_items WHERE list_id=?",new Object[]{id});db.execSQL("DELETE FROM wordlists WHERE id=?",new Object[]{id});}
     public void rename(long id,String name){db.execSQL("UPDATE wordlists SET name=? WHERE id=?",new Object[]{name.trim(),id});}
 

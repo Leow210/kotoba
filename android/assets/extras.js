@@ -56,7 +56,7 @@ async function wordListPage(src){
   let view='list',sort='default',rows=[],shown=0,loading=false,done=false,query='',gen=0;
   try{view=localStorage.getItem('wlView')||'list';}catch(e){}
   const el=document.createElement('div');el.className='wl-page';
-  el.innerHTML=`<div class="bar"><button class="icon-btn" data-a="back">${icon('back')}</button><div class="title"><b>${esc(src.title)}</b><small>${esc(src.sub)}</small></div><button class="icon-btn" data-a="sort" aria-label="Sort">${icon('sort')}</button><button class="icon-btn" data-a="view" aria-label="List or grid"></button>${src.menu?`<button class="icon-btn" data-a="more">${icon('more')}</button>`:''}</div>
+  el.innerHTML=`<div class="bar"><button class="icon-btn" data-a="back">${icon('back')}</button><div class="title"><b>${esc(src.title)}</b><small>${esc(src.sub)}</small></div>${src.random?`<button class="icon-btn" data-a="random" aria-label="Random word">${icon('shuffle')}</button>`:''}<button class="icon-btn" data-a="sort" aria-label="Sort">${icon('sort')}</button><button class="icon-btn" data-a="view" aria-label="List or grid"></button>${src.menu?`<button class="icon-btn" data-a="more">${icon('more')}</button>`:''}</div>
     <div class="searchline"><div class="field">${icon('search')}<input data-f="q" type="search" placeholder="Find in this list" autocomplete="off"></div></div>
     <div class="chips" style="padding:2px 14px 8px" data-f="sorts"></div>
     <div class="chips wl-jump" data-f="jump" hidden></div>
@@ -74,6 +74,7 @@ async function wordListPage(src){
   };
   renderSorts();
   el.querySelector('[data-a="sort"]').onclick=()=>{sort=sort==='default'?'abc':'default';renderSorts();reset();};
+  if(src.random)el.querySelector('[data-a="random"]').onclick=handle(async()=>{const r=await src.random();if(r)return src.open(r);});
   if(src.menu)el.querySelector('[data-a="more"]').onclick=handle(()=>src.menu(el));
   f('q').addEventListener('input',debounce(()=>{query=f('q').value.trim();reset();},200));
   const CHUNK=300;
@@ -141,6 +142,7 @@ async function openWordList(id){
       const batch=await api('wordlist.items',{id,offset:q?0:sort==='abc'?offset:last,limit,q,sort});
       return {rows:batch.map(r=>({...r,rank:list.ranked?r.pos:null})),done:!!q||batch.length<limit};
     },
+    random:()=>api('wordlist.random',{id}),
     async open(r){
       if(!r.rec){const g=(await api('gloss',{words:[r.word]}))[0];r.rec=g.rec;r.dict=g.dict;}
       if(r.rec)return openEntry({rec:r.rec,dict:r.dict,key:r.word});
