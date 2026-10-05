@@ -8,6 +8,17 @@ on('mihon-imported',r=>{
   if(tab==='reader'&&shelfKind==='comics')renderComicShelf();
 });
 
+// Lists that ship with the app (android/assets/preset-*.txt, built by tools/build_preset_lists.py).
+const PRESET_LISTS=[
+  ['HSK 3.0 · Level 1','hsk3-1'],['HSK 3.0 · Level 2','hsk3-2'],['HSK 3.0 · Level 3','hsk3-3'],['HSK 3.0 · Level 4','hsk3-4'],
+  ['HSK 3.0 · Level 5','hsk3-5'],['HSK 3.0 · Level 6','hsk3-6'],['HSK 3.0 · Levels 7–9','hsk3-7'],
+  ['TOPIK I · 초급','topik1'],['TOPIK II · 중급','topik2']];
+async function addPresetList(title,file){
+  const text=await (await fetch('preset-'+file+'.txt')).text();
+  const r=await api('wordlist.importText',{name:title,text});
+  return r.id;
+}
+
 (function(){
   // Vocabulary tab: the dictionaries' own selections (地名, 四字熟語, 重要語…), then imported word lists.
   const original=renderFolders;
@@ -23,7 +34,14 @@ on('mihon-imported',r=>{
       box.innerHTML+=`<div class="section-label">From your dictionaries</div>`+[...byDict.values()].map(ls=>
         `<div class="dl-dict">${esc(shortName(ls[0].dictionary))}</div><div class="history dl-chips">${ls.map(l=>`<button class="chip" data-dl="${l.dict}:${l.index}">${esc(l.title)} <small>${l.count.toLocaleString()}</small></button>`).join('')}</div>`).join('')+'<div style="height:20px"></div>';
     }
+    const have=new Set(lists.map(l=>l.name));
+    box.innerHTML+=`<div class="section-label">Preset lists</div><div class="history dl-chips">${PRESET_LISTS.map(([t,f])=>`<button class="chip" data-preset="${f}" data-title="${esc(t)}">${esc(t)}${have.has(t)?' ✓':''}</button>`).join('')}</div><p class="hint" style="padding:0 18px 20px">HSK 3.0 (2021) levels hold the words new at that level. TOPIK has two official tiers only (I, II).</p>`;
     $('folder-list').appendChild(box);
+    box.querySelectorAll('[data-preset]').forEach(b=>b.onclick=handle(async()=>{
+      const t=b.dataset.title,existing=lists.find(l=>l.name===t);
+      if(existing)return openWordList(existing.id);
+      const id=await addPresetList(t,b.dataset.preset);toast('Added '+t,2500);renderFolders();openWordList(id);
+    }));
     box.querySelector('#wl-import').onclick=()=>Kotoba.pickWordList();
     box.querySelectorAll('[data-wl]').forEach(b=>b.onclick=handle(()=>openWordList(+b.dataset.wl)));
     box.querySelectorAll('[data-dl]').forEach(b=>b.onclick=handle(()=>{const [d,i]=b.dataset.dl.split(':').map(Number);return openDictList(d,i);}));

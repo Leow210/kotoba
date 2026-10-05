@@ -202,6 +202,7 @@ public class Routes {
             case "wordlists":return wordlists.lists();
             case "wordlist.items":if("abc".equals(d.optString("sort")))wordlists.fillSortKeys(d.getLong("id"),library::readingOf);
                 return wordlists.items(d.getLong("id"),d.optInt("offset",0),d.optInt("limit",200),d.optString("q",""),d.optString("sort",""));
+            case "wordlist.importText":return wordlists.importText(d.getString("name")+".txt",d.getString("text"));
             case "wordlist.delete":wordlists.delete(d.getLong("id"));return null;
             case "wordlist.rename":wordlists.rename(d.getLong("id"),d.getString("name"));return null;
             case "wordlist.toFolder":return wordListToFolder(d.getLong("id"),d.getLong("folder"));

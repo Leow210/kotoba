@@ -1,0 +1,507 @@
+# HSK 3.0 level 1 (words new at this level). drkameleon/complete-hsk-vocabulary, MIT; meanings CC-CEDICT CC BY-SA
+的	de	of; ~'s (possessive particle); (used after an attribute); (used to form a nominal expression)
+了	le	(completed action marker); (modal particle indicating change of state, situation now); (modal particle intensifying preceding clause)
+我	wǒ	I; me; my
+是	shì	to be (followed by substantives only); correct; right; true; (respectful acknowledgement of a command) very well
+你	nǐ	you (informal, as opposed to courteous 您)
+在	zài	to exist; to be alive; (of sb or sth) to be (located) at; (used before a verb to indicate an action in progress)
+不	bù	no; not so; (bound form) not; un-
+有	yǒu	to have; there is; (bound form) having; with; -ful; -ed; -al (as in 意 intentional)
+他	tā	he; him (used for either sex when the sex is unknown or unimportant); (used before sb's name for emphasis); (used as a meaningless mock object)
+这	zhè	(pronoun) this; these; (bound form) this; the (followed by a noun); (bound form) this; these (followed by a classifier) (in this sense, commonly pr. [zhèi], esp. in Beijing)
+就	jiù	(after a suppositional clause) in that case; then; (after a clause of action) as soon as; immediately after; (same as 是) merely; nothing else but; simply; just; precisely; exactly
+个	gě	used in 自个儿
+和	hé	old variant of 和
+人	rén	person; people
+说	shuì	to persuade
+我们	wǒmen	we; us; ourselves
+要	yāo	(bound form) to demand; to coerce
+好	hǎo	good; appropriate; proper; all right!
+一	yī	one; single; a (article)
+会	huì	can; to have the skill; to know how to; to be likely to; to be sure to; to meet; to get together
+也	Yě	surname Ye
+都	Dū	surname Du
+对	duì	right; correct; towards; at; for; concerning; regarding
+到	dào	to reach; to arrive; to leave for; to go to; to (a place); until (a time); up to (a point)
+上	shǎng	used in 上声
+来	lái	to come; (used as a substitute for a more specific verb); hither (directional complement for motion toward the speaker, as in 回来)
+很	hěn	(adverb of degree); quite; very
+还	Huán	surname Huan
+去	qù	to go; to go to (a place); (of a time etc) last
+她	tā	she
+着	zhāo	(chess) move; trick; all right!
+想	xiǎng	to think (about); to think of; to devise; to think (that); to believe (that)
+给	gěi	to; for; for the benefit of
+没有	méiyǒu	haven't; hasn't; doesn't exist
+能	Néng	surname Neng
+那	Nā	surname Na
+他们	tāmen	they
+看	kān	to look after; to take care of; to watch
+做	zuò	to make; to produce; to write; to compose; to do; to engage in; to hold (a party etc)
+什么	shénme	what?; something; anything
+吧	bā	bar (loanword) (serving drinks, or providing Internet access etc); to puff (on a pipe etc); (onom.) bang
+点	diǎn	point; dot; drop
+过	Guō	surname Guo
+没	méi	(negative prefix for verbs) have not; not
+大	dà	big; large; great; older (than another person); eldest (as in 姐)
+从	cóng	variant of 从
+下	xià	down; downwards; below
+中	Zhōng	China; Chinese; surname Zhong
+里	lǐ	variant of 里
+真	zhēn	really; truly; indeed
+现在	xiànzài	now; at present; at the moment
+年	Nián	surname Nian
+用	yòng	to use; to employ; to have to
+多	duō	many; much; too many; in excess; (after a numeral) ... odd
+两	liǎng	two; both; some
+等	děng	class; rank; grade
+吗	má	(coll.) what?
+天	tiān	day; sky; heaven
+出	chū	to go out; to come out; to occur
+太	tài	highest; greatest; too (much)
+最	zuì	variant of 最
+再	zài	again; once more; re-; second; another; then (after sth, and not until then)
+呢	ne	particle indicating that a previously asked question is to be applied to the preceding word ("What about ...?", "And ...?"); particle for inquiring about location ("Where is ...?"); particle signaling a pause, to emphasize the preceding words and allow the listener time to take them on board ("ok?", "are you with me?")
+次	cì	next in sequence; second; the second (day, time etc)
+小	xiǎo	small; tiny; few
+知道	zhīdào	to know; to become aware of; also pr. [zhī dao]
+时候	shíhou	time; length of time; moment
+走	zǒu	to walk; to go; to run
+工作	gōngzuò	to work; (of a machine) to operate; job
+事	shì	matter; thing; item
+后	Hòu	surname Hou
+家	jiā	used in 家伙 and 家俱
+你们	nǐmen	you (plural)
+前	qián	front; forward; ahead
+时间	shíjiān	time; period
+怎么	zěnme	how?; what?; why?
+爱	ài	to love; to be fond of; to like; affection; to be inclined (to do sth); to tend to (happen)
+地	de	-ly; structural particle: used before a verb or adjective, linking it to preceding modifying adverbial adjunct
+这些	zhèxiē	these
+跟	gēn	heel; to follow closely; to go with
+喜欢	xǐhuan	to like; to be fond of
+吃	chī	to eat; to consume; to eat at (a cafeteria etc); to eradicate; to destroy
+谁	shéi	who; also pr. [shuí]
+新	Xīn	abbr. for Xinjiang 疆 or Singapore 坡; surname Xin
+找	zhǎo	to try to find; to look for; to call on sb
+打	dá	dozen (loanword)
+还有	háiyǒu	furthermore; in addition; still
+快	kuài	rapid; quick; speed
+比	Bǐ	Belgium; Belgian; abbr. for 比利时
+今天	jīntiān	today; at the present; now
+话	huà	dialect; language; spoken words
+还是	háishi	still (as before); had better; unexpectedly
+觉得	juéde	to think that ...; to feel that ...; to feel (uncomfortable etc)
+月	yuè	moon; month; monthly
+看到	kàndào	to see
+起来	qǐlai	to stand up; to get up; also pr. [qǐ lái]
+一起	yīqǐ	in the same place; together; with
+起	qǐ	to rise; to raise; to get up
+几	jī	small table
+见	jiàn	to see; to meet; to appear (to be sth)
+车	Chē	surname Che
+一些	yīxiē	some; a few; a little
+找到	zhǎodào	to find
+手	shǒu	hand; (formal) to hold; person engaged in certain types of work
+听	yǐn	smile (archaic)
+非常	fēicháng	very; really; unusual; extraordinary
+开	kāi	to open (transitive or intransitive); (of ships, vehicles, troops etc) to start; to turn on; to put in operation; to operate; to run
+叫	jiào	to shout; to call; to order
+孩子	háizi	child
+这里	zhèlǐ	variant of 这里
+别	Bié	surname Bie
+请	qǐng	to ask; to invite; please (do sth)
+钱	Qián	surname Qian
+本	běn	root; stem; origin
+回	huí	to circle; to go back; to turn around
+东西	dōngxī	east and west
+三	Sān	surname San
+一样	yīyàng	same; like; equal to
+买	mǎi	to buy; to purchase
+重要	zhòngyào	important; significant; major
+问	wèn	to ask; to inquire
+告诉	gàosù	to press charges; to file a complaint
+出来	chūlái	to come out; to appear; to arise
+地方	dìfāng	region; regional (away from the central administration); local
+最后	zuìhòu	final; last; finally
+老	lǎo	prefix used before the surname of a person or a numeral indicating the order of birth of the children in a family or to indicate affection or familiarity; old (of people); venerable (person)
+岁	suì	variant of 岁, year; years old
+行	háng	row; line; commercial firm
+号	háo	roar; cry
+放	fàng	to put; to place; to release
+朋友	péngyou	friend
+住	zhù	to live; to dwell; to stay
+拿	ná	old variant of 拿
+高	Gāo	surname Gao
+正	zhēng	first month of the lunar year
+先	xiān	early; prior; former
+得到	dédào	to get; to obtain; to receive
+那些	nàxiē	those
+准备	zhǔnbèi	preparation; to prepare; to intend
+水	Shuǐ	surname Shui
+进	jìn	to go forward; to advance; to go in
+写	xiě	to write
+国家	guójiā	country; nation; state
+您	nín	you (courteous, as opposed to informal 你)
+电话	diànhuà	telephone; phone call; phone number
+女	nǚ	female; woman; daughter
+送	sòng	to send; to deliver; to transmit; to give (as a present); to see (sb) off
+分	fēn	to divide; to separate; to distribute; to allocate; to distinguish (good and bad)
+笑	xiào	old variant of 笑
+女人	nǚrén	woman
+小时	xiǎoshí	hour
+有些	yǒuxiē	some; somewhat
+帮	bāng	old variant of 帮
+日	Rì	abbr. for 本, Japan
+别人	biéren	other people; others; other person
+站	zhàn	station; to stand; to halt
+路	Lù	surname Lu
+男人	nánrén	a man; a male; men
+正在	zhèngzài	just at (that time); right in (that place); right in the middle of (doing sth)
+门	Mén	surname Men
+喝	hē	to drink; variant of 嗬
+穿	chuān	to wear; to put on; to dress
+学校	xuéxiào	school
+花	Huā	surname Hua
+坐	Zuò	surname Zuo
+早	zǎo	early; morning; Good morning!
+们	men	plural marker for pronouns, and nouns referring to individuals
+身上	shēnshang	on the body; at hand; among
+干	gān	old variant of 干
+认识	rènshi	to know; to recognize; to be familiar with
+睡	shuì	to sleep; to lie down
+明天	míngtiān	tomorrow
+回来	huílai	to return; to come back
+四	sì	four; 4
+块	kuài	lump; chunk; piece; classifier for pieces of cloth, cake, soap etc; (coll.) classifier for money and currency units
+外	wài	outside; in addition; foreign
+晚上	wǎnshang	evening; night; in the evening
+妈	mā	ma; mom; mother
+球	qiú	ball; sphere; globe
+谢谢	xièxie	to thank; thanks; thank you
+学	xué	to learn; to study; to imitate
+多少	duōshǎo	number; amount; somewhat
+第二	dìèr	second; number two; next
+妈妈	māma	mama; mommy; mother
+错	Cuò	surname Cuo
+少	shǎo	few; less; to lack
+别的	biéde	else; other
+难	nán	difficult (to...); problem; difficulty
+电影	diànyǐng	movie; film
+间	jiān	between; among; within a definite time or space
+哪	nǎ	how; which
+跑	páo	(of an animal) to paw (the ground)
+回家	huíjiā	to return home
+昨天	zuótiān	yesterday
+晚	wǎn	evening; night; late
+书	Shū	abbr. for 书经
+五	wǔ	five; 5
+先生	xiānsheng	teacher; gentleman; sir; mister (Mr.); husband
+男	nán	male; Baron, lowest of five orders of nobility 位
+动	dòng	(of sth) to move; to set in movement; to displace
+医院	yīyuàn	hospital
+重	chóng	to repeat; repetition; again
+真的	zhēnde	really, truly, indeed
+子	zǐ	son; child; seed
+远	yuǎn	far; distant; remote
+口	kǒu	mouth; classifier for things with mouths (people, domestic animals, cannons, wells etc); classifier for bites or mouthfuls
+学生	xuésheng	student; schoolchild
+二	èr	two; 2; (Beijing dialect) stupid
+儿子	érzi	son
+明白	míngbai	clear; obvious; unequivocal
+杯	bēi	cup; trophy cup; classifier for certain containers of liquids: glass, cup
+记得	jìde	to remember
+歌	gē	song; to sing
+半	bàn	half; semi-; incomplete
+中国	Zhōngguó	China
+身体	shēntǐ	the body; one's health; in person
+元	Yuán	surname Yuan; the Yuan or Mongol dynasty (1279-1368)
+哪里	nǎlǐ	where?; somewhere; anywhere
+包	Bāo	surname Bao
+楼	Lóu	surname Lou
+那里	nàli	there; that place
+电视	diànshì	television; TV
+飞	fēi	to fly
+介绍	jièshào	to introduce (sb to sb); to give a presentation; to present (sb for a job etc)
+下午	xiàwǔ	afternoon; p.m.
+出去	chūqù	to go out
+学习	xuéxí	to learn; to study
+老师	lǎoshī	teacher
+六	liù	six; 6
+唱	chàng	to sing; to call loudly; to chant
+大学	Dàxué	the Great Learning, one of the Four Books 四书 in Confucianism
+病	bìng	illness; disease; to fall ill
+医生	yīshēng	doctor
+名字	míngzi	name (of a person or thing)
+她们	tāmen	they; them (for females)
+马上	mǎshàng	at once; right away; immediately
+今年	jīnnián	this year
+手机	shǒujī	cell phone; mobile phone
+忙	máng	busy; hurriedly; to hurry
+十	shí	ten; 10
+看见	kànjiàn	to see; to catch sight of
+听到	tīngdào	to hear
+女儿	nǚér	daughter
+说话	shuōhuà	to speak; to say; to talk
+汽车	qìchē	car; automobile; bus
+爸爸	bàba	(coll.) father; dad
+字	zì	letter; symbol; character
+高兴	gāoxìng	happy; glad; willing (to do sth)
+白	Bái	surname Bai
+去年	qùnián	last year
+热	rè	to warm up; to heat up; hot (of weather)
+试	shì	to test; to try; experiment
+来到	láidào	to arrive; to come
+睡觉	shuìjiào	to go to bed; to sleep
+电脑	diànnǎo	computer
+票	piào	ticket; ballot; banknote
+西	Xī	the West; abbr. for Spain 牙; Spanish
+床	chuáng	bed; couch; classifier for beds
+第	dì	(prefix indicating ordinal number, as in 六 "sixth"); (literary) grades in which successful candidates in the imperial examinations were placed; (old) residence of a high official
+回到	huídào	to return to
+差	chā	difference; discrepancy; (math.) difference (amount remaining after a subtraction); (literary) a little; somewhat; slightly
+家里	jiālǐ	home
+教	Jiào	surname Jiao
+不用	bùyòng	need not
+读	dòu	comma; phrase marked by pause
+忘	wàng	to forget; to overlook; to neglect
+认真	rènzhēn	conscientious; earnest; serious
+电	diàn	lightning; electricity; electric (bound form)
+房子	fángzi	house; building (single- or two-story); apartment
+冷	Lěng	surname Leng
+山	Shān	surname Shan
+常	Cháng	surname Chang
+飞机	fēijī	airplane
+早上	zǎoshang	early morning
+回答	huídá	to reply; to answer; reply; answer
+记	jì	to record; to note; to memorize
+关	Guān	surname Guan
+哥	gē	elder brother
+爸	bà	father; dad; pa
+风	fēng	wind; news; style
+回去	huíqu	to return; to go back
+累	lěi	to accumulate; to involve or implicate (Taiwan pr. [lèi]); continuous
+打开	dǎkāi	to open; to show (a ticket); to turn on
+病人	bìngrén	sick person; patient; invalid
+肉	ròu	meat; flesh; pulp (of a fruit)
+打电话	dǎdiànhuà	to make a telephone call
+休息	xiūxi	rest; to rest
+班	Bān	surname Ban
+坏	huài	bad; spoiled; broken
+一边	yībiān	one side; either side; on the one hand
+洗	xǐ	to wash; to bathe; to develop (photographs); to shuffle (cards etc)
+有的	yǒude	(there are) some (who are...); some (exist)
+毛	Máo	surname Mao
+忘记	wàngjì	to forget
+房间	fángjiān	room
+八	bā	eight; 8
+左	Zuǒ	surname Zuo
+吃饭	chīfàn	to have a meal; to eat; to make a living
+动作	dòngzuò	movement; motion; action; to act; to move
+七	qī	seven; 7
+菜	cài	dish (type of food); vegetable; cuisine
+衣服	yīfu	clothes
+饿	è	to be hungry; hungry; to starve (sb)
+树	shù	tree; to cultivate; to set up
+右	yòu	(bound form) right; right-hand side; (bound form) (politics) right of center; (bound form) (old) west
+上班	shàngbān	to go to work; to be on duty; to start work
+生日	shēngrì	birthday
+东	Dōng	surname Dong
+姐姐	jiějie	older sister
+课	kè	subject; course; class
+国	Guó	surname Guo
+饭	fàn	cooked rice; meal; (loanword) fan
+一半	yībàn	half
+家人	jiārén	family member; (old) servant
+有时	yǒushí	sometimes; now and then
+小姐	xiǎojie	young lady; miss; (slang) prostitute
+对不起	duìbuqǐ	I'm sorry; excuse me; I beg your pardon; to let (sb) down; to disappoint
+进去	jìnqù	to go in
+哥哥	gēge	older brother
+没什么	méishénme	nothing; it doesn't matter; it's nothing
+路上	lùshang	on the road; on a journey; road surface
+天气	tiānqì	weather
+最好	zuìhǎo	best; (you) had better (do what we suggest)
+南	Nán	surname Nan
+考试	kǎoshì	to take an exam; exam
+有时候	yǒushíhou	sometimes
+慢	màn	slow
+旁边	pángbiān	side; adjacent place
+同学	tóngxué	to study at the same school; fellow student; classmate
+北	běi	north; (classical) to be defeated
+帮忙	bāngmáng	to help; to lend a hand; to do a favor
+进来	jìnlái	to come in
+见面	jiànmiàn	to meet; to see each other
+好看	hǎokàn	good-looking; nice-looking; good (of a movie, book, TV show etc)
+中间	zhōngjiān	the middle; the inside; in the middle; within; between; among; during; in the meantime
+女生	nǚshēng	schoolgirl; female student; girl
+茶	chá	tea; tea plant
+地点	dìdiǎn	place; site; location
+雨	yǔ	rain
+星期	xīngqī	week; day of the week; Sunday
+车上	chēshàng	Car
+考	kǎo	to beat; to hit; variant of 考
+九	jiǔ	nine; 9
+妹妹	mèimei	younger sister; young woman
+生气	shēngqì	to get angry; to take offense; angry
+地上	dìshang	on the ground; on the floor
+上午	shàngwǔ	morning
+一会儿	yīhuìr	a moment; a while; in a moment
+贵	guì	expensive; noble; precious
+记住	jìzhu	to remember; to bear in mind; to learn by heart
+下次	xiàcì	next time
+知识	zhīshi	knowledge; intellectual
+机场	jīchǎng	airport; airfield; (slang) service provider for Shadowsocks or similar software for circumventing Internet censorship
+学院	xuéyuàn	college; educational institute; school
+老人	lǎorén	old man or woman; the elderly; one's aged parents or grandparents
+页	xié	head
+工人	gōngrén	worker
+那边	nàbian	over there; yonder
+弟弟	dìdi	younger brother
+干净	gānjìng	clean; neat
+在家	zàijiā	to be at home; (at a workplace) to be in (as opposed to being away on official business 差); (Buddhism etc) to remain a layman (as opposed to becoming a monk or a nun 家)
+百	Bǎi	surname Bai
+网上	wǎngshàng	online
+好吃	hǎochī	tasty; delicious
+明年	míngnián	next year
+再见	zàijiàn	goodbye; see you again later
+妹	mèi	younger sister
+这儿	zhèr	here
+哪儿	nǎr	where?; wherever; anywhere; somewhere; (used in rhetorical questions) how can ...?; how could ...?
+不对	bùduì	incorrect; wrong; amiss
+中午	zhōngwǔ	noon; midday
+起床	qǐchuáng	to get out of bed; to get up
+是不是	shìbùshì	is or isn't; yes or no; whether or not
+开车	kāichē	to drive a car
+干什么	gànshénme	what are you doing?; what's he up to?
+奶	nǎi	breast; milk; to breastfeed
+门口	ménkǒu	doorway; gate
+常常	chángcháng	frequently; often
+这边	zhèbiān	this side; here
+男生	nánshēng	schoolboy; male student; boy
+火车	huǒchē	train
+奶奶	nǎinai	(informal) grandma (paternal grandmother); (respectful) mistress of the house; (coll.) boobies
+上次	shàngcì	last time
+唱歌	chànggē	to sing a song
+右边	yòubian	right side; right, to the right
+上学	shàngxué	to go to school; to attend school
+牛奶	niúnǎi	cow's milk
+女朋友	nǚpéngyou	girlfriend
+上课	shàngkè	to go to class; to attend class; to go to teach a class
+爷爷	yéye	(coll.) father's father; paternal grandfather
+听见	tīngjiàn	to hear
+新年	xīnnián	New Year
+男朋友	nánpéngyou	boyfriend
+下班	xiàbān	to finish work; to get off work
+水果	shuǐguǒ	fruit
+读书	dúshū	to read a book; to study; to attend school
+那儿	nàr	there
+商店	shāngdiàn	store; shop
+鸡蛋	jīdàn	(chicken) egg; hen's egg
+没关系	méiguānxi	it doesn't matter
+地图	dìtú	map
+姐	jiě	older sister
+坐下	zuòxia	to sit down
+零	líng	zero; nought; zero sign
+桌子	zhuōzi	table; desk
+白天	báitiān	daytime; during the day; day
+请问	qǐngwèn	Excuse me, may I ask...?
+哪些	nǎxiē	which ones?; who?; what?
+晚饭	wǎnfàn	evening meal; dinner; supper
+小学	xiǎoxué	elementary school; primary school
+图书馆	túshūguǎn	library
+开玩笑	kāiwánxiào	to play a joke; to make fun of; to joke
+国外	guówài	abroad; external (affairs); overseas
+日期	rìqī	date
+饭店	fàndiàn	restaurant; hotel
+中学	zhōngxué	middle school
+上网	shàngwǎng	to go online; to connect to the Internet; (of a document etc) to be uploaded to the Internet
+商场	shāngchǎng	shopping mall; shopping center; department store
+楼下	lóuxià	downstairs
+面包	miànbāo	bread
+外国	wàiguó	foreign (country)
+生病	shēngbìng	to fall ill
+好听	hǎotīng	pleasant to hear
+开会	kāihuì	to hold a meeting; to attend a meeting
+钱包	qiánbāo	purse; wallet
+大学生	dàxuéshēng	university student; college student
+车站	chēzhàn	rail station; bus stop
+走路	zǒulù	to walk; to go on foot
+小朋友	xiǎopéngyǒu	child
+左边	zuǒbian	left; the left side; to the left of
+北京	Běijīng	Beijing, capital of the People's Republic of China
+有用	yǒuyòng	useful
+爱好	àihào	to like; to be fond of; to take pleasure in; to be keen on; interest; hobby
+不大	bùdà	not very; not too; not often
+午饭	wǔfàn	lunch
+上车	shàngchē	to get on or into (a bus, train, car etc)
+马路	mǎlù	street; road
+门票	ménpiào	ticket (for theater, cinema etc)
+机票	jīpiào	air ticket; passenger ticket
+楼上	lóushàng	upstairs; (Internet slang) previous poster in a forum thread
+打球	dǎqiú	to play ball; to play with a ball
+下雨	xiàyǔ	to rain
+下车	xiàchē	to get off or out of (a bus, train, car etc)
+杯子	bēizi	cup; glass
+放假	fàngjià	to have a holiday or vacation
+路口	lùkǒu	crossing; intersection (of roads)
+有名	yǒumíng	famous; well-known
+中文	Zhōngwén	Chinese language
+弟	dì	younger brother; junior male; I (modest word in letter)
+电视机	diànshìjī	television set
+早饭	zǎofàn	breakfast
+一点儿	yīdiǎnr	erhua variant of 一点; a bit; a little bit; (used in negative expressions) (not) the least bit
+书店	shūdiàn	bookstore
+放学	fàngxué	to dismiss students at the end of the school day
+关上	guānshàng	to close (a door); to turn off (light, electrical equipment etc)
+玩儿	wánr	to play; to have fun; to hang out
+半天	bàntiān	half of the day; a long time; quite a while
+星期天	Xīngqītiān	Sunday
+车票	chēpiào	ticket (for a bus or train)
+看病	kànbìng	to visit a doctor; to see a patient
+电影院	diànyǐngyuàn	cinema; movie theater
+前天	qiántiān	the day before yesterday
+后天	hòutiān	the day after tomorrow; life after birth (the period in which one develops through experiences, contrasted with 天); acquired (not innate or congenital)
+渴	kě	thirsty
+洗手间	xǐshǒujiān	toilet; lavatory; washroom
+下课	xiàkè	to finish class; to get out of class; (fig.) (esp. of a sports coach) to be dismissed
+请假	qǐngjià	to request leave of absence
+米饭	mǐfàn	(cooked) rice
+里边	lǐbian	inside
+外语	wàiyǔ	foreign language
+没事儿	méishìr	to have spare time; free from work; it's not important
+一块儿	yīkuàir	erhua variant of 一块; a piece; a chunk; (coll.) one yuan; one dollar
+书包	shūbāo	schoolbag; satchel; bookbag
+小学生	xiǎoxuéshēng	primary school student; schoolchild; (fig.) beginner
+外边	wàibian	outside; outer surface; abroad
+中学生	zhōngxuéshēng	middle-school student; high school student
+本子	běnzi	book; notebook; Japanese-style self-published comic (esp. an erotic one), aka "dōjinshi"
+星期日	Xīngqīrì	Sunday
+课本	kèběn	textbook
+汉语	Hànyǔ	Chinese language
+后边	hòubian	the back; the rear; the last bit; behind; near the end; at the back; later; afterwards
+西边	xībiān	west; west side; western part
+上边	shàngbian	the top; above; overhead
+打车	dǎchē	to take a taxi (in town); to hitch a lift
+东边	dōngbian	east; east side; eastern part
+包子	bāozi	bao (steamed stuffed bun)
+不客气	bùkèqi	you're welcome; don't mention it; impolite
+南边	nánbian	south; south side; southern part
+北边	běibiān	north; north side; northern part
+女孩儿	nǚháir	erhua variant of 女孩; girl
+下边	xiàbian	under; the underside; below
+汉字	hànzì	Chinese character; Japanese: kanji; Korean: hanja
+请进	qǐngjìn	"please come in"
+好玩儿	hǎowánr	erhua variant of 好玩; amusing; fun
+前边	qiánbian	front; the front side; in front of
+小孩儿	xiǎoháir	erhua variant of 小孩; child
+教学楼	jiàoxuélóu	teaching block; school building
+网友	wǎngyǒu	online friend; Internet user
+课文	kèwén	text
+请坐	qǐngzuò	please, have a seat
+半年	bànnián	half a year
+听写	tīngxiě	(of a pupil) to write down (in a dictation exercise); dictation; (music) to transcribe by ear
+面条儿	miàntiáor	erhua variant of 面条; noodles
+男孩儿	nánháir	erhua variant of 男孩; boy
+一下儿	yīxiàr	erhua variant of 一下; one time; once; all of sudden
+有一些	yǒuyīxiē	somewhat; rather; some

@@ -145,7 +145,7 @@ Tap a preview to play the video. Each one is silent and about 15–25 seconds lo
 - **Kanji grid:** every kanji in 漢辞海 and 漢検 as a grid you can filter by Kanken level, stroke count, radical and 常用/教育/人名. Old and variant forms (舊 → 旧) find their main entry.
   - Radicals are picked from their own grid, grouped by stroke count.
   - Filters stay on when you switch between 漢検 and 漢辞海 (漢検's ⺡ becomes 漢辞海's 水).
-- **Word lists:** import frequency, JLPT or TOPIK lists (TXT/CSV, optionally with rank). A whole list can become a deck.
+- **Word lists:** import frequency, JLPT or TOPIK lists (TXT/CSV, optionally with rank). A whole list can become a deck. **Preset lists** ship with the app: HSK 3.0 levels 1–9 and TOPIK I/II, with meanings (`tools/build_preset_lists.py`).
 - **Dictionary selections:** each dictionary's own lists, kept separate from imported ones: 大辞林's 地名, 人名, 四字熟語, 季語…, 新明解's 最重要語/重要語, 漢検's 四字熟語, NHK's 助数詞一覧, 朝鮮語辞典's 最重要語/基本語/品詞/専門用語, and more.
   - Lists with categories open as a grid of categories with word counts (地名 › 東北地方 › 青森), plus すべて for everything.
   - Korean words show their hanja underneath (가격 / 價格).
