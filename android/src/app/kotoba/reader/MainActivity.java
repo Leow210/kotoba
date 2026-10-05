@@ -374,6 +374,7 @@ public class MainActivity extends Activity {
             case "music.access":runOnUiThread(()->startActivity(new Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)));return null;
             case "sync.status":return syncStatus();
             case "sync.now":return syncNow();
+            case "sync.wake":return syncWake();
             case "library.scan":return scan(Uri.parse(d.getString("tree")));
             case "library.relink":return relink(d.getString("tree"));
             case "library.scanLocal":{
@@ -448,6 +449,18 @@ public class MainActivity extends Activity {
         JSONObject r=sync.run(syncFolder(Uri.parse(folder)),android.os.Build.MODEL,library.syncDicts());
         if(r.optBoolean("changed"))event("synced",r);
         return r.put("status",syncStatus());
+    }
+
+    /** Syncthing-Fork is what carries the files to the Mac; Android sometimes kills it. If it isn't answering, open it. */
+    JSONObject syncWake() throws Exception {
+        boolean up=false;
+        for(int port:new int[]{22000,8384})try(java.net.Socket s=new java.net.Socket()){s.connect(new java.net.InetSocketAddress("127.0.0.1",port),400);up=true;break;}catch(Exception ignored){}
+        boolean started=false;
+        if(!up){
+            Intent i=getPackageManager().getLaunchIntentForPackage("com.github.catfriend1.syncthingfork");
+            if(i!=null){runOnUiThread(()->startActivity(i));started=true;}
+        }
+        return new JSONObject().put("running",up).put("started",started);
     }
 
     JSONObject syncStatus() throws Exception {

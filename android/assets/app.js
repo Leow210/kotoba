@@ -1865,6 +1865,7 @@ async function renderReviewHome(){
     ${!stats.cards?`<p class="hint" style="text-align:center">Save words with ☆ on any dictionary entry — each folder becomes a deck.</p>`:''}</div>
     <div class="section-label">Decks<span style="text-transform:none;letter-spacing:0;font-weight:500">tick the ones you’re studying</span></div>
     <div class="decks">${folders.map(f=>`<div class="deck ${f.study?'':'off'}"><label class="toggle"><input type="checkbox" data-deck="${f.id}" ${f.study?'checked':''}><span></span></label><div class="db"><b>${esc(f.name)}</b><small>${f.count} words · <span style="color:var(--easy)">${f.fresh} new</span> · <span style="color:var(--good)">${f.due} due</span> · <button class="deck-limit" data-deck-limit="${f.id}">${f.new_per_day>=0?f.new_per_day:c.new_limit} new/day${f.new_per_day>=0?'':' (default)'}</button></small></div><button class="btn small" data-deck-start="${f.id}" ${f.due+f.fresh?'':'disabled'}>Study</button></div>`).join('')}</div>
+    <div style="padding:6px 16px 0"><button class="btn" id="review-sync" style="width:100%;height:44px">Sync with other device</button></div>
     <div class="cardbox"><div class="section-label" style="padding:0 0 4px">Next 7 days</div><div class="forecast">${stats.forecast.map((n,i)=>`<div><em>${n||''}</em><i style="height:${Math.round(n/max*60)}px"></i><span>${days[i]}</span></div>`).join('')}</div></div>
     <div class="cardbox" style="display:flex;justify-content:space-around;text-align:center">
       <div><b style="font:600 22px var(--serif)">${stats.cards}</b><br><small class="hint">cards</small></div>
@@ -1880,6 +1881,17 @@ async function renderReviewHome(){
   $('review-home').querySelectorAll('[data-deck-limit]').forEach(b=>b.onclick=handle(()=>deckLimitSheet(folders.find(f=>f.id===+b.dataset.deckLimit),c.new_limit)));
   $('review-home').querySelectorAll('[data-deck-start]').forEach(b=>b.onclick=handle(()=>startReview(+b.dataset.deckStart)));
   $('start-review').onclick=handle(()=>startReview(reviewFolder));
+  $('review-sync').onclick=handle(async()=>{
+    const b=$('review-sync');b.disabled=true;b.textContent='Syncing…';
+    try{
+      const w=await api('sync.wake');
+      if(w.started){toast('Opening Syncthing — come back to Kotoba in a few seconds and tap Sync again',4500);return;}
+      await new Promise(r=>setTimeout(r,2500));
+      const r=await api('sync.now');
+      if(r.skipped){toast('Choose a sync folder in Library first');return;}
+      toast(r.changed?`Synced: ${r.added} new, ${r.updated} updated, ${r.reviews} reviews`:'Up to date');
+    }finally{b.disabled=false;b.textContent='Sync with other device';renderReviewHome();refreshBadge();}
+  });
   $('review-home').querySelectorAll('[data-np]').forEach(b=>b.onclick=handle(async()=>{const v=Math.max(0,Math.min(500,c.new_limit+ +b.dataset.np));await setSetting('new_per_day',v);renderReviewHome();refreshBadge();}));
   $('review-home').querySelectorAll('[data-rt]').forEach(b=>b.onclick=handle(async()=>{const v=Math.max(0.8,Math.min(0.97,+(Number(settings.retention)+ +b.dataset.rt).toFixed(2)));await setSetting('retention',v);$('rt').textContent=Math.round(v*100)+'%';}));
   const n=c.review+c.learning+c.new;$('due-badge').textContent=reviewFolder===0&&n?String(n):$('due-badge').textContent;

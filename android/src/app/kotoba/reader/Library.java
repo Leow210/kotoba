@@ -2076,7 +2076,7 @@ public class Library {
         }
         return same.length()>0?same:mine;
     }
-    static long biggest(JSONArray rows){long m=0;for(int i=0;i<rows.length();i++)m=Math.max(m,rows.getJSONObject(i).optLong("size"));return m;}
+    static long biggest(JSONArray rows){long m=0;for(int i=0;i<rows.length();i++){org.json.JSONObject o=rows.optJSONObject(i);if(o!=null)m=Math.max(m,o.optLong("size"));}return m;}
 
     /** "label one; label two (+3)" from the form index's " | "-joined grammar. */
     static String germanExplain(List<String> labels){
