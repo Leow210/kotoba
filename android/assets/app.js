@@ -1703,10 +1703,12 @@ async function renderFolders(){
     folders.map(f=>`<div class="folder-row"><button class="fi" data-f="${f.id}">${icon('folder')}</button><button class="fb" data-f="${f.id}" style="text-align:left"><b>${esc(f.name)}</b><small>${f.count} ${f.count===1?'word':'words'}${f.fresh?` · ${f.fresh} new`:''}${f.due?` · ${f.due} due`:''}</small></button><label class="toggle" title="Study this folder"><input type="checkbox" data-study="${f.id}" ${f.study?'checked':''}><span></span></label></div>`).join('')+
         knownRow+`<p class="hint" style="padding:0 18px">Switch on the folders you want to study — they become your review decks.</p>`+
     `<div style="padding:16px"><button class="btn wide" id="new-folder" style="width:100%">${icon('plus')} New folder</button></div>
+     <div style="padding:0 16px 12px"><button class="btn wide" id="folders-sync" style="width:100%">Sync with other device</button></div>
      <div style="padding:0 16px 24px;display:flex;gap:10px"><button class="btn small wide" id="new-word">${icon('edit')} Add your own word</button></div>`;
   $('folder-list').querySelectorAll('[data-f]').forEach(b=>b.onclick=handle(()=>openFolder(+b.dataset.f,folders)));
   $('folder-list').querySelectorAll('[data-known]').forEach(b=>b.onclick=()=>knownListSheet(b.dataset.known));
   $('folder-list').querySelectorAll('[data-study]').forEach(c=>c.onchange=handle(async()=>{await api('folder.study',{id:+c.dataset.study,study:c.checked});toast(c.checked?'Studying this folder':'Folder paused in review',1400);refreshBadge();}));
+  $('folders-sync').onclick=syncButton($('folders-sync'));
   $('new-folder').onclick=handle(async()=>{const name=await prompt2('New folder','','e.g. JLPT N1, Thai verbs');if(!name)return;await api('folder.save',{name});renderFolders();});
   $('new-word').onclick=handle(()=>openSaveSheet({review:true,kind:'custom',headword:'',back:'',onSaved:renderFolders}));
 }
@@ -1850,6 +1852,21 @@ function deckLimitSheet(f,fallback){
   s.sheet.querySelector('#dl-own').onchange=e=>{own=e.target.checked;show();save();};
   s.sheet.querySelectorAll('[data-dl]').forEach(b=>b.onclick=()=>{own=true;n=Math.max(0,Math.min(500,n+ +b.dataset.dl));show();save();});
 }
+/** The "Sync with other device" button: opens Syncthing if Android stopped it, then merges the other device's file. */
+function syncButton(b){
+  return handle(async()=>{
+    b.disabled=true;b.textContent='Syncing…';
+    try{
+      const w=await api('sync.wake');
+      if(w.started){toast('Opening Syncthing — come back to Kotoba in a few seconds and tap Sync again',4500);return;}
+      await new Promise(r=>setTimeout(r,2500));
+      const r=await api('sync.now');
+      if(r.skipped){toast('Choose a sync folder in Library first');return;}
+      toast(r.changed?`Synced: ${r.added} new, ${r.updated} updated, ${r.reviews} reviews`:'Up to date');
+    }finally{b.disabled=false;b.textContent='Sync with other device';refreshBadge();if(tab==='review')renderReviewHome();if(tab==='folders')renderFolders();}
+  });
+}
+
 async function renderReviewHome(){
   reviewFolder=0;
   const [q,stats,folders]=await Promise.all([api('queue',{folder:0}),api('stats'),api('folders')]);
@@ -1881,17 +1898,7 @@ async function renderReviewHome(){
   $('review-home').querySelectorAll('[data-deck-limit]').forEach(b=>b.onclick=handle(()=>deckLimitSheet(folders.find(f=>f.id===+b.dataset.deckLimit),c.new_limit)));
   $('review-home').querySelectorAll('[data-deck-start]').forEach(b=>b.onclick=handle(()=>startReview(+b.dataset.deckStart)));
   $('start-review').onclick=handle(()=>startReview(reviewFolder));
-  $('review-sync').onclick=handle(async()=>{
-    const b=$('review-sync');b.disabled=true;b.textContent='Syncing…';
-    try{
-      const w=await api('sync.wake');
-      if(w.started){toast('Opening Syncthing — come back to Kotoba in a few seconds and tap Sync again',4500);return;}
-      await new Promise(r=>setTimeout(r,2500));
-      const r=await api('sync.now');
-      if(r.skipped){toast('Choose a sync folder in Library first');return;}
-      toast(r.changed?`Synced: ${r.added} new, ${r.updated} updated, ${r.reviews} reviews`:'Up to date');
-    }finally{b.disabled=false;b.textContent='Sync with other device';renderReviewHome();refreshBadge();}
-  });
+  $('review-sync').onclick=syncButton($('review-sync'));
   $('review-home').querySelectorAll('[data-np]').forEach(b=>b.onclick=handle(async()=>{const v=Math.max(0,Math.min(500,c.new_limit+ +b.dataset.np));await setSetting('new_per_day',v);renderReviewHome();refreshBadge();}));
   $('review-home').querySelectorAll('[data-rt]').forEach(b=>b.onclick=handle(async()=>{const v=Math.max(0.8,Math.min(0.97,+(Number(settings.retention)+ +b.dataset.rt).toFixed(2)));await setSetting('retention',v);$('rt').textContent=Math.round(v*100)+'%';}));
   const n=c.review+c.learning+c.new;$('due-badge').textContent=reviewFolder===0&&n?String(n):$('due-badge').textContent;
