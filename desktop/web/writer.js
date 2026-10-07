@@ -45,8 +45,15 @@
   }
 
   const FONT_SIZES=[15,16,17,18,20,22,24,28];
+  // The language of a document picks which dictionaries answer (no Japanese results for Chinese text, and the reverse).
+  const WRITE_LANGS=[['ja','日本語'],['zh','中文'],['ko','한국어'],['de','Deutsch']];
+  const GROUP_LANG={Japanese:'ja',Kanji:'ja',Chinese:'zh',Korean:'ko',German:'de'};
+  const groupLang=(g)=>GROUP_LANG[String(g||'').split('/')[0]]||'';
+  /** Keeps the items from dictionaries of the document's language (dictionaries of no known language stay). */
+  const ofLang=(items)=>(items||[]).filter(it=>{const l=groupLang((dictById(it.dict)||{}).grp);return !l||!current||l===current.lang;});
+
   async function openDoc(id){
-    const d=id?await api('doc.get',{id}):{id:'',title:'',html:'',vertical:false,lang:'ja'};
+    const d=id?await api('doc.get',{id}):{id:'',title:'',html:'',vertical:false,lang:store.get('write.lang','ja')};
     current={id:d.id,title:d.title,vertical:d.vertical,lang:d.lang||'ja',dirty:false,saving:null};
     screen.classList.add('editing');
     screen.innerHTML=`<div class="wr">
@@ -54,6 +61,7 @@
         <div class="wr-bar">
           <button class="icon-btn" data-a="home" title="All documents">${icon('back')}</button>
           <input class="wr-title" placeholder="Title" value="${esc(d.title)}" maxlength="80">
+          <select class="wr-lang" title="Language of this document: the dictionary, 類語 and grammar check follow it">${WRITE_LANGS.map(([c,n])=>`<option value="${c}"${c===current.lang?' selected':''}>${n}</option>`).join('')}</select>
           <div class="wr-tools">
             <button data-cmd="bold" title="Bold (⌘B)"><b>B</b></button><button data-cmd="italic" title="Italic (⌘I)"><i>I</i></button><button data-cmd="underline" title="Underline (⌘U)"><u>U</u></button>
             <span class="sep"></span>
@@ -76,6 +84,7 @@
     </div>`;
     const ed=editor();
     ed.innerHTML=d.html||'<p><br></p>';
+    screen.querySelector('.wr-lang').onchange=(e)=>setLang(e.target.value);
     applyLayout();
     wireEditor(ed);
     buildPanels();
@@ -84,12 +93,19 @@
     if(!id)screen.querySelector('.wr-title').focus();else placeCaretEnd(ed);
   }
   const editor=()=>screen.querySelector('.wr-doc');
+  function setLang(lang){
+    current.lang=lang;store.set('write.lang',lang);
+    const ed=editor();ed.lang=lang;
+    applyLayout();buildPanels();showPanel(panel);
+    markDirty();
+  }
   function applyLayout(){
     const ed=editor();if(!ed)return;
     ed.classList.toggle('vertical',!!current.vertical);
     screen.querySelector('.wr-scroll').classList.toggle('vertical',!!current.vertical);
     ed.style.fontSize=store.get('write.fontSize',18)+'px';
     screen.querySelector('[data-a="vertical"]').classList.toggle('on',!!current.vertical);
+    screen.querySelector('[data-a="ruby"]').hidden=current.lang!=='ja';
     // Vertical text starts at the right edge.
     if(current.vertical){const s=screen.querySelector('.wr-scroll');requestAnimationFrame(()=>s.scrollLeft=s.scrollWidth);}
   }
@@ -107,7 +123,7 @@
     current.dirty=false;
     // Nothing written yet: don't leave empty "Untitled" files behind.
     if(!current.id&&!text.trim()&&!screen.querySelector('.wr-title').value.trim())return;
-    current.lang=textLang(text,'');ed.lang=current.lang;
+    ed.lang=current.lang;
     try{
       const r=await api('doc.save',{id:current.id,title,html:cleanHtml(ed),vertical:!!current.vertical,lang:current.lang});
       current.id=r.id;current.title=r.title;setStatus('Saved');
@@ -229,7 +245,7 @@
     screen.querySelectorAll('.wr-tabs [data-p]').forEach(b=>b.onclick=()=>showPanel(b.dataset.p));
     const P=(n)=>screen.querySelector(`[data-panel="${n}"]`);
     P('dict').innerHTML=`<div class="wr-search"><input type="search" placeholder="Look up a word" data-q="dict"></div><div class="wr-out" data-out="dict"><p class="wr-hint">Select a word in your text, or type one here.</p></div>`;
-    P('thes').innerHTML=`<div class="wr-search"><input type="search" placeholder="類語: type a word (思う, 美しい…)" data-q="thes"></div><div class="wr-out" data-out="thes"><p class="wr-hint">Type a word, or select one in your text, to see its entries in your thesaurus dictionaries (${esc(thesaurusGroups().map(g=>g.split('/')[0]).join(', ')||'none found')}). Double-click a word in an entry to brainstorm from it; select one and press <b>Use</b> to put it in your text.</p></div>`;
+    P('thes').innerHTML=`<div class="wr-search"><input type="search" placeholder="類語: type a word (${esc({ja:'思う, 美しい',zh:'美麗, 思考',ko:'생각하다, 아름답다',de:'schön, denken'}[current.lang]||'')}…)" data-q="thes"></div><div class="wr-out" data-out="thes"><p class="wr-hint">Type a word, or select one in your text, to see its entries in your thesaurus dictionaries (${esc(thesaurusGroups().map(g=>g.split('/')[0]).join(', ')||'none found')}). Double-click a word in an entry to brainstorm from it; select one and press <b>Use</b> to put it in your text.</p></div>`;
     P('gram').innerHTML=`<div class="wr-gram-actions"><button class="btn small primary" data-a="check-all">Check the document</button><button class="btn small" data-a="check-sel">Check selection</button></div><div class="wr-out" data-out="gram"><p class="wr-hint">Gemma 4 (on this Mac) reads your text for grammar, particles, conjugation, spelling and unnatural phrasing. Nothing leaves your computer. The first check loads the model (about a minute).</p></div>`;
     const dq=P('dict').querySelector('input'),tq=P('thes').querySelector('input');
     dq.addEventListener('keydown',e=>{if(e.key==='Enter'&&dq.value.trim())dictLookup(dq.value.trim());});
@@ -275,8 +291,10 @@
     const out=screen.querySelector('[data-out="dict"]');if(!out)return;
     const q=screen.querySelector('[data-q="dict"]');if(q&&document.activeElement!==q)q.value=text;
     const token=++dictToken;
-    const r=await api('lookup',{text,lang:''}).catch(()=>({items:[]}));
+    const r=await api('lookup',{text,lang:current?current.lang:''}).catch(()=>({items:[]}));
     if(token!==dictToken)return;
+    r.items=ofLang(r.items);
+    if(r.items.length)r.key=r.items[0].key||r.key;
     if(!r.items.length){out.innerHTML=`<p class="wr-hint">No headword for “${esc(text)}”.</p>`;return;}
     out.innerHTML=`<div class="wr-word"><b>${esc(r.key)}</b>${r.explain?`<small>${esc(r.matched)} → ${esc(r.key)} · ${esc(r.explain)}</small>`:''}</div>
       <div class="wr-chips">${r.items.map((it,i)=>`<button class="chip small${i?'':' on'}" data-t="${i}">${esc(shortName(it.dictionary))}${r.items.filter(x=>x.dict===it.dict).length>1&&it.page?' · '+esc(String(it.page).slice(0,8)):''}</button>`).join('')}</div>
@@ -293,7 +311,7 @@
   function sentenceOf(word){const t=plainText();const i=t.indexOf(word);if(i<0)return '';const a=t.lastIndexOf('。',i)+1,b=t.indexOf('。',i);return t.slice(a,b<0?undefined:b+1).trim().slice(0,300);}
 
   // ---------- 類語 brainstormer ----------
-  function thesaurusGroups(){return [...new Set(dicts.filter(d=>d.enabled&&/\/類語$/.test(d.grp||'')).map(d=>d.grp))];}
+  function thesaurusGroups(){return [...new Set(dicts.filter(d=>d.enabled&&/\/類語$/.test(d.grp||'')&&(!current||groupLang(d.grp)===current.lang)).map(d=>d.grp))];}
   function isThe2(it){return /日本語シソーラス/.test(it.dictionary||'');}
   let thesToken=0;const thesHistory=[];
   async function brainstorm(word){
@@ -302,16 +320,16 @@
     const token=++thesToken;
     out.innerHTML='<p class="wr-hint">Looking…</p>';
     const groups=thesaurusGroups();
-    if(!groups.length){out.innerHTML='<p class="wr-hint">No thesaurus dictionary found. Put one (e.g. 類語例解辞典) in a “類語” group in the Library.</p>';return;}
+    if(!groups.length){out.innerHTML=`<p class="wr-hint">No ${esc((WRITE_LANGS.find(l=>l[0]===current.lang)||[])[1]||'')} thesaurus found. Put one in a “類語” group of that language in the Library.</p>`;return;}
     // A conjugated word (考えた) is looked up as its dictionary form; a word the thesaurus has as it is stays as it is.
     const own=await Promise.all(groups.map(g=>api('search',{q:word,mode:'headword',dict:'g:'+g,offset:0}).then(r=>(r.items||[]).some(i=>i.exact)).catch(()=>false)));
-    const base=own.some(Boolean)?word:await api('lookup',{text:word,lang:''}).then(r=>r.items.length&&r.matched===word?r.key:word).catch(()=>word);
+    const base=own.some(Boolean)?word:await api('lookup',{text:word,lang:current.lang}).then(r=>{r.items=ofLang(r.items);return r.items.length&&r.matched===word?r.items[0].key||r.key:word;}).catch(()=>word);
     // THE2 indexes member words by reading and points each one at its concept
     // pages. Search the reading as well as the written form for kanji words.
-    const reading=await readingOf(base).catch(()=> '');
+    const reading=current.lang==='ja'?await readingOf(base).catch(()=> ''):'';
     const queries=[...new Set([base,reading].filter(Boolean))];
     const indexed=[],indexedSeen=new Set();
-    for(const query of queries){
+    for(const query of current.lang==='ja'?queries:[]){
       const r=await api('the2.index',{q:query}).catch(()=>({items:[]}));
       for(const it of r.items||[]){const id=it.dict+':'+it.rec;if(!indexedSeen.has(id)){indexedSeen.add(id);indexed.push(it);}}
     }
@@ -453,7 +471,7 @@
     out.innerHTML=`<p class="wr-hint wr-busy">Gemma 4 is reading ${text.replace(/\s/g,'').length.toLocaleString()} characters…</p>`;
     const tick=setInterval(()=>{const p=out.querySelector('.wr-busy');if(!p){clearInterval(tick);return;}const s=Math.round((Date.now()-started)/1000);p.textContent=`Gemma 4 is reading… ${s} s${s>15?' (loading the model the first time takes about a minute)':''}`;},1000);
     let r;
-    try{r=await api('grammar.check',{text,lang:textLang(text,'')});}
+    try{r=await api('grammar.check',{text,lang:current?current.lang:textLang(text,'')});}
     catch(e){clearInterval(tick);out.innerHTML=`<p class="wr-hint">${esc(e.message)}</p>`;return;}
     clearInterval(tick);
     const issues=r.issues;

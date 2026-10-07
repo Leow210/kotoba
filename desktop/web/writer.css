@@ -9,6 +9,7 @@
 .wr{display:flex;height:100%;min-height:0}
 .wr-main{flex:1;min-width:0;display:flex;flex-direction:column}
 .wr-bar{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.wr-lang{font:inherit;font-size:13px;padding:4px 6px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);margin-right:8px}
 .wr-title{flex:1;min-width:160px;font:600 19px var(--serif);border:0;background:transparent;color:var(--ink);outline:none;padding:4px 2px}
 .wr-tools{display:flex;align-items:center;gap:2px}
 .wr-tools button{min-width:32px;height:30px;padding:0 7px;border:0;border-radius:7px;background:transparent;color:var(--ink);font-size:14px;cursor:pointer}
