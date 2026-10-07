@@ -1509,7 +1509,7 @@ async function lookupSheet(text,sel,extra={}){
   const formNote=r.explain?`<div class="form-note"><b>${esc(r.matched)}</b> → ${esc(r.key)} · ${esc(r.explain)}</div>`:'';
   const s=openSheet(`${formNote}<div class="dict-tabs" id="lk-tabs" ${items.length<2?'hidden':''}></div><div class="lk-units" id="lk-units" hidden></div><div class="sheet-body" style="padding:0"><iframe class="lookup-frame" id="lk-frame"></iframe></div><div class="sheet-foot"><button class="btn wide" id="lk-open">${icon('book')} Open</button><button class="btn primary wide" id="lk-card">${icon('star')} Save</button></div>`,{title:r.key,tall:false,onClose:extra.onClose,anchor:extra.anchor});
   const frame=s.sheet.querySelector('#lk-frame');
-  let wired=null,focusUnit=null;
+  let wired=null,focusUnit=null,focusIdx=-1;// focusIdx: which of the page's entries is shown (비운1, 비운2…), so the card is made from that one
   const show=async(i)=>{
     index=i;const it=items[i];
     // Several pages from one dictionary (homographs filed apart) are numbered: 朝鮮語 1, 朝鮮語 2.
@@ -1519,7 +1519,7 @@ async function lookupSheet(text,sel,extra={}){
     await new Promise(res=>{frame.onload=res;frame.src=`/d/${it.dict}/${it.rec}.entry`;});
     wired=frameSetup(frame,{dict:it.dict,autoHeight:false,onLink:async(href)=>{const ref=await api('reference',{dict:it.dict,ref:href});if(ref.rec){closeSheet(s);openEntry({rec:ref.rec,dict:it.dict,key:ref.key||'',anchor:ref.anchor||''});}},source:()=>({dict:it.dict,dictName:it.dictionary,key:r.key,page:it.page,info:focusUnit?unitInfo(focusUnit,r.key):null})});
     if(!wired)return;
-    const f=findFocus(wired.doc,r.key,'');focusUnit=f.focus;if(!kanjiHead(it.dict,r.key))applyFocus(wired.doc,f.focus,f.units);
+    const f=findFocus(wired.doc,r.key,'');focusUnit=f.focus;focusIdx=f.units.indexOf(f.focus);if(!kanjiHead(it.dict,r.key))applyFocus(wired.doc,f.focus,f.units);
     const fit=()=>{frame.style.height=Math.min(window.innerHeight*0.55,Math.max(160,wired.doc.body.getBoundingClientRect().bottom+10))+'px';};
     fit();
     // One page holding several entries for this word (朝鮮語辞典: 비운1 否運, 비운2 悲運, 비운3 飛雲): a chip for each, and All.
@@ -1532,7 +1532,7 @@ async function lookupSheet(text,sel,extra={}){
       box.innerHTML=`<span class="lk-units-n">${same.length} entries</span>`+same.map((u,n)=>`<button class="chip small ${u===f.focus?'on':''}" data-u="${n}">${esc(label(u))}</button>`).join('')+`<button class="chip small" data-u="all">All</button>`;
       box.querySelectorAll('[data-u]').forEach(b=>b.onclick=()=>{
         const u=b.dataset.u==='all'?null:same[+b.dataset.u];
-        focusUnit=u||f.focus;applyFocus(wired.doc,u,f.units);
+        focusUnit=u||f.focus;focusIdx=f.units.indexOf(focusUnit);applyFocus(wired.doc,u,f.units);
         box.querySelectorAll('[data-u]').forEach(x=>x.classList.toggle('on',x===b));
         wired.doc.documentElement.scrollTop=0;setTimeout(fit,30);
       });
@@ -1555,23 +1555,23 @@ async function lookupSheet(text,sel,extra={}){
       b.after(read);read.onclick=()=>Kotoba.plecoRead(context);
     }
   }
-  s.sheet.querySelector('#lk-card').onclick=handle(()=>{const it=items[index];closeSheet(s);return saveLookupResult(it,r.key,sel&&sel.context||'',items,true,extra.book||'');});
+  s.sheet.querySelector('#lk-card').onclick=handle(()=>{const it=items[index];closeSheet(s);return saveLookupResult(it,r.key,sel&&sel.context||'',items,true,extra.book||'',focusIdx);});
   await show(0);
 }
 
 /** Loads an entry into a hidden frame to extract its focused unit and parts, then opens the save sheet. */
-async function loadEntryDoc(rec,dict,key){
+async function loadEntryDoc(rec,dict,key,unitIndex=-1){
   const frame=document.createElement('iframe');
   frame.style.cssText='position:absolute;left:-9999px;top:0;width:360px;height:600px;visibility:hidden';
   document.body.appendChild(frame);
   await new Promise(res=>{frame.onload=res;frame.src=`/d/${dict}/${rec}.entry`;});
   const doc=frame.contentDocument;
   const f=findFocus(doc,key,'');
-  const unit=f.focus||f.units[0]||doc.body;
+  const unit=f.units[unitIndex]||f.focus||f.units[0]||doc.body;
   return {frame,doc,unit,units:f.units,info:unitInfo(unit,key),parts:partsOf(unit)};
 }
-async function saveLookupResult(item,key,context,alternatives,review=true,source=''){
-  const loaded=await loadEntryDoc(item.rec,item.dict,key);
+async function saveLookupResult(item,key,context,alternatives,review=true,source='',unitIndex=-1){
+  const loaded=await loadEntryDoc(item.rec,item.dict,key,unitIndex);
   const rec=await api('record',{rec:item.rec});
   await openSaveSheet({review,headword:loaded.info.word||key,reading:loaded.info.reading,dict:item.dict,dict_name:item.dictionary,page:rec.key,anchor:loaded.unit.id||'',kind:'entry',doc:loaded.doc,unit:loaded.unit,parts:loaded.parts,context,alternatives,note:source?'📖 '+source:'',onClose:()=>loaded.frame.remove()});
 }
