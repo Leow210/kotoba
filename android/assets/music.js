@@ -111,7 +111,7 @@
         if(a==='copy'){Kotoba.copy(l.text);toast('Copied');}
         return;
       }
-      const w=e.target.closest('.mu-w');
+      let w=e.target.closest('.mu-w');
       // Only one line shows its buttons: tapping another line closes the last one.
       f('lines').querySelectorAll('.mu-line.open').forEach(x=>{if(x!==line)x.classList.remove('open');});
       // A tap beside the words: the song jumps to this line (unsynced lyrics just show the line's buttons).
@@ -123,7 +123,18 @@
         }else line.classList.toggle('open');
         return;
       }
-      const word=wordAt(l.text,w);if(!word)return;
+      let word=wordAt(l.text,w);if(!word)return;
+      // Korean looks up from the tapped syllable to the end of the word (so 대한민국 can be tapped at 민국). A tap inside a
+      // conjugated word (the 도 of 먹도록) would then lose its stem and look up the ending alone: when the whole word is
+      // a form of a dictionary word, that is what gets looked up.
+      if(w.dataset.end!=null&&/[가-힣]/.test(word)){
+        const first=[...line.querySelectorAll('.mu-w')].find(x=>x.dataset.end===w.dataset.end);
+        if(first&&+first.dataset.o<+w.dataset.o){
+          const whole=wordAt(l.text,first);
+          const r=await api('lookup',{text:whole,lang:'ko'}).catch(()=>null);
+          if(r&&r.explain&&r.matched===whole){word=whole;w=first;}
+        }
+      }
       line.classList.add('open');
       line.querySelectorAll('.mu-w.on').forEach(x=>x.classList.remove('on'));
       if(w.dataset.end!=null)line.querySelectorAll('.mu-w').forEach(x=>{if(x.dataset.end===w.dataset.end&&+x.dataset.o>=+w.dataset.o)x.classList.add('on');});else w.classList.add('on');
