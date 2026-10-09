@@ -689,21 +689,29 @@ public class DesktopServer {
         public boolean handles(String lang){return "ko".equals(lang)&&!"paddle".equals(store.setting("ocr_engine",""));}
         /** One request line to the helper; its JSON answer. */
         synchronized JSONObject ask(String request) throws Exception {
-            String reply=null;
-            for(int attempt=0;attempt<2&&reply==null;attempt++){
-                if(process==null||!process.isAlive()){
-                    process=new ProcessBuilder(exe.getPath()).redirectError(ProcessBuilder.Redirect.DISCARD).start();
+            // Apple's recognizer can break inside a helper that has been running a while (after sleep, or a display or GPU
+            // change: "CRImageReaderError") and then fails every page. A helper that fails or dies is thrown away and the
+            // request goes to a fresh one; only an error from a fresh helper is real.
+            String lastError=null;
+            for(int attempt=0;attempt<3;attempt++){
+                boolean fresh=process==null||!process.isAlive();
+                if(fresh){
+                    File log=new File(System.getProperty("java.io.tmpdir"),"kotoba-ocr.log");
+                    process=new ProcessBuilder(exe.getPath()).redirectError(ProcessBuilder.Redirect.appendTo(log)).start();
                     toHelper=new java.io.BufferedWriter(new java.io.OutputStreamWriter(process.getOutputStream(),StandardCharsets.UTF_8));
                     fromHelper=new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream(),StandardCharsets.UTF_8));
                 }
-                try{toHelper.write(request+"\n");toHelper.flush();reply=fromHelper.readLine();}
-                catch(IOException e){process.destroy();process=null;}
-                if(reply==null&&process!=null){process.destroy();process=null;}
+                String reply=null;
+                try{toHelper.write(request+"\n");toHelper.flush();reply=fromHelper.readLine();}catch(IOException e){}
+                if(reply!=null){
+                    JSONObject r=new JSONObject(reply);
+                    if(!r.has("error"))return r;
+                    lastError=r.getString("error");
+                    if(fresh)throw new Exception(lastError);
+                }
+                process.destroy();process=null;
             }
-            if(reply==null)throw new Exception("Text recognition stopped.");
-            JSONObject r=new JSONObject(reply);
-            if(r.has("error"))throw new Exception(r.getString("error"));
-            return r;
+            throw new Exception(lastError!=null?lastError:"Text recognition stopped.");
         }
         public synchronized List<Ocr.Line> read(byte[] image,String lang,int[] size) throws Exception {
             File tmp=File.createTempFile("kotoba-ocr",".img");
