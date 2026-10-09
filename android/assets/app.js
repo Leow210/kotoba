@@ -1489,7 +1489,7 @@ window.selectionAction=(action)=>handle(async()=>{
 })();
 
 async function lookupSheet(text,sel,extra={}){
-  const r=await api('lookup',{text,lang:extra.lang||''});
+  const r=extra.result||await api('lookup',{text,lang:extra.lang||''});
   // One Pleco button, on the phone: the sentence in Pleco's reader (Chinese only).
   const pleco=window.Kotoba&&Kotoba.plecoRead&&chineseHeadword(r.matched||text.trim())&&
     (extra.lang==='zh'||(r.items||[]).some(it=>parentOf(dictById(it.dict)?.grp)==='Chinese'));
@@ -1507,8 +1507,22 @@ async function lookupSheet(text,sel,extra={}){
   let index=0;
   const items=r.items;
   const formNote=r.explain?`<div class="form-note"><b>${esc(r.matched)}</b> → ${esc(r.key)} · ${esc(r.explain)}</div>`:'';
-  const s=openSheet(`${formNote}<div class="dict-tabs" id="lk-tabs" ${items.length<2?'hidden':''}></div><div class="lk-units" id="lk-units" hidden></div><div class="sheet-body" style="padding:0"><iframe class="lookup-frame" id="lk-frame"></iframe></div><div class="sheet-foot"><button class="btn wide" id="lk-open">${icon('book')} Open</button><button class="btn primary wide" id="lk-card">${icon('star')} Save</button></div>`,{title:r.key,tall:false,onClose:extra.onClose,anchor:extra.anchor});
+  const s=openSheet(`${formNote}<div class="lk-units" id="lk-alts" hidden></div><div class="dict-tabs" id="lk-tabs" ${items.length<2?'hidden':''}></div><div class="lk-units" id="lk-units" hidden></div><div class="sheet-body" style="padding:0"><iframe class="lookup-frame" id="lk-frame"></iframe></div><div class="sheet-foot"><button class="btn wide" id="lk-open">${icon('book')} Open</button><button class="btn primary wide" id="lk-card">${icon('star')} Save</button></div>`,{title:r.key,tall:false,onClose:extra.onClose,anchor:extra.anchor});
   const frame=s.sheet.querySelector('#lk-frame');
+  // Korean can break down several ways (수장이 = 수다 + -장이, or 수장 + 이; 담도 whole, or 담 + 도): each is a chip, and
+  // the one tapped is looked up instead.
+  const alts=(r.forms||[]).filter(f=>f.chain&&f.items&&f.items.length);
+  if(alts.length>1){
+    const box=s.sheet.querySelector('#lk-alts'),cur=extra.result?r.altIndex||0:0;
+    box.hidden=false;
+    box.innerHTML=`<span class="lk-units-n">${alts.length} readings</span>`+alts.map((f,n)=>`<button class="chip small ${n===cur?'on':''}" data-a="${n}">${esc(f.chain)}</button>`).join('');
+    box.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{
+      const n=+b.dataset.a;if(n===cur)return;
+      const f=alts[n];
+      closeSheet(s);
+      lookupSheet(text,sel,{...extra,result:{...r,key:f.base,items:[...f.items,...(f.extra||[])],explain:f.explain||'',altIndex:n}});
+    });
+  }
   let wired=null,focusUnit=null,focusIdx=-1;// focusIdx: which of the page's entries is shown (비운1, 비운2…), so the card is made from that one
   const show=async(i)=>{
     index=i;const it=items[i];
