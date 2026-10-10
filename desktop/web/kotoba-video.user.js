@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kotoba Video Text
 // @namespace    app.kotoba.desktop
-// @version      0.13.3
+// @version      0.13.4
 // @description  Look up YouTube, Netflix, Viki and GagaOOLala subtitles in Kotoba for Mac: hold Shift over a word; YouTube Music's song goes to Kotoba's lyrics. Works in Firefox and Chrome (Tampermonkey).
 // @match        https://www.youtube.com/watch*
 // @match        https://www.gagaoolala.com/*/videos/*
@@ -53,7 +53,7 @@
   const youtube = location.hostname === 'www.youtube.com';
   // Netflix draws its captions in .player-timedtext (turn them on in its Audio & Subtitles menu); Viki and GagaOOLala use Bitmovin's overlay.
   const netflix = location.hostname === 'www.netflix.com';
-  const sourceSelector = youtube ? '.ytp-caption-window-container' : netflix ? '.player-timedtext' : '.bmpui-ui-subtitle-overlay, [data-kotoba-src]';
+  const sourceSelector = youtube ? '.ytp-caption-window-container' : netflix ? '.player-timedtext' : '.bmpui-ui-subtitle-overlay, .vjs-text-track-display, [data-kotoba-src]';
   const store = { get: (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} } };
   let enabled = store.get('kotoba.videoText.enabled', 'true') !== 'false';
   let stayOpen = store.get('kotoba.videoText.stay', 'true') !== 'false';
@@ -339,6 +339,8 @@
     const ui = document.getElementById('kotoba-video-ui');
     const found = Array.from(document.querySelectorAll('[class*="ubtitle" i], [class*="aption" i], [class*="cue" i], [data-kotoba-src]'))
       .filter(el => !(ui && ui.contains(el)) && el.textContent.trim() && el.textContent.length < 400)
+      // Not the player's own buttons and menus (Viki's "Select subtitles" button and language list).
+      .filter(el => !el.closest('button, [role=button], [role=menu], [class*="setting" i], [class*="menu" i], [class*="control" i], [class*="button" i]') && !el.querySelector('button, li, svg'))
       .filter(el => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.top >= box.top - 5 && r.bottom <= box.bottom + 5 && r.left >= box.left - 5 && r.right <= box.right + 5; })
       .filter((el, i, all) => !all.some(o => o !== el && o.contains(el)));
     document.querySelectorAll('[data-kotoba-src]').forEach(el => { if (!found.includes(el)) el.removeAttribute('data-kotoba-src'); });
