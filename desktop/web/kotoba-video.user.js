@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kotoba Video Text
 // @namespace    app.kotoba.desktop
-// @version      0.13.2
+// @version      0.13.3
 // @description  Look up YouTube, Netflix, Viki and GagaOOLala subtitles in Kotoba for Mac: hold Shift over a word; YouTube Music's song goes to Kotoba's lyrics. Works in Firefox and Chrome (Tampermonkey).
 // @match        https://www.youtube.com/watch*
 // @match        https://www.gagaoolala.com/*/videos/*
@@ -53,7 +53,7 @@
   const youtube = location.hostname === 'www.youtube.com';
   // Netflix draws its captions in .player-timedtext (turn them on in its Audio & Subtitles menu); Viki and GagaOOLala use Bitmovin's overlay.
   const netflix = location.hostname === 'www.netflix.com';
-  const sourceSelector = youtube ? '.ytp-caption-window-container' : netflix ? '.player-timedtext' : '.bmpui-ui-subtitle-overlay';
+  const sourceSelector = youtube ? '.ytp-caption-window-container' : netflix ? '.player-timedtext' : '.bmpui-ui-subtitle-overlay, [data-kotoba-src]';
   const store = { get: (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} } };
   let enabled = store.get('kotoba.videoText.enabled', 'true') !== 'false';
   let stayOpen = store.get('kotoba.videoText.stay', 'true') !== 'false';
@@ -327,6 +327,25 @@
     concealed = node;
     document.documentElement.appendChild(hideCss);
   }
+  // Viki and GagaOOLala change their player's class names now and then: when the known caption element is missing or
+  // empty, the visible element over the video whose class says subtitle/caption/cue and that holds text is used (and
+  // marked, so the stylesheet that hides the site's own caption finds it too).
+  function findSource() {
+    const known = document.querySelector(sourceSelector);
+    if (youtube || netflix || (known && readCaption(known))) return known;
+    const v = largestVideo();
+    if (!v) return known;
+    const box = v.getBoundingClientRect();
+    const ui = document.getElementById('kotoba-video-ui');
+    const found = Array.from(document.querySelectorAll('[class*="ubtitle" i], [class*="aption" i], [class*="cue" i], [data-kotoba-src]'))
+      .filter(el => !(ui && ui.contains(el)) && el.textContent.trim() && el.textContent.length < 400)
+      .filter(el => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.top >= box.top - 5 && r.bottom <= box.bottom + 5 && r.left >= box.left - 5 && r.right <= box.right + 5; })
+      .filter((el, i, all) => !all.some(o => o !== el && o.contains(el)));
+    document.querySelectorAll('[data-kotoba-src]').forEach(el => { if (!found.includes(el)) el.removeAttribute('data-kotoba-src'); });
+    if (!found.length) return known;
+    found[0].setAttribute('data-kotoba-src', '');
+    return found[0];
+  }
   function readCaption(node) {
     if (!node) return '';
     if (youtube) return Array.from(node.querySelectorAll('.ytp-caption-segment')).map(part => part.textContent).join('\n').trim();
@@ -386,7 +405,7 @@
     }
     // Live subtitles take the place of the site's own, and so do lines heard on an earlier watch, but only where the
     // site has no caption of its own to read (so YouTube's subtitles are never replaced, or shown twice, by old lines).
-    const source = document.querySelector(sourceSelector);
+    const source = findSource();
     if (enabled && (live || (!source && liveLines.length))) {
       if (source) hideNative(source); else showNative();
       const current = liveLineAt(video.currentTime);
