@@ -220,11 +220,15 @@ public final class Ocr {
 
     public JSONObject recognize(byte[] image,String lang) throws Exception {
         if(externalFor(lang)){
-            int[] size=new int[2];
-            List<Line> kept=new ArrayList<>();
-            // Vision's confidences run lower than PaddleOCR's for text it reads correctly.
-            for(Line l:external.read(image,lang,size))if(keep(l,lang,0.2f))kept.add(l);
-            return blocks(kept,size[0],size[1],0.25f);
+            try{
+                int[] size=new int[2];
+                List<Line> kept=new ArrayList<>();
+                // Vision's confidences run lower than PaddleOCR's for text it reads correctly.
+                for(Line l:external.read(image,lang,size))if(keep(l,lang,0.2f))kept.add(l);
+                return blocks(kept,size[0],size[1],0.25f);
+            }catch(Exception e){
+                // The external recognizer failed twice: the page is read by PaddleOCR rather than failing.
+            }
         }
         BitmapFactory.Options o=new BitmapFactory.Options();o.inPreferredConfig=Bitmap.Config.ARGB_8888;
         Bitmap bmp=BitmapFactory.decodeByteArray(image,0,image.length,o);

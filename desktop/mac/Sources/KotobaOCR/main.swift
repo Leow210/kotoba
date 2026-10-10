@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import CoreML
 import Vision
 
 // kotoba-ocr: Apple's text recognizer for the Java core (Ocr.external). Stays running; one request per line on stdin,
@@ -27,6 +28,16 @@ while let request = readLine() {
     if parts[0] == "auto", #available(macOS 13.0, *) { req.automaticallyDetectsLanguage = true }
     else { req.recognitionLanguages = languages[parts[0]] ?? ["ko-KR"] }
     req.usesLanguageCorrection = true
+    // The GPU, not the Neural Engine, unless told otherwise: the Engine's model compile stalls under load on macOS 27.
+    if #available(macOS 14.0, *) {
+        let mode = ProcessInfo.processInfo.environment["KOTOBA_OCR_DEVICE"] ?? "gpu"
+        for (stage, devices) in (try? req.supportedComputeStageDevices) ?? [:] {
+            let pick = devices.first { d in
+                switch d { case .cpu: return mode == "cpu"; case .gpu: return mode == "gpu"; default: return false }
+            }
+            if let pick { req.setComputeDevice(pick, for: stage) }
+        }
+    }
     // Tall webtoon strips: Vision shrinks the whole image, so read it in overlapping bands about as tall as wide × 2.5.
     let band = h > w * 3 ? max(w * 2.5, 64) : h, overlap = h > w * 3 ? w / 4 : 0
     var lines: [[String: Any]] = []

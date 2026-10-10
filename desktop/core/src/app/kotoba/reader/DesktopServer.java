@@ -681,37 +681,37 @@ public class DesktopServer {
         return new JSONObject().put("w",r.getDouble("w")).put("h",r.getDouble("h")).put("lines",r.getJSONArray("lines"));
     }
 
-    /** Apple Vision through the kotoba-ocr helper, kept running between pages (one request per line). */
+    /**
+     * Apple Vision through the kotoba-ocr helper. A helper reads one page and is then thrown away: on macOS 27 Apple's
+     * text reader answers the first request of a process and then fails (CRImageReaderError) or hangs on every later
+     * one, and stalls while the Neural Engine is busy (a game running). A page that fails or takes too long goes to a
+     * second fresh helper; if that fails too, the error goes up and the page is read by PaddleOCR instead.
+     */
     static final class VisionOcr implements Ocr.LineReader {
         final File exe;final Store store;
-        Process process;java.io.BufferedWriter toHelper;java.io.BufferedReader fromHelper;
         VisionOcr(File exe,Store store){this.exe=exe;this.store=store;}
         public boolean handles(String lang){return "ko".equals(lang)&&!"paddle".equals(store.setting("ocr_engine",""));}
-        /** One request line to the helper; its JSON answer. */
+        /** One request to a fresh helper; its JSON answer. */
         synchronized JSONObject ask(String request) throws Exception {
-            // Apple's recognizer can break inside a helper that has been running a while (after sleep, or a display or GPU
-            // change: "CRImageReaderError") and then fails every page. A helper that fails or dies is thrown away and the
-            // request goes to a fresh one; only an error from a fresh helper is real.
-            String lastError=null;
-            for(int attempt=0;attempt<3;attempt++){
-                boolean fresh=process==null||!process.isAlive();
-                if(fresh){
-                    File log=new File(System.getProperty("java.io.tmpdir"),"kotoba-ocr.log");
-                    process=new ProcessBuilder(exe.getPath()).redirectError(ProcessBuilder.Redirect.appendTo(log)).start();
-                    toHelper=new java.io.BufferedWriter(new java.io.OutputStreamWriter(process.getOutputStream(),StandardCharsets.UTF_8));
-                    fromHelper=new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream(),StandardCharsets.UTF_8));
-                }
-                String reply=null;
-                try{toHelper.write(request+"\n");toHelper.flush();reply=fromHelper.readLine();}catch(IOException e){}
-                if(reply!=null){
+            Exception last=null;
+            for(int attempt=0;attempt<2;attempt++){
+                File log=new File(System.getProperty("java.io.tmpdir"),"kotoba-ocr.log");
+                Process process=new ProcessBuilder(exe.getPath()).redirectError(ProcessBuilder.Redirect.appendTo(log)).start();
+                try{
+                    java.io.BufferedWriter toHelper=new java.io.BufferedWriter(new java.io.OutputStreamWriter(process.getOutputStream(),StandardCharsets.UTF_8));
+                    java.io.BufferedReader fromHelper=new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream(),StandardCharsets.UTF_8));
+                    toHelper.write(request+"\n");toHelper.flush();
+                    java.util.concurrent.CompletableFuture<String> line=java.util.concurrent.CompletableFuture.supplyAsync(()->{try{return fromHelper.readLine();}catch(IOException e){return null;}});
+                    String reply=line.get(30,java.util.concurrent.TimeUnit.SECONDS);
+                    if(reply==null)throw new Exception("Text recognition stopped.");
                     JSONObject r=new JSONObject(reply);
-                    if(!r.has("error"))return r;
-                    lastError=r.getString("error");
-                    if(fresh)throw new Exception(lastError);
-                }
-                process.destroy();process=null;
+                    if(r.has("error"))throw new Exception(r.getString("error"));
+                    return r;
+                }catch(java.util.concurrent.TimeoutException e){last=new Exception("Text recognition timed out.");}
+                catch(Exception e){last=e;}
+                finally{process.destroyForcibly();}
             }
-            throw new Exception(lastError!=null?lastError:"Text recognition stopped.");
+            throw last;
         }
         public synchronized List<Ocr.Line> read(byte[] image,String lang,int[] size) throws Exception {
             File tmp=File.createTempFile("kotoba-ocr",".img");
