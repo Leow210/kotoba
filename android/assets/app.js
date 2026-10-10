@@ -88,8 +88,12 @@ function loadLocalSettings(){try{Object.assign(settings,JSON.parse(localStorage.
 function saveLocalSettings(){try{localStorage.setItem('settings',JSON.stringify(settings));}catch(e){}}
 const THEME_BARS={light:['#f7f4ee',true],sepia:['#f1e8d6',true],dark:['#141614',false]};
 function setBars(color,light){try{Kotoba.setBars(color,light);}catch(e){}}
-function appBars(){const b=THEME_BARS[settings.theme]||THEME_BARS.light;setBars(b[0],b[1]);}
-function applyTheme(){document.documentElement.dataset.theme=settings.theme;appBars();try{api('setting',{key:'theme',value:settings.theme}).catch(()=>{});}catch(e){}}
+// 'auto' follows the system's light/dark setting.
+const darkQuery=window.matchMedia?matchMedia('(prefers-color-scheme: dark)'):null;
+function effTheme(){return settings.theme==='auto'?(darkQuery&&darkQuery.matches?'dark':'light'):settings.theme;}
+if(darkQuery&&darkQuery.addEventListener)darkQuery.addEventListener('change',()=>{if(settings.theme==='auto')applyTheme();});
+function appBars(){const b=THEME_BARS[effTheme()]||THEME_BARS.light;setBars(b[0],b[1]);}
+function applyTheme(){document.documentElement.dataset.theme=effTheme();appBars();try{api('setting',{key:'theme',value:effTheme()}).catch(()=>{});api('setting',{key:'theme_pref',value:settings.theme}).catch(()=>{});}catch(e){}}
 async function setSetting(key,value){settings[key]=value;saveLocalSettings();if(['new_per_day','retention'].includes(key))await api('setting',{key,value:String(value)});}
 
 // ---------- navigation: tabs, pages, sheets ----------
@@ -856,8 +860,8 @@ function frameSetup(frame,opts){
     const h=a.getAttribute('href')||'';
     if(/^sound:\/\//i.test(h)||AUDIO_RE.test(h)){a.classList.add('kotoba-audio');a.innerHTML=SPEAKER_SVG;a.setAttribute('aria-label','Play pronunciation');}
   });
-  doc.documentElement.classList.toggle('kotoba-dark',settings.theme==='dark');
-  if(settings.theme==='dark')darkenDoc(doc);
+  doc.documentElement.classList.toggle('kotoba-dark',effTheme()==='dark');
+  if(effTheme()==='dark')darkenDoc(doc);
   // Body rect already includes CSS zoom; documentElement.scrollHeight never shrinks below the frame itself.
   const resize=()=>{if(opts.autoHeight===false)return;const h=Math.ceil(doc.body.getBoundingClientRect().bottom+8);frame.style.height=Math.max(opts.min||60,h)+'px';};
   resize();
@@ -2086,7 +2090,7 @@ async function renderLibrary(){
       <div class="switch-row"><div><b>Entry text size</b><small>Also adjustable from any entry’s ⋯ menu</small></div><div class="stepper"><button data-z="-0.1">−</button><span id="zv">${Math.round(settings.zoom*100)}%</span><button data-z="0.1">+</button></div></div>
       <div class="switch-row"><div><b>Vertical text (縦書き)</b><small>Show entries in vertical writing</small></div><label class="toggle"><input type="checkbox" id="set-vertical" ${settings.vertical?'checked':''}><span></span></label></div>
       <div class="switch-row"><div><b>Interface language</b></div><div class="chips">${[['en','English'],['ja','日本語']].map(([c,n])=>`<button class="chip small ${(settings.ui_lang||'en')===c?'on':''}" data-ui-lang="${c}" data-no-i18n>${n}</button>`).join('')}</div></div>
-      <div class="switch-row"><div><b>Theme</b></div><div class="chips">${['light','sepia','dark'].map(t=>`<button class="chip small ${settings.theme===t?'on':''}" data-theme-set="${t}">${t[0].toUpperCase()+t.slice(1)}</button>`).join('')}</div></div>
+      <div class="switch-row"><div><b>Theme</b></div><div class="chips">${['auto','light','sepia','dark'].map(t=>`<button class="chip small ${settings.theme===t?'on':''}" data-theme-set="${t}">${t[0].toUpperCase()+t.slice(1)}</button>`).join('')}</div></div>
       <div class="switch-row"><div><b>Track known words</b><small>A ✓ on entries, your vocabulary size, and how much of a chapter or episode you’d know. Nothing is highlighted while you read.</small></div><label class="toggle"><input type="checkbox" id="set-known" ${knownOn()?'checked':''}><span></span></label></div>
       <div class="switch-row"><div><b>Recent searches</b><small>Show your recent searches on the Dictionary home screen</small></div><label class="toggle"><input type="checkbox" id="set-recent" ${settings.show_recent?'checked':''}><span></span></label></div>
       <div class="switch-row"><div><b>Show reading on card front</b><small>Otherwise the reading appears with the answer</small></div><label class="toggle"><input type="checkbox" id="set-front" ${settings.front_reading?'checked':''}><span></span></label></div>
@@ -2313,6 +2317,8 @@ async function dictMenu(id){
     const server=await api('settings');
     if(server.new_per_day)settings.new_per_day=server.new_per_day;
     if(server.retention)settings.retention=server.retention;
+    // The theme is also kept by the app itself, so it survives anything that clears the page's own storage.
+    if(server.theme_pref&&server.theme_pref!==settings.theme){settings.theme=server.theme_pref;saveLocalSettings();applyTheme();}
   }catch(e){}
   await loadDicts().catch(e=>toast(e.message));
   renderSearchEmpty();

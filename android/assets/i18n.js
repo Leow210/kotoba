@@ -94,7 +94,7 @@
     'Show more':'もっと見る','Reader':'リーダー','Books you’re reading':'読書中の本','＋ Add':'＋ 追加','Vocabulary':'単語帳','Folders of words you’ve kept':'保存した語のフォルダ','Review':'復習',
     'Spaced repetition · FSRS':'間隔反復 · FSRS','Library':'ライブラリ','Dictionaries and settings':'辞書と設定','Search your dictionaries':'辞書を検索',
     'Show or hide thesaurus dictionaries in regular search':'通常の検索で類語辞書を表示／非表示','Home':'ホーム','Search':'検索','Settings':'設定','Language':'言語','Interface language':'表示言語',
-    'Light':'ライト','Sepia':'セピア','Dark':'ダーク','Inbox':'受信箱','Statistics ›':'統計 ›','Reading':'読み','Definition':'語義','On':'オン','Off':'オフ','Show':'表示','Hide':'非表示',
+    'Auto':'自動','Light':'ライト','Sepia':'セピア','Dark':'ダーク','Inbox':'受信箱','Statistics ›':'統計 ›','Reading':'読み','Definition':'語義','On':'オン','Off':'オフ','Show':'表示','Hide':'非表示',
     'show':'表示','hide':'非表示','after hearing':'聞いた後','next one':'次へ','again':'もう一度','stop':'停止','start over':'最初から','on':'オン','off':'オフ','none':'なし','brief':'短','short':'中','long':'長',
     'Passive':'聴く','Produce':'話す','Understand':'理解','Translation':'翻訳','English':'英語','Text size':'文字サイズ','Add':'追加','Remove':'削除','Move':'移動','Yes':'はい','No':'いいえ','OK':'OK',
     'Command':'コマンド','Control':'コントロール','No key':'キーなし','Option':'オプション','Shift':'シフト',

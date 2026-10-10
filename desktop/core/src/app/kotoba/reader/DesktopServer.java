@@ -872,7 +872,10 @@ public class DesktopServer {
         File assets=new File(args.length>1?args[1]:"android/assets");
         File web=new File(args.length>2?args[2]:"desktop/web");
         DesktopServer s=new DesktopServer(data,assets,web);
-        HttpServer http=HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(),args.length>3?Integer.parseInt(args[3]):0),64);
+        // A fixed port (when free) keeps the page's address, and so its saved settings, the same from one launch to the next.
+        HttpServer http;
+        try{http=HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(),args.length>3?Integer.parseInt(args[3]):47824),64);}
+        catch(java.net.BindException busy){http=HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(),0),64);}
         http.createContext("/",s::handle);
         http.setExecutor(Executors.newFixedThreadPool(16));
         http.start();

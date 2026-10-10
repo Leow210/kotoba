@@ -316,7 +316,7 @@ function showEntry(P,n){
   const it=P.items&&P.items[n];if(!it)return;
   P.tab=n;
   P.el.querySelectorAll('.p-tab').forEach(t=>t.classList.toggle('on',+t.dataset.n===n));
-  const dark=(()=>{try{return JSON.parse(localStorage.getItem('settings')||'{}').theme==='dark';}catch(e){return false;}})();
+  const dark=(()=>{try{const t=JSON.parse(localStorage.getItem('settings')||'{}').theme;return t==='dark'||t==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches;}catch(e){return false;}})();
   document.documentElement.classList.toggle('k-dark',dark);
   const f=document.createElement('iframe');f.src=`/d/${it.dict}/${it.rec}.entry`;
   if(dark)f.style.visibility='hidden';
