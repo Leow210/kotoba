@@ -2,7 +2,7 @@
 // @name         Kotoba Video Text
 // @namespace    app.kotoba.desktop
 // @version      0.13.4
-// @description  Look up YouTube, Netflix, Viki and GagaOOLala subtitles in Kotoba for Mac: hold Shift over a word; YouTube Music's song goes to Kotoba's lyrics. Works in Firefox and Chrome (Tampermonkey).
+// @description  Look up YouTube, Netflix, Viki and GagaOOLala subtitles in Kotoba for Mac: hold Shift over a word; YouTube Music's song goes to Kotoba's lyrics. Works in Firefox and Chromium browsers such as Chrome, Helium, Brave and Edge (Tampermonkey).
 // @match        https://www.youtube.com/watch*
 // @match        https://www.gagaoolala.com/*/videos/*
 // @match        https://music.youtube.com/*
@@ -26,6 +26,8 @@
  */
 (() => {
   'use strict';
+  /*__KOTOBA_DARK__*/
+  let kTheme = '';
   if (document.getElementById('kotoba-video-ui')) return;
   const KEY = '__KOTOBA_KEY__', PORT = '__KOTOBA_PORT__';
 
@@ -163,6 +165,20 @@
     .kotoba-pop .k-newfolder button { font: 600 12px -apple-system,BlinkMacSystemFont,sans-serif; border: 0; background: #2f6b55; color: #fff; border-radius: 8px; padding: 4px 10px; cursor: pointer; }
     .kotoba-pop .k-folder { font: 600 12px -apple-system,BlinkMacSystemFont,sans-serif; border: 1px solid #cfdcd3; background: #fff; color: #2f6b55; border-radius: 8px; padding: 3px 6px; max-width: 150px; cursor: pointer; }
     .kotoba-pop .k-note { color: #72766f; font-size: 13px; }
+    /* Dark theme (Kotoba's theme setting): the popup and the entry page inside it. */
+    .kotoba-pop.k-dark { background: #1c1f1c; color: #e6e5df; box-shadow: 0 12px 40px rgba(0,0,0,.7); outline: 1px solid #2c302b; }
+    .kotoba-pop.k-dark .k-key, .kotoba-pop.k-dark .k-freq, .kotoba-pop.k-dark .k-note, .kotoba-pop.k-dark .k-close, .kotoba-pop.k-dark .k-tab { color: #a3a69e; }
+    .kotoba-pop.k-dark .k-saved { color: #dfbd62; }
+    .kotoba-pop.k-dark .k-size, .kotoba-pop.k-dark .k-known { background: #2b2f2b; color: #cfcdc6; }
+    .kotoba-pop.k-dark .k-known.on { background: #3f8d6c; color: #fff; }
+    .kotoba-pop.k-dark .k-close:hover, .kotoba-pop.k-dark .k-tab:hover { background: #2b2f2b; color: #e6e5df; }
+    .kotoba-pop.k-dark .k-alt, .kotoba-pop.k-dark .k-folder { border-color: #33473d; background: #232823; color: #7cc2a0; }
+    .kotoba-pop.k-dark .k-explain { color: #7cc2a0; }
+    .kotoba-pop.k-dark .k-tab.on { background: #25352d; color: #7cc2a0; }
+    .kotoba-pop.k-dark.k-big .k-entry { border-top-color: #2c302b; }
+    .kotoba-pop.k-dark .k-actions button { background: #25352d; color: #7cc2a0; }
+    .kotoba-pop.k-dark .k-actions button:first-child, .kotoba-pop.k-dark .k-newfolder button { background: #3f8d6c; color: #fff; }
+    .kotoba-pop.k-dark .k-newfolder input { background: #232823; color: #e6e5df; border-color: #3b5a4a; }
   `;
   document.documentElement.appendChild(style);
 
@@ -532,7 +548,7 @@
   // The entry as the dictionary lays it out, with its styles and images sent by Kotoba (the page can't load them itself).
   const entries = new Map();
   function entryHtml(rec) {
-    if (!entries.has(rec)) { entries.set(rec, kotoba('entry', { rec }).then(r => r.html).catch(e => { entries.delete(rec); throw e; })); if (entries.size > 60) entries.delete(entries.keys().next().value); }
+    if (!entries.has(rec)) { entries.set(rec, kotoba('entry', { rec }).then(r => { kTheme = r.theme || kTheme; return r.html; }).catch(e => { entries.delete(rec); throw e; })); if (entries.size > 60) entries.delete(entries.keys().next().value); }
     return entries.get(rec);
   }
   async function showEntry(P, n) {
@@ -542,11 +558,15 @@
     let html;
     try { html = await entryHtml(it.rec); } catch (e) { if (P.res === res) box.textContent = e.message; return; }
     if (P.res !== res) return;
+    const dark = kTheme === 'dark';
+    P.el.classList.toggle('k-dark', dark);
     const f = document.createElement('iframe');
     f.setAttribute('sandbox', 'allow-same-origin');
+    if (dark) f.style.visibility = 'hidden';
     box.replaceChildren(f);
     f.addEventListener('load', () => {
       const d = f.contentDocument; if (!d || !d.body) return;
+      if (dark) { d.documentElement.classList.add('kotoba-dark'); try { darkenDoc(d); } catch (e) {} f.style.visibility = ''; }
       wireFrame(P, f);
       fitFrame(P); setTimeout(() => fitFrame(P), 250);
       // A page with several words (大辞林 けんのう: 献納, 権能) opens at the heading of the one looked up.

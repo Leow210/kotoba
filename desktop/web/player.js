@@ -316,10 +316,14 @@ function showEntry(P,n){
   const it=P.items&&P.items[n];if(!it)return;
   P.tab=n;
   P.el.querySelectorAll('.p-tab').forEach(t=>t.classList.toggle('on',+t.dataset.n===n));
+  const dark=(()=>{try{return JSON.parse(localStorage.getItem('settings')||'{}').theme==='dark';}catch(e){return false;}})();
+  document.documentElement.classList.toggle('k-dark',dark);
   const f=document.createElement('iframe');f.src=`/d/${it.dict}/${it.rec}.entry`;
+  if(dark)f.style.visibility='hidden';
   P.el.querySelector('.p-entry').replaceChildren(f);
   f.addEventListener('load',()=>{
     const d=f.contentDocument;if(!d||!d.body)return;
+    if(dark){d.documentElement.classList.add('kotoba-dark');darkenDoc(d);f.style.visibility='';}
     const css=d.createElement('style');
     css.textContent='body.kotoba-entry{padding:2px 6px 8px!important;font-size:14.5px}::highlight(kotoba){background-color:rgba(124,194,160,.5)}';
     d.head.appendChild(css);

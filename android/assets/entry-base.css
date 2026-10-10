@@ -15,7 +15,14 @@ mark.kotoba-hit{background:rgba(222,184,74,.45);color:inherit;border-radius:2px}
 html.kotoba-vertical{writing-mode:vertical-rl;-webkit-writing-mode:vertical-rl;height:100%}
 html.kotoba-vertical body.kotoba-entry{padding:18px 10px;height:calc(100% - 36px);line-height:1.9}
 html.kotoba-vertical img{max-height:60vh;max-width:none}
-html.kotoba-dark img{filter:invert(1) hue-rotate(180deg)}
+html.kotoba-dark{color-scheme:dark;--text-color:#e6e5df;--background-color:#1c1f1c;--accent-color:#7cc2a0;--link-color:#7cc2a0;--danger-color-lightest:#3a2420;--sidebar-button-danger-background-color-active:#e0806c;--tag-default-background-color:#25352d;--light-border-color:#2c302b;--medium-border-color:#3b403a}
+html.kotoba-dark body.kotoba-entry{color:#e6e5df;-webkit-tap-highlight-color:rgba(124,194,160,.2)}
+html.kotoba-dark a{color:#7cc2a0}
+html.kotoba-dark a.kotoba-audio{background:rgba(124,194,160,.16);color:#7cc2a0!important}
+html.kotoba-dark ::selection{background:rgba(124,194,160,.3)}
+html.kotoba-dark mark.kotoba-hit{background:rgba(222,184,74,.35)}
+html.kotoba-dark img{filter:brightness(.88)}
+html.kotoba-dark.kotoba-appendix td,html.kotoba-dark.kotoba-appendix th{border-bottom-color:rgba(255,255,255,.1)}
 a.kotoba-audio{display:inline-flex;align-items:center;justify-content:center;width:1.6em;height:1.6em;margin:0 .25em;border-radius:50%;background:rgba(47,107,85,.12);color:#2f6b55!important;text-decoration:none!important;vertical-align:middle;font-size:.9em;line-height:1}
 a.kotoba-audio svg{width:1em;height:1em}
 /* Tables (appendices, conjugation charts): keep words whole; wide tables scroll sideways instead of squashing. */

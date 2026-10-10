@@ -56,6 +56,18 @@ body.idle #subs{bottom:34px}
 .fbars i{width:3px;border-radius:1px;background:#d8d3c7}
 .fbars i:nth-child(1){height:4px}.fbars i:nth-child(2){height:6px}.fbars i:nth-child(3){height:8.5px}.fbars i:nth-child(4){height:11px}
 .fbars.l1 i:nth-child(-n+1),.fbars.l2 i:nth-child(-n+2),.fbars.l3 i:nth-child(-n+3),.fbars.l4 i{background:#2f6b55}
+.k-dark .kpop{background:#1c1f1c;color:#e6e5df;box-shadow:0 8px 28px rgba(0,0,0,.7);outline:1px solid #2c302b}
+.k-dark .p-key,.k-dark .p-freq,.k-dark .p-close,.k-dark .p-tab{color:#a3a69e}
+.k-dark .p-saved{color:#dfbd62}
+.k-dark .p-size{background:#2b2f2b;color:#cfcdc6}
+.k-dark .p-close:hover,.k-dark .p-tab:hover{background:#2b2f2b;color:#e6e5df}
+.k-dark .p-explain{color:#7cc2a0}
+.k-dark .p-tab.on{background:#25352d;color:#7cc2a0}
+.k-dark .kpop.big .p-entry{border-top-color:#2c302b}
+.k-dark .p-actions button{background:#25352d;color:#7cc2a0}
+.k-dark .p-actions button:first-child{background:#3f8d6c;color:#fff}
+.k-dark .fbars i{background:#3b403a}
+.k-dark .fbars.l1 i:nth-child(-n+1),.k-dark .fbars.l2 i:nth-child(-n+2),.k-dark .fbars.l3 i:nth-child(-n+3),.k-dark .fbars.l4 i{background:#7cc2a0}
 
 /* Control bar (IINA-like, simplified). */
 #bar{position:absolute;left:50%;transform:translateX(-50%);bottom:14px;width:min(860px,calc(100% - 28px));background:var(--panel);border-radius:14px;

@@ -116,7 +116,6 @@ svg.i{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stro
 .entry-scroll.vertical .contents{display:none}
 .entry-scroll.vertical .focus-note{flex:none;padding:4px 16px}
 .entry-scroll.vertical .browse{flex:none;padding-top:8px}
-:root[data-theme="dark"] .entry-frame{filter:invert(.9) hue-rotate(180deg)}
 .focus-note{display:flex;justify-content:center;padding:6px 16px 4px}
 .focus-note button{font-size:14px;font-weight:600;color:var(--accent);padding:10px 16px;border-radius:12px;background:var(--accent-soft)}
 .contents{padding:6px 0 10px;border-top:1px solid var(--line);margin-top:8px}
@@ -179,7 +178,6 @@ label.f{display:block;margin:12px 0 0;font-size:12.5px;font-weight:700;color:var
 .stepper span{min-width:44px;text-align:center;font-weight:650;font-variant-numeric:tabular-nums}
 .hint{color:var(--muted);font-size:13px;line-height:1.5;margin:8px 0 0}
 .lookup-frame{width:100%;border:0;height:320px;border-radius:12px;background:var(--surface);display:block}
-:root[data-theme="dark"] .lookup-frame,:root[data-theme="dark"] .card-frame{filter:invert(.9) hue-rotate(180deg)}
 
 /* selection bar */
 #selbar{position:absolute;left:10px;right:10px;bottom:calc(var(--tab-h) + var(--safe-b) + 10px);z-index:30;background:var(--ink);color:var(--bg);border-radius:16px;box-shadow:0 8px 28px rgba(0,0,0,.28);display:flex;align-items:center;padding:4px;gap:2px;overflow-x:auto;scrollbar-width:none}

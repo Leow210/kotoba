@@ -42,13 +42,14 @@ public class DesktopServer {
     final Sync sync;
     final Translator translator;
     final Writing writing;
+    final Store store;
     final java.util.Map<String,Long> installLinks=new java.util.concurrent.ConcurrentHashMap<>();
     volatile int port;volatile boolean helperRunning;
 
     DesktopServer(File data,File assets,File web){
         this.data=data;this.assets=assets;this.web=web;
         Context context=new Context(data,assets);
-        Store store=new Store(context);
+        Store store=this.store=new Store(context);
         library=new Library(context,uri->FileChannel.open(Path.of(uri.startsWith("file://")?uri.substring(7):uri),StandardOpenOption.READ));
         WordLists wordlists=new WordLists(store.db);
         Extras extras=new Extras(library,new File(data,"extras"));
@@ -582,7 +583,7 @@ public class DesktopServer {
             try{
                 Object result;
                 if(route.equals("show")){event("helper-show",new JSONObject().put("word",d.getString("word")));result=null;}
-                else if(route.equals("entry"))result=new JSONObject().put("html",entryInline(d.getLong("rec")));
+                else if(route.equals("entry"))result=new JSONObject().put("html",entryInline(d.getLong("rec"))).put("theme",store.setting("theme",""));
                 else if(HELPER_ROUTES.contains(route))result=route(route,d);
                 else throw new Exception("Not available to the helper: "+route);
                 reply=new JSONObject().put("data",result==null?JSONObject.NULL:result).toString();
@@ -758,6 +759,8 @@ public class DesktopServer {
                     send(x,404,"text/plain","This install link has expired. Make a new one in Kotoba › Video.".getBytes(StandardCharsets.UTF_8),null);return;
                 }
                 String js=Files.readString(script.toPath()).replace("__KOTOBA_KEY__",helperKey()).replace("__KOTOBA_PORT__",Integer.toString(HELPER_PORT));
+                File dark=new File(assets,"dark.js");
+                if(dark.isFile())js=js.replace("/*__KOTOBA_DARK__*/",Files.readString(dark.toPath()));
                 send(x,200,"text/javascript",js.getBytes(StandardCharsets.UTF_8),null);
                 return;
             }

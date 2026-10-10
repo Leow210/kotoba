@@ -158,14 +158,14 @@
     const r=await api('helper.link');
     Kotoba.copy(r.url);
     if(!r.helperRunning)toast('Another app is using port '+r.helperPort+'; quit it and reopen Kotoba for the helper to work.',6000);
-    else toast('Install link copied (valid 10 minutes). Paste it into Firefox’s or Chrome’s address bar; Tampermonkey offers to install.',6000);
+    else toast('Install link copied (valid 10 minutes). Paste it into the address bar of Firefox, Chrome, Helium or another Chromium browser; Tampermonkey offers to install.',6000);
   });
   // The same for any web page (Yomitan-style: hold Shift over text): a second script, paired with the same key.
   document.getElementById('copy-browser-web').onclick=handle(async()=>{
     const r=await api('helper.link');
     Kotoba.copy(r.webUrl);
     if(!r.helperRunning)toast('Another app is using port '+r.helperPort+'; quit it and reopen Kotoba for the helper to work.',6000);
-    else toast('Install link copied (valid 10 minutes). Paste it into Firefox’s or Chrome’s address bar; Tampermonkey offers to install. Then hold Shift over text on any page.',7000);
+    else toast('Install link copied (valid 10 minutes). Paste it into the address bar of Firefox, Chrome, Helium or another Chromium browser; Tampermonkey offers to install. Then hold Shift over text on any page.',7000);
   });
   // "Open in Kotoba" from the helper: the word opens here and the window comes forward.
   on('helper-show',r=>{mac({type:'activate'});window.externalLookup&&window.externalLookup(r.word);});
@@ -202,7 +202,7 @@
     let recent=[];try{recent=JSON.parse(localStorage.getItem('recentVideos')||'[]');}catch(e){}
     const box=document.getElementById('video-home');
     box.innerHTML=recent.length?`<div class="section-label">Recent</div>`+recent.map((v,i)=>`<button class="row video-row" data-v="${i}"><div class="line"><div class="hw">${esc(v.title)}</div><div class="meta"><span class="tag muted">${fmt(v.t)} / ${fmt(v.d)}</span></div></div><div class="progress"><i style="width:${v.d?Math.min(100,v.t/v.d*100):0}%"></i></div><small class="vpath">${esc(v.path)}</small></button>`).join('')
-      :`<div class="empty"><span class="glyph">映</span><h2>Watch with subtitles</h2>Open a video (MKV, MP4…). Subtitle files beside it, or in a <b>subtitles</b> folder next to it, and the tracks inside it are found automatically. For subtitles printed into the picture, choose <b>OCR hardcoded subtitles</b> from the 字幕 menu in the player.<br><br>For YouTube and GagaOOLala in Firefox or Chrome, install the subtitle helper above (needs Tampermonkey). Turn on the site's captions, then hold <b>Shift</b> over a word: Kotoba shows its definitions and can save a card, as long as this app is open.<br><br>${esc(hoverInstruction())}; <b>A</b> / <b>D</b> go to the previous / next line, <b>S</b> replays it, and <b>P</b> pauses after every line.</div>`;
+      :`<div class="empty"><span class="glyph">映</span><h2>Watch with subtitles</h2>Open a video (MKV, MP4…). Subtitle files beside it, or in a <b>subtitles</b> folder next to it, and the tracks inside it are found automatically. For subtitles printed into the picture, choose <b>OCR hardcoded subtitles</b> from the 字幕 menu in the player.<br><br>For YouTube, Viki, Netflix and GagaOOLala in Firefox, Chrome, Helium or another Chromium browser, install the subtitle helper above (needs Tampermonkey). Turn on the site's captions, then hold <b>Shift</b> over a word: Kotoba shows its definitions and can save a card, as long as this app is open.<br><br>${esc(hoverInstruction())}; <b>A</b> / <b>D</b> go to the previous / next line, <b>S</b> replays it, and <b>P</b> pauses after every line.</div>`;
     box.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>mac({type:'openVideo',path:recent[+b.dataset.v].path}));
   }
   const originalShow=showTab;

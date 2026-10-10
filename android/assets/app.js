@@ -89,7 +89,7 @@ function saveLocalSettings(){try{localStorage.setItem('settings',JSON.stringify(
 const THEME_BARS={light:['#f7f4ee',true],sepia:['#f1e8d6',true],dark:['#141614',false]};
 function setBars(color,light){try{Kotoba.setBars(color,light);}catch(e){}}
 function appBars(){const b=THEME_BARS[settings.theme]||THEME_BARS.light;setBars(b[0],b[1]);}
-function applyTheme(){document.documentElement.dataset.theme=settings.theme;appBars();}
+function applyTheme(){document.documentElement.dataset.theme=settings.theme;appBars();try{api('setting',{key:'theme',value:settings.theme}).catch(()=>{});}catch(e){}}
 async function setSetting(key,value){settings[key]=value;saveLocalSettings();if(['new_per_day','retention'].includes(key))await api('setting',{key,value:String(value)});}
 
 // ---------- navigation: tabs, pages, sheets ----------
@@ -857,6 +857,7 @@ function frameSetup(frame,opts){
     if(/^sound:\/\//i.test(h)||AUDIO_RE.test(h)){a.classList.add('kotoba-audio');a.innerHTML=SPEAKER_SVG;a.setAttribute('aria-label','Play pronunciation');}
   });
   doc.documentElement.classList.toggle('kotoba-dark',settings.theme==='dark');
+  if(settings.theme==='dark')darkenDoc(doc);
   // Body rect already includes CSS zoom; documentElement.scrollHeight never shrinks below the frame itself.
   const resize=()=>{if(opts.autoHeight===false)return;const h=Math.ceil(doc.body.getBoundingClientRect().bottom+8);frame.style.height=Math.max(opts.min||60,h)+'px';};
   resize();

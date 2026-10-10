@@ -1,6 +1,6 @@
 /*
  * Yomitan dictionaries: Kotoba's heading and definition layout, plus the defaults Yomitan gives structured content
- * (tables, lists, images). The dictionary's own styles.css loads after this. Dark mode inverts the whole frame.
+ * (tables, lists, images). The dictionary's own styles.css loads after this. Dark mode re-colours the frame (see darkenDoc in app.js).
  */
 :root{
   /* Yomitan theme variables that dictionary styles refer to. */
