@@ -122,7 +122,7 @@ public class DesktopServer {
                 byte[] r=new byte[12];new SecureRandom().nextBytes(r);
                 StringBuilder b=new StringBuilder();for(byte v:r)b.append(String.format("%02x",v));
                 installLinks.put(b.toString(),System.currentTimeMillis());
-                return new JSONObject().put("url","http://127.0.0.1:"+port+"/kotoba-video.user.js?once="+b).put("webUrl","http://127.0.0.1:"+port+"/kotoba-web.user.js?once="+b).put("helperPort",HELPER_PORT).put("helperRunning",helperRunning);
+                return new JSONObject().put("url","http://127.0.0.1:"+port+"/kotoba-video.user.js?once="+b).put("webUrl","http://127.0.0.1:"+port+"/kotoba-web.user.js?once="+b).put("helperPort",HELPER_PORT).put("helperRunning",helperRunning).put("code","kotoba:"+HELPER_PORT+":"+helperKey());
             }
             case "video.tracks":return videoTracks(new File(d.getString("path")));
             case "video.sub":return new JSONObject().put("text",videoSub(new File(d.getString("path")),d.optInt("stream",-1),d.optString("file","")));

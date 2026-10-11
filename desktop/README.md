@@ -90,6 +90,18 @@ The helper talks to Kotoba on 127.0.0.1:47823 through Tampermonkey (`GM_xmlhttpR
 installed script; that address only answers lookups, entries, definitions, frequency and card saves. Reinstall the helper
 from the Video tab if the key changes. It reads only the caption text shown on the page.
 
+### Toolbar extension (Chrome, Helium, other Chromium browsers)
+
+`desktop/extension` is the same page lookup as a real extension, so it has a toolbar button: one switch turns lookup on or
+off, another turns it off for the current site, and the popup picks the languages (日本語, 한국어, 中文, ไทย, Русский) and whether
+kanji/hanzi on their own are read as Japanese or Chinese. Changes apply to open pages at once.
+
+Install: `chrome://extensions` › Developer mode › **Load unpacked** › choose `desktop/extension` (also copied to
+`Kotoba.app/Contents/Resources/extension`). Pin it from the puzzle-piece menu. Then in Kotoba choose Video › **Browser extension
+code**, open the extension's popup, expand **Connect to Kotoba** and paste. The status dot shows whether Kotoba is reachable.
+Use either this or the Tampermonkey page-lookup script, not both. `desktop/build-extension.sh` regenerates
+`extension/content.js` from `web/kotoba-web.user.js` (run it after changing that script; `build-app.sh` does too).
+
 ### Any web page, like Yomitan
 
 Kotoba › Video › **Browser page lookup** copies a second one-time install link (same Tampermonkey, same key as the subtitle

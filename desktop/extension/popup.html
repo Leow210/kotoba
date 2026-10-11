@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="popup.css"><title>Kotoba Lookup</title></head>
+<body>
+<header><b>Kotoba</b><span id="status" class="status" title=""><i></i><span id="status-text">Checking…</span></span></header>
+<main>
+  <label class="row big"><span>Lookup on</span><input type="checkbox" id="enabled" class="switch"></label>
+  <label class="row"><span>On for <b id="host">this site</b></span><input type="checkbox" id="site" class="switch"></label>
+  <h2>Languages</h2>
+  <div class="chips" id="langs">
+    <label><input type="checkbox" value="ja"><span>日本語</span></label>
+    <label><input type="checkbox" value="ko"><span>한국어</span></label>
+    <label><input type="checkbox" value="zh"><span>中文</span></label>
+    <label><input type="checkbox" value="th"><span>ไทย</span></label>
+    <label><input type="checkbox" value="ru"><span>Русский</span></label>
+  </div>
+  <h2>Kanji / hanzi alone count as</h2>
+  <div class="seg" id="han"><label><input type="radio" name="han" value="ja"><span>Japanese</span></label><label><input type="radio" name="han" value="zh"><span>Chinese</span></label></div>
+  <p class="hint">Hold <b>Shift</b> over text, or Shift-drag across it. Kana, hangul, Thai and Cyrillic are always read as their own language.</p>
+  <details id="pair"><summary>Connect to Kotoba</summary>
+    <p class="hint">In Kotoba for Mac open <b>Video › Browser extension code</b>, then paste it here.</p>
+    <div class="paste"><input id="code" placeholder="kotoba:47823:…" spellcheck="false" autocomplete="off"><button id="connect">Connect</button></div>
+    <p class="hint" id="pair-msg"></p>
+  </details>
+</main>
+<script src="popup.js"></script>
+</body></html>

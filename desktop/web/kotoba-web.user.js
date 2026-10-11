@@ -40,13 +40,15 @@
   // Sites it's switched off for (Tampermonkey's storage, shared by every site).
   const offList = () => { try { return JSON.parse(GM_getValue('kotoba.web.off', '[]')); } catch (e) { return []; } };
   let off = offList().includes(location.hostname);
+  // Switches the Kotoba extension's popup (or Tampermonkey's storage) can change while the page is open.
+  const isOff = () => GM_getValue('kotoba.web.enabled', true) === false || offList().includes(location.hostname);
+  const langOn = l => { try { const a = JSON.parse(GM_getValue('kotoba.web.langs', '')); return !Array.isArray(a) || a.includes(l); } catch (e) { return true; } };
   try {
     GM_registerMenuCommand(off ? `Kotoba: turn on for ${location.hostname}` : `Kotoba: turn off for ${location.hostname}`, () => {
       const list = offList().filter(h => h !== location.hostname); if (!off) list.push(location.hostname);
       GM_setValue('kotoba.web.off', JSON.stringify(list)); location.reload();
     });
   } catch (e) {}
-  if (off) return;
   // YouTube only accepts HTML through a Trusted Types policy in Chrome; Firefox takes plain strings.
   const policy = (() => {
     if (!window.trustedTypes || !trustedTypes.createPolicy) return null;
@@ -295,7 +297,7 @@
     }, 10));
   }
   async function lookupRange(P, f, range, str) {
-    const lang = textLang(str);
+    const lang = textLang(str); if (!langOn(lang)) return;
     const tok = {}; frameTok = tok;
     let res; try { res = await kotoba('lookup', { text: str, lang: lang === 'zh' || lang === 'th' ? lang : '' }); } catch (e) { return; }
     if (frameTok !== tok) return;
@@ -314,7 +316,7 @@
     if (/[ぁ-ヿ]/u.test(c)) return 'ja';
     if (/[ก-๛]/u.test(c)) return 'th';
     if (/[А-ӿ]/u.test(c)) return 'ru';
-    if (/[一-鿿]/u.test(c)) return '' === 'zh' ? 'zh' : 'ja';
+    if (/[一-鿿]/u.test(c)) return GM_getValue('kotoba.web.han', 'ja') === 'zh' ? 'zh' : 'ja';
     return '';
   }
   async function lookupInFrame(P, f, node, off) {
@@ -327,7 +329,7 @@
     str = str.slice(0, 24);
     if (!str.trim() || /^[\s\p{P}\d]/u.test(str)) return;
     const tok = {}; frameTok = tok;
-    const lang = textLang(str);
+    const lang = textLang(str); if (!langOn(lang)) return;
     let res; try { res = await kotoba('lookup', { text: str, lang: lang === 'zh' || lang === 'th' ? lang : '' }); } catch (e) { return; }
     if (frameTok !== tok || !res.items.length) return;
     const range = d.createRange(); range.setStart(parts[0].n, parts[0].o);
@@ -426,7 +428,7 @@
   }
   const blockOf = n => { const e = n.parentElement; return e && (e.closest('p,li,td,th,dd,dt,blockquote,h1,h2,h3,h4,h5,h6,article,section,div') || e); };
   async function probe() {
-    if (!shift || !at) return;
+    if (!shift || !at || isOff()) return;
     const p = pointedChar(at.x, at.y);
     if (!p) return;
     if (lastSeen && lastSeen.node === p.node && lastSeen.off === p.off) return;
@@ -439,7 +441,7 @@
     str = str.slice(0, 24);
     // Only the scripts Kotoba has dictionaries for; Latin text is left alone.
     if (!str.trim() || !/^[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff\uac00-\ud7af\u0e00-\u0e7f\u0400-\u04ff]/.test(str)) return;
-    const lang = textLang(str);
+    const lang = textLang(str); if (!langOn(lang)) return;
     const mine = tok = {};
     let res; try { res = await kotoba('lookup', { text: str, lang: lang === 'zh' || lang === 'th' ? lang : '' }); } catch (e) { if (tok === mine) showMessage(e.message, { getBoundingClientRect: () => ({ left: at.x, right: at.x, top: at.y, bottom: at.y }) }); return; }
     if (tok !== mine || !res.items.length) return;
@@ -457,7 +459,7 @@
   }
   addEventListener('mousemove', e => {
     shift = e.shiftKey; at = { x: e.clientX, y: e.clientY };
-    if (!shift || inPopup(e.target)) return;
+    if (!shift || inPopup(e.target) || isOff()) return;
     clearTimeout(pageTimer); pageTimer = setTimeout(probe, 70);
   }, true);
   addEventListener('keydown', e => {
@@ -469,11 +471,12 @@
   addEventListener('mousedown', e => { if (!pop.hidden && !inPopup(e.target)) hidePop(); }, true);
   // Dragging across text with Shift held looks up exactly the selection.
   addEventListener('mouseup', e => {
-    if (!e.shiftKey || inPopup(e.target)) return;
+    if (!e.shiftKey || inPopup(e.target) || isOff()) return;
     setTimeout(async () => {
       const sel = getSelection(); if (!sel || sel.isCollapsed || !sel.rangeCount) return;
       const str = sel.toString().replace(/\s+/g, ''); if (!str || str.length > 24) return;
       const range = sel.getRangeAt(0).cloneRange(), lang = textLang(str), mine = tok = {};
+      if (!langOn(lang)) return;
       let res; try { res = await kotoba('lookup', { text: str, lang: lang === 'zh' || lang === 'th' ? lang : '' }); } catch (err) { return; }
       if (tok !== mine || !res.items.length) return;
       sel.removeAllRanges(); pinned = true;
