@@ -391,7 +391,11 @@ function darkenDoc(doc){
     if (/[ぁ-ヿ]/u.test(c)) return 'ja';
     if (/[ก-๛]/u.test(c)) return 'th';
     if (/[А-ӿ]/u.test(c)) return 'ru';
-    if (/[一-鿿]/u.test(c)) return GM_getValue('kotoba.web.han', 'ja') === 'zh' ? 'zh' : 'ja';
+    if (/[一-鿿]/u.test(c)) {
+      const want = GM_getValue('kotoba.web.han', 'ja') === 'zh' ? 'zh' : 'ja', other = want === 'zh' ? 'ja' : 'zh';
+      // Kanji on their own go to the other of Japanese / Chinese when the preferred one is switched off.
+      return !langOn(want) && langOn(other) ? other : want;
+    }
     return '';
   }
   async function lookupInFrame(P, f, node, off) {
