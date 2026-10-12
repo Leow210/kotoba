@@ -1,8 +1,8 @@
 // Runs the page-lookup script (kotoba-web.user.js) as an extension content script: Tampermonkey's GM_* calls are
 // answered from chrome.storage, and requests to Kotoba go through the background worker.
 (async () => {
-  if (window.__kotobaExtension) return;
-  window.__kotobaExtension = true;
+  if (window.__kotobaExtension_video) return;
+  window.__kotobaExtension_video = true;
   const __cfg = await chrome.storage.local.get(null);
   chrome.storage.onChanged.addListener(changes => { for (const k in changes) __cfg[k] = changes[k].newValue; });
   const GM_getValue = (k, d) => (k in __cfg && __cfg[k] !== undefined ? __cfg[k] : d);
@@ -14,6 +14,8 @@
       .catch(() => o.onerror && o.onerror());
   };
 
+// YouTube changes pages without reloading: wait here until a watch page is open.
+while (location.hostname === 'www.youtube.com' && location.pathname !== '/watch') await new Promise(r => setTimeout(r, 700));
 /*
  * Draws the site's current caption as text you can hover. Holding Shift over a word asks Kotoba for Mac (which
  * must be open) for that word: the popup shows your dictionaries' definitions, frequency and whether it's already
@@ -141,6 +143,9 @@ function darkenDoc(doc){
   const store = { get: (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} } };
   let enabled = store.get('kotoba.videoText.enabled', 'true') !== 'false';
   let stayOpen = store.get('kotoba.videoText.stay', 'true') !== 'false';
+  // The toolbar menu's switch (extension) or this bar's pin button; the one set last wins.
+  const syncStay = () => { try { const g = GM_getValue('kotoba.stay', null); if (typeof g === 'boolean') { stayOpen = g; stayBtn.setAttribute('aria-pressed', String(g)); } } catch (e) {} };
+  const barOn = () => { try { return GM_getValue('kotoba.video.bar', true) !== false; } catch (e) { return true; } };
   let language = store.get('kotoba.videoText.language', bilibili ? 'zh' : 'auto');
   let pauseOnLookup = store.get('kotoba.videoText.pause', 'true') !== 'false';
   let concealed = null, lastText = '';
@@ -177,6 +182,7 @@ function darkenDoc(doc){
     /* Top right of the video, clear of the site's own control bar and its menus (a button of ours in the path from the
        site's subtitle button to its menu made the site think the pointer had left, and the menu closed). */
     #kotoba-video-toolbar { position: fixed; display: flex; align-items: center; gap: 5px; justify-content: flex-end; opacity: .55; transition: opacity .15s; }
+    #kotoba-video-toolbar[hidden] { display: none; }
     #kotoba-video-toolbar:hover, #kotoba-video-toolbar:focus-within { opacity: 1; }
     #kotoba-video-toolbar button, #kotoba-video-toolbar select { pointer-events: auto; border: 1px solid rgba(255,255,255,.25); border-radius: 7px; background: rgba(19,23,21,.88); color: #fff; font: 12px -apple-system,BlinkMacSystemFont,sans-serif; padding: 4px 7px; cursor: pointer; }
     #kotoba-video-toolbar button[aria-pressed="true"] { color: #a8e1c4; }
@@ -488,6 +494,7 @@ function darkenDoc(doc){
     const rect = video.getBoundingClientRect();
     if (rect.bottom < 0 || rect.top > innerHeight) { ui.hidden = true; showNative(); return; }
     ui.hidden = false;
+    toolbar.hidden = !barOn();
     const width = Math.min(rect.width * .94, 1100);
     ui.style.left = `${Math.max(0, rect.left + (rect.width - width) / 2)}px`;
     ui.style.top = `${Math.max(0, rect.bottom - Math.max(90, rect.height * .16))}px`;
@@ -760,7 +767,7 @@ function darkenDoc(doc){
     pausedByUs = false;
   }
   /** Closes the popup unless it's set to stay until ×. */
-  function hideAuto() { if (!stayOpen) hidePop(); }
+  function hideAuto() { syncStay(); if (!stayOpen) hidePop(); }
   const inPopup = t => !!(t && t.closest && t.closest('.kotoba-pop'));
 
   // Drag across part of the line to look up exactly that (a shorter word than Shift picks, a stem, a single hanja).
@@ -859,8 +866,8 @@ function darkenDoc(doc){
   grip.addEventListener('dblclick', e => { e.stopPropagation(); pos = { x: 0, y: 0 }; store.set(posKey, JSON.stringify(pos)); update(); });
   for (const type of ['mousedown', 'click']) grip.addEventListener(type, e => e.stopPropagation());
   const stayBtn = ui.querySelector('#kotoba-video-stay');
-  stayBtn.setAttribute('aria-pressed', String(stayOpen));
-  stayBtn.addEventListener('click', () => { stayOpen = !stayOpen; store.set('kotoba.videoText.stay', String(stayOpen)); stayBtn.setAttribute('aria-pressed', String(stayOpen)); if (!stayOpen && !pop.hidden && !pop.matches(':hover') && !text.matches(':hover')) hidePop(); });
+  stayBtn.setAttribute('aria-pressed', String(stayOpen)); syncStay();
+  stayBtn.addEventListener('click', () => { stayOpen = !stayOpen; store.set('kotoba.videoText.stay', String(stayOpen)); try { GM_setValue('kotoba.stay', stayOpen); } catch (e) {} stayBtn.setAttribute('aria-pressed', String(stayOpen)); if (!stayOpen && !pop.hidden && !pop.matches(':hover') && !text.matches(':hover')) hidePop(); });
   toggle.addEventListener('click', () => { enabled = !enabled; store.set('kotoba.videoText.enabled', String(enabled)); toggle.setAttribute('aria-pressed', String(enabled)); if (!enabled) hidePop(); update(); });
   pauseBtn.addEventListener('click', () => { pauseOnLookup = !pauseOnLookup; store.set('kotoba.videoText.pause', String(pauseOnLookup)); pauseBtn.setAttribute('aria-pressed', String(pauseOnLookup)); });
   select.addEventListener('change', () => { language = select.value; store.set('kotoba.videoText.language', language); text.lang = guessLanguage(lastText); });

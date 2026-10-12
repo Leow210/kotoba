@@ -5,7 +5,8 @@
   "description": "Hold Shift over Japanese, Chinese, Korean, Thai or Russian text on any page, or over the subtitles of YouTube, Netflix, Viki, GagaOOLala and Bilibili videos (burned-in ones are read from the picture), to look it up in Kotoba for Mac. Turn it on or off and pick languages from the toolbar button.",
   "permissions": [
     "storage",
-    "activeTab"
+    "activeTab",
+    "scripting"
   ],
   "host_permissions": [
     "http://127.0.0.1/*"
@@ -53,7 +54,7 @@
     },
     {
       "matches": [
-        "https://www.youtube.com/watch*",
+        "https://www.youtube.com/*",
         "https://music.youtube.com/*",
         "https://www.netflix.com/*",
         "https://www.viki.com/*",

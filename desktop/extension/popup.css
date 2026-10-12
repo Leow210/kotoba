@@ -26,3 +26,7 @@ summary{cursor:pointer;font-weight:600}
 .paste{display:flex;gap:6px;margin-top:8px}
 .paste input{flex:1;min-width:0;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:12px ui-monospace,monospace}
 .paste button{border:0;border-radius:8px;background:var(--accent);color:var(--accent-ink);font-weight:600;padding:0 12px;cursor:pointer}
+
+button.wide { width: 100%; margin: 6px 0 2px; padding: 7px 10px; border-radius: 8px; border: 1px solid #c9ccc4; background: #fff; color: inherit; font: inherit; cursor: pointer; }
+@media (prefers-color-scheme: dark) { button.wide { background: #2a2f2c; border-color: #444; } }
+small { opacity: .6; font-size: 11px; }

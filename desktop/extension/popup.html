@@ -6,7 +6,11 @@
 <main>
   <label class="row big"><span>Lookup on</span><input type="checkbox" id="enabled" class="switch"></label>
   <label class="row"><span>On for <b id="host">this site</b></span><input type="checkbox" id="site" class="switch"></label>
+  <label class="row"><span>Keep the box open <small>until × / Esc</small></span><input type="checkbox" id="stay" class="switch"></label>
   <label class="row"><span>Video subtitles <small>(YouTube, Netflix, Viki, Bilibili…)</small></span><input type="checkbox" id="video" class="switch"></label>
+  <label class="row"><span>Video bar <small>(文 Kotoba, 📌, ⏸ …)</small></span><input type="checkbox" id="bar" class="switch"></label>
+  <button id="loadvideo" class="wide">Load video bar on this page</button>
+  <p class="hint" id="load-msg"></p>
   <h2>Languages</h2>
   <div class="chips" id="langs">
     <label><input type="checkbox" value="ja"><span>日本語</span></label>

@@ -1,8 +1,8 @@
 // Runs the page-lookup script (kotoba-web.user.js) as an extension content script: Tampermonkey's GM_* calls are
 // answered from chrome.storage, and requests to Kotoba go through the background worker.
 (async () => {
-  if (window.__kotobaExtension) return;
-  window.__kotobaExtension = true;
+  if (window.__kotobaExtension_web) return;
+  window.__kotobaExtension_web = true;
   const __cfg = await chrome.storage.local.get(null);
   chrome.storage.onChanged.addListener(changes => { for (const k in changes) __cfg[k] = changes[k].newValue; });
   const GM_getValue = (k, d) => (k in __cfg && __cfg[k] !== undefined ? __cfg[k] : d);
@@ -214,7 +214,9 @@ function darkenDoc(doc){
 
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-  let stayOpen = true, pinned = false;
+  let pinned = false;
+  // Whether the box stays when the pointer leaves it (toolbar menu › "Keep the box open"); × or Esc always closes it.
+  const stayOn = () => GM_getValue('kotoba.stay', true) !== false;
   // Where "the word" is, for messages and ＋ Card: popup messages hang from the last popup position.
   const text = { lang: '', getBoundingClientRect: () => (main.rect ? { left: main.rect.left, right: main.rect.right, top: main.rect.top, bottom: main.rect.bottom } : { left: 20, right: 20, top: 20, bottom: 20 }) };
   const pop = document.createElement('div');
@@ -232,7 +234,7 @@ function darkenDoc(doc){
     pop.hidden = true; pinned = false; main.res = null; lookupAt = '';
     try { CSS.highlights.delete('kotoba-page'); } catch (e) {}
   }
-  const hideAuto = () => { if (!stayOpen) hidePop(); };
+  const hideAuto = () => { if (!stayOn()) hidePop(); };
   const inPopup = t => !!(t && t.closest && t.closest('.kotoba-pop'));
 
   const shortName = n => String(n).replace(/\s*[\[(（][\d\-. v]+[\])）]\s*$/, '').replace(/^(小学館|三省堂|研究社|大修館|旺文社)\s*/, '').replace(/\s*第.版$/, '').slice(0, 16);
@@ -492,7 +494,7 @@ function darkenDoc(doc){
   hl.textContent = '::highlight(kotoba-page){background-color:rgba(124,194,160,.5);}';
   document.documentElement.appendChild(hl);
   let shift = false, at = null, pageTimer = 0, lastSeen = null, tok = null;
-  const skip = n => !!(n.parentElement && n.parentElement.closest('rt,rp,script,style,textarea,input,select,noscript,[contenteditable="true"],.kotoba-pop'));
+  const skip = n => !!(n.parentElement && n.parentElement.closest('rt,rp,script,style,textarea,input,select,noscript,[contenteditable="true"],.kotoba-pop,#kotoba-video-ui'));
   /** The text node and offset under the pointer, only when the pointer is on the glyph itself (not merely nearest to it). */
   function pointedChar(x, y) {
     const c = caretAt(document, x, y);

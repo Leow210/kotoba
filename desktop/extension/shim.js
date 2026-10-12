@@ -1,8 +1,8 @@
 // Runs the page-lookup script (kotoba-web.user.js) as an extension content script: Tampermonkey's GM_* calls are
 // answered from chrome.storage, and requests to Kotoba go through the background worker.
 (async () => {
-  if (window.__kotobaExtension) return;
-  window.__kotobaExtension = true;
+  if (window.__kotobaExtension___NAME__) return;
+  window.__kotobaExtension___NAME__ = true;
   const __cfg = await chrome.storage.local.get(null);
   chrome.storage.onChanged.addListener(changes => { for (const k in changes) __cfg[k] = changes[k].newValue; });
   const GM_getValue = (k, d) => (k in __cfg && __cfg[k] !== undefined ? __cfg[k] : d);

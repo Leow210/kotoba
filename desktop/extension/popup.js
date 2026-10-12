@@ -19,6 +19,8 @@ async function pingKotoba(cfg) {
 async function paint() {
   const cfg = await S.get(null);
   $('enabled').checked = cfg['kotoba.web.enabled'] !== false;
+  $('stay').checked = cfg['kotoba.stay'] !== false;
+  $('bar').checked = cfg['kotoba.video.bar'] !== false;
   $('video').checked = cfg['kotoba.video.enabled'] !== false;
   const off = (() => { try { return JSON.parse(cfg['kotoba.web.off'] || '[]'); } catch (e) { return []; } })();
   $('site').checked = !off.includes(host);
@@ -32,6 +34,17 @@ async function paint() {
 }
 
 $('enabled').onchange = () => S.set({ 'kotoba.web.enabled': $('enabled').checked });
+$('stay').onchange = () => S.set({ 'kotoba.stay': $('stay').checked });
+$('bar').onchange = () => S.set({ 'kotoba.video.bar': $('bar').checked });
+// For pages where the bar didn't appear (a player the extension wasn't running in yet): run the video helper there now.
+$('loadvideo').onclick = async () => {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    await S.set({ 'kotoba.video.enabled': true, 'kotoba.video.bar': true });
+    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['video.js'] });
+    $('load-msg').textContent = 'Loaded. If the page has a video, the bar is at its top right.';
+  } catch (e) { $('load-msg').textContent = 'Couldn’t load it on this page (' + (e.message || e) + ').'; }
+};
 $('video').onchange = () => S.set({ 'kotoba.video.enabled': $('video').checked });
 $('site').onchange = async () => {
   const cfg = await S.get('kotoba.web.off');
