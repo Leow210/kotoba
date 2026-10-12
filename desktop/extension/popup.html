@@ -6,6 +6,7 @@
 <main>
   <label class="row big"><span>Lookup on</span><input type="checkbox" id="enabled" class="switch"></label>
   <label class="row"><span>On for <b id="host">this site</b></span><input type="checkbox" id="site" class="switch"></label>
+  <label class="row"><span>Video subtitles <small>(YouTube, Netflix, Viki, Bilibili…)</small></span><input type="checkbox" id="video" class="switch"></label>
   <h2>Languages</h2>
   <div class="chips" id="langs">
     <label><input type="checkbox" value="ja"><span>日本語</span></label>
@@ -16,7 +17,7 @@
   </div>
   <h2>Kanji / hanzi alone count as</h2>
   <div class="seg" id="han"><label><input type="radio" name="han" value="ja"><span>Japanese</span></label><label><input type="radio" name="han" value="zh"><span>Chinese</span></label></div>
-  <p class="hint">Hold <b>Shift</b> over text, or Shift-drag across it. Kana, hangul, Thai and Cyrillic are always read as their own language.</p>
+  <p class="hint">Hold <b>Shift</b> over text, or Shift-drag across it. On video sites the subtitle switch in the video\u2019s top-right corner chooses the site\u2019s own subtitles, live, or ones read from the picture (OCR, the default on Bilibili). Kana, hangul, Thai and Cyrillic are always read as their own language.</p>
   <details id="pair"><summary>Connect to Kotoba</summary>
     <p class="hint">In Kotoba for Mac open <b>Video › Browser extension code</b>, then paste it here.</p>
     <div class="paste"><input id="code" placeholder="kotoba:47823:…" spellcheck="false" autocomplete="off"><button id="connect">Connect</button></div>

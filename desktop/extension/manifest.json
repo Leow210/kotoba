@@ -2,25 +2,70 @@
   "manifest_version": 3,
   "name": "Kotoba Lookup",
   "version": "0.1.0",
-  "description": "Hold Shift over Japanese, Chinese, Korean, Thai or Russian text on any page to look it up in Kotoba for Mac. Turn it on or off and pick languages from the toolbar button.",
-  "permissions": ["storage", "activeTab"],
-  "host_permissions": ["http://127.0.0.1/*"],
-  "background": { "service_worker": "background.js" },
+  "description": "Hold Shift over Japanese, Chinese, Korean, Thai or Russian text on any page, or over the subtitles of YouTube, Netflix, Viki, GagaOOLala and Bilibili videos (burned-in ones are read from the picture), to look it up in Kotoba for Mac. Turn it on or off and pick languages from the toolbar button.",
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "action": {
     "default_title": "Kotoba Lookup",
     "default_popup": "popup.html",
-    "default_icon": { "16": "icons/16.png", "32": "icons/32.png", "48": "icons/48.png", "128": "icons/128.png" }
+    "default_icon": {
+      "16": "icons/16.png",
+      "32": "icons/32.png",
+      "48": "icons/48.png",
+      "128": "icons/128.png"
+    }
   },
-  "icons": { "16": "icons/16.png", "32": "icons/32.png", "48": "icons/48.png", "128": "icons/128.png" },
-  "content_scripts": [{
-    "matches": ["<all_urls>"],
-    "exclude_matches": [
-      "http://127.0.0.1/*", "http://localhost/*",
-      "https://www.youtube.com/watch*", "https://music.youtube.com/*", "https://www.netflix.com/*",
-      "https://www.viki.com/*", "https://www.gagaoolala.com/*",
-      "https://www.bilibili.com/video/*", "https://www.bilibili.com/bangumi/play/*", "https://www.bilibili.com/list/*"
-    ],
-    "js": ["content.js"],
-    "run_at": "document_idle"
-  }]
+  "icons": {
+    "16": "icons/16.png",
+    "32": "icons/32.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "exclude_matches": [
+        "http://127.0.0.1/*",
+        "http://localhost/*",
+        "https://www.youtube.com/watch*",
+        "https://music.youtube.com/*",
+        "https://www.netflix.com/*",
+        "https://www.viki.com/*",
+        "https://www.gagaoolala.com/*",
+        "https://www.bilibili.com/video/*",
+        "https://www.bilibili.com/bangumi/play/*",
+        "https://www.bilibili.com/list/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.youtube.com/watch*",
+        "https://music.youtube.com/*",
+        "https://www.netflix.com/*",
+        "https://www.viki.com/*",
+        "https://www.gagaoolala.com/*",
+        "https://www.bilibili.com/video/*",
+        "https://www.bilibili.com/bangumi/play/*",
+        "https://www.bilibili.com/list/*"
+      ],
+      "js": [
+        "video.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
 }

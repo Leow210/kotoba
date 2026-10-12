@@ -19,6 +19,7 @@ async function pingKotoba(cfg) {
 async function paint() {
   const cfg = await S.get(null);
   $('enabled').checked = cfg['kotoba.web.enabled'] !== false;
+  $('video').checked = cfg['kotoba.video.enabled'] !== false;
   const off = (() => { try { return JSON.parse(cfg['kotoba.web.off'] || '[]'); } catch (e) { return []; } })();
   $('site').checked = !off.includes(host);
   $('site').disabled = !host;
@@ -31,6 +32,7 @@ async function paint() {
 }
 
 $('enabled').onchange = () => S.set({ 'kotoba.web.enabled': $('enabled').checked });
+$('video').onchange = () => S.set({ 'kotoba.video.enabled': $('video').checked });
 $('site').onchange = async () => {
   const cfg = await S.get('kotoba.web.off');
   let off = []; try { off = JSON.parse(cfg['kotoba.web.off'] || '[]'); } catch (e) {}
