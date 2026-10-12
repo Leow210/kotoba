@@ -17,7 +17,8 @@
     "exclude_matches": [
       "http://127.0.0.1/*", "http://localhost/*",
       "https://www.youtube.com/watch*", "https://music.youtube.com/*", "https://www.netflix.com/*",
-      "https://www.viki.com/*", "https://www.gagaoolala.com/*"
+      "https://www.viki.com/*", "https://www.gagaoolala.com/*",
+      "https://www.bilibili.com/video/*", "https://www.bilibili.com/bangumi/play/*", "https://www.bilibili.com/list/*"
     ],
     "js": ["content.js"],
     "run_at": "document_idle"

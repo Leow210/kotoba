@@ -1,13 +1,16 @@
 // ==UserScript==
 // @name         Kotoba Video Text
 // @namespace    app.kotoba.desktop
-// @version      0.13.4
-// @description  Look up YouTube, Netflix, Viki and GagaOOLala subtitles in Kotoba for Mac: hold Shift over a word; YouTube Music's song goes to Kotoba's lyrics. Works in Firefox and Chromium browsers such as Chrome, Helium, Brave and Edge (Tampermonkey).
+// @version      0.14.0
+// @description  Look up YouTube, Netflix, Viki, GagaOOLala and Bilibili subtitles (Bilibili's burned-in ones are read from the picture) in Kotoba for Mac: hold Shift over a word; YouTube Music's song goes to Kotoba's lyrics. Works in Firefox and Chromium browsers such as Chrome, Helium, Brave and Edge (Tampermonkey).
 // @match        https://www.youtube.com/watch*
 // @match        https://www.gagaoolala.com/*/videos/*
 // @match        https://music.youtube.com/*
 // @match        https://www.viki.com/*
 // @match        https://www.netflix.com/*
+// @match        https://www.bilibili.com/video/*
+// @match        https://www.bilibili.com/bangumi/play/*
+// @match        https://www.bilibili.com/list/*
 // @run-at       document-idle
 // @updateURL    none
 // @downloadURL  none
@@ -55,11 +58,14 @@
   const youtube = location.hostname === 'www.youtube.com';
   // Netflix draws its captions in .player-timedtext (turn them on in its Audio & Subtitles menu); Viki and GagaOOLala use Bitmovin's overlay.
   const netflix = location.hostname === 'www.netflix.com';
-  const sourceSelector = youtube ? '.ytp-caption-window-container' : netflix ? '.player-timedtext' : '.bmpui-ui-subtitle-overlay, .vjs-text-track-display, [data-kotoba-src]';
+  // Bilibili: its own CC (when a video has any) is .bpx-player-subtitle-panel-text; most videos have subtitles burned
+  // into the picture, so there the source starts out as "picture" (read from the frames).
+  const bilibili = /(^|\.)bilibili\.com$/.test(location.hostname);
+  const sourceSelector = youtube ? '.ytp-caption-window-container' : netflix ? '.player-timedtext' : bilibili ? '.bpx-player-subtitle-wrap, .bpx-player-subtitle-panel-text, .bilibili-player-video-subtitle, [data-kotoba-src]' : '.bmpui-ui-subtitle-overlay, .vjs-text-track-display, [data-kotoba-src]';
   const store = { get: (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} } };
   let enabled = store.get('kotoba.videoText.enabled', 'true') !== 'false';
   let stayOpen = store.get('kotoba.videoText.stay', 'true') !== 'false';
-  let language = store.get('kotoba.videoText.language', 'auto');
+  let language = store.get('kotoba.videoText.language', bilibili ? 'zh' : 'auto');
   let pauseOnLookup = store.get('kotoba.videoText.pause', 'true') !== 'false';
   let concealed = null, lastText = '';
 
@@ -209,7 +215,7 @@
   // spoken line into text and places it on this episode's timeline. The lines come back here and show at their time,
   // like a subtitle track; an episode heard before shows its lines at once.
   // One button, three modes: the site's subtitles, live (from the audio), picture (read from the video's frames).
-  let subsMode = store.get('kotoba.subs.' + location.hostname, store.get('kotoba.live.' + location.hostname, 'false') === 'true' ? 'live' : 'site');
+  let subsMode = store.get('kotoba.subs.' + location.hostname, store.get('kotoba.live.' + location.hostname, 'false') === 'true' ? 'live' : bilibili ? 'picture' : 'site');
   let live = subsMode === 'live';
   let liveLines = [], liveRev = -1, liveKey = '';
   const episodeKey = () => location.hostname + location.pathname.replace(/\/$/, '');
