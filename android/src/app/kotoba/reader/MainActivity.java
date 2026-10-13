@@ -61,6 +61,18 @@ public class MainActivity extends Activity {
     /** WebView whose text-selection menu gains Look up and Save card. */
     public class KotobaWebView extends WebView {
         public KotobaWebView(Context c){super(c);}
+        /**
+         * Holding the keyboard's globe key (or its other pop-ups) gives the keyboard's own window the focus. The web view
+         * took that as the page losing focus and hid the keyboard, which closed the language picker with it. While the
+         * keyboard is up, losing the focus to it is ignored.
+         */
+        @Override public void onWindowFocusChanged(boolean hasWindowFocus){
+            if(!hasWindowFocus&&android.os.Build.VERSION.SDK_INT>=30){
+                android.view.WindowInsets insets=getRootWindowInsets();
+                if(insets!=null&&insets.isVisible(android.view.WindowInsets.Type.ime()))return;
+            }
+            super.onWindowFocusChanged(hasWindowFocus);
+        }
         @Override public ActionMode startActionMode(ActionMode.Callback callback,int type){
             return super.startActionMode(wrap(callback),type);
         }
