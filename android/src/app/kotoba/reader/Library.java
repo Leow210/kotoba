@@ -1940,7 +1940,11 @@ public class Library {
                 for(Deinflect.Candidate c:Deinflect.korean(rest,w->{try{return koKey(w);}catch(Exception e){return false;}},this::koreanStems)){
                     if(c.steps.size()==1&&c.steps.get(0).label.startsWith("noun + particle"))continue;
                     JSONArray rows=koEntries(c.base);if(rows.length()==0)continue;
-                    add.accept(new JSONObject().put("base",c.base).put("explain","compound: "+head+" + "+c.base+" · "+c.explain()+" (not listed as one word)").put("chain",head+" + "+c.chain()).put("items",rows).put("extra",koEntries(head)),word);
+                    // Both words get an entry, the first word first (열정없는: 열정, then 없다 with the grammar of 없는).
+                    String note="compound: "+head+" + "+c.base+" · "+c.explain()+" (not listed as one word)";
+                    JSONArray headRows=koEntries(head);
+                    add.accept(new JSONObject().put("base",head).put("explain",note).put("chain",head).put("items",headRows).put("split",true),head);
+                    add.accept(new JSONObject().put("base",c.base).put("explain",note).put("chain",head+" + "+c.chain()).put("items",rows),c.base);
                     break;
                 }
             }
