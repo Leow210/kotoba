@@ -189,7 +189,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
         guard let m = message.body as? [String: Any], let type = m["type"] as? String else { return }
         switch type {
         case "uiLang":
-            let l = (m["lang"] as? String) == "ja" ? "ja" : "en"
+            let l = ["ja", "ko", "zh-Hans", "zh-Hant"].contains(m["lang"] as? String ?? "") ? (m["lang"] as! String) : "en"
             if l != uiLang { uiLang = l; UserDefaults.standard.set(l, forKey: "UILang"); buildMenu() }
         case "pickFolder":
             let panel = NSOpenPanel()
@@ -302,13 +302,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKScriptMessageHandler
     var uiLang = UserDefaults.standard.string(forKey: "UILang") ?? "en"
     /// Native menu text in the interface language chosen in Library › Settings.
     func L(_ en: String) -> String {
-        guard uiLang == "ja" else { return en }
-        let ja = ["About Kotoba": "Kotoba について", "Hide Kotoba": "Kotoba を隠す", "Quit Kotoba": "Kotoba を終了", "File": "ファイル", "Open Video…": "動画を開く…",
-                  "Edit": "編集", "Undo": "取り消す", "Redo": "やり直す", "Cut": "カット", "Copy": "コピー", "Paste": "ペースト", "Select All": "すべてを選択",
-                  "View": "表示", "Reload": "再読み込み", "Enter Full Screen": "フルスクリーンにする", "Read Screen Text (works in games)": "画面のテキストを読む（ゲームでも使えます）",
-                  "Window": "ウインドウ", "Minimize": "しまう", "Close": "閉じる",
-                  "Choose a folder with .mdx/.mdd dictionaries or Yomitan .zip dictionaries": ".mdx/.mdd 辞書または Yomitan の .zip 辞書があるフォルダを選んでください"]
-        return ja[en] ?? en
+        guard uiLang != "en" else { return en }
+        // English, 日本語, 한국어, 简体中文, 繁體中文
+        let t: [String: [String]] = [
+            "About Kotoba": ["Kotoba について", "Kotoba 정보", "关于 Kotoba", "關於 Kotoba"],
+            "Hide Kotoba": ["Kotoba を隠す", "Kotoba 가리기", "隐藏 Kotoba", "隱藏 Kotoba"],
+            "Quit Kotoba": ["Kotoba を終了", "Kotoba 종료", "退出 Kotoba", "結束 Kotoba"],
+            "File": ["ファイル", "파일", "文件", "檔案"],
+            "Open Video…": ["動画を開く…", "동영상 열기…", "打开视频…", "開啟影片…"],
+            "Edit": ["編集", "편집", "编辑", "編輯"],
+            "Undo": ["取り消す", "실행 취소", "撤销", "還原"],
+            "Redo": ["やり直す", "실행 복귀", "重做", "重做"],
+            "Cut": ["カット", "오려두기", "剪切", "剪下"],
+            "Copy": ["コピー", "복사", "拷贝", "拷貝"],
+            "Paste": ["ペースト", "붙여넣기", "粘贴", "貼上"],
+            "Select All": ["すべてを選択", "전체 선택", "全选", "全選"],
+            "View": ["表示", "보기", "显示", "顯示"],
+            "Reload": ["再読み込み", "다시 불러오기", "重新载入", "重新載入"],
+            "Enter Full Screen": ["フルスクリーンにする", "전체 화면 사용", "进入全屏幕", "進入全螢幕"],
+            "Read Screen Text (works in games)": ["画面のテキストを読む（ゲームでも使えます）", "화면 텍스트 읽기 (게임에서도 작동)", "读取屏幕文字（游戏中也可用）", "讀取螢幕文字（遊戲中也可用）"],
+            "Window": ["ウインドウ", "윈도우", "窗口", "視窗"],
+            "Minimize": ["しまう", "최소화", "最小化", "最小化"],
+            "Close": ["閉じる", "닫기", "关闭", "關閉"],
+            "Choose a folder with .mdx/.mdd dictionaries or Yomitan .zip dictionaries": [
+                ".mdx/.mdd 辞書または Yomitan の .zip 辞書があるフォルダを選んでください",
+                ".mdx/.mdd 사전 또는 Yomitan .zip 사전이 있는 폴더를 선택하세요",
+                "请选择包含 .mdx/.mdd 词典或 Yomitan .zip 词典的文件夹",
+                "請選擇包含 .mdx/.mdd 辭典或 Yomitan .zip 辭典的資料夾"],
+        ]
+        let i = ["ja": 0, "ko": 1, "zh-Hans": 2, "zh-Hant": 3][uiLang] ?? 0
+        return t[en]?[i] ?? en
     }
     func buildMenu() {
         let main = NSMenu()

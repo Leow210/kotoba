@@ -146,7 +146,7 @@
     [/^([\d,]+) pages · browse$/,'$1 ページ · 閲覧'],[/^(\d+) radicals · by stroke count$/,'部首 $1 個 · 画数順'],[/^No headword starts with “(.+)”\.$/,'「$1」で始まる見出し語はありません。'],
     [/^(\d+) entries$/,'$1 件'],[/^([\d,]+) marked known · ([\d,]+) learned cards$/,'既知 $1 語 · 学習済みカード $2 枚'],[/^(\d+) items$/,'$1 件'],
     [/^([\d,]+) of ([\d,]+) words · ([\d,]+) different, (.+)$/,'$2 語中 $1 語が既知 · 異なり $3 語、$4'],
-    [/^(\d+) words$/,'$1 語'],[/^(\d+) word$/,'$1 語'],[/^(\d+) new$/,'新規 $1'],[/^(\d+) due$/,'期限 $1'],[/^(\d+) new waiting in this deck$/,'このデッキで新規 $1 枚が待機中'],
+    [/^(\d+) new$/,'新規 $1'],[/^(\d+) due$/,'期限 $1'],[/^(\d+) new waiting in this deck$/,'このデッキで新規 $1 枚が待機中'],
     [/^Off: the default, (\d+) a day$/,'オフ: 既定の 1日 $1 枚'],[/^For each deck without its own limit · (\d+) new waiting$/,'個別の上限がない各デッキ用 · 新規 $1 枚が待機中'],
     [/^Next card (.+)\.$/,'次のカード $1。'],[/^Next review (.+)$/,'次の復習 $1'],[/^(\d+) reviews?$/,'復習 $1 回'],[/^You reviewed (\d+) cards?\.$/,'$1 枚を復習しました。'],
     [/^(.+) removed from review · Vocabulary › Suspended brings it back$/,'$1 を復習から外しました · 単語帳 › 保留中で元に戻せます'],
@@ -162,7 +162,7 @@
     [/^(\d+) chapters$/,'$1 章'],[/^(\d+) PDFs?$/,'PDF $1 件'],[/^Text recognition failed:\s*(.*)$/,'テキスト認識に失敗: $1'],
     [/^Known (\d+)$/,'既知 $1'],[/^Screen text: (.+)$/,'画面テキスト: $1'],[/^Another app is using port (\d+)/,'別のアプリがポート $1 を使用中です'],[/^Inserted (.+)$/,'$1 を挿入しました'],[/^(\d+) cards?$/,'$1 枚'],[/^(\d+) words?$/,'$1 語'],[/^(\d+) items?$/,'$1 件'],[/^(\d+) due$/,'$1 件が期限'],
     [/^(\d+) new$/,'新規 $1'],[/^(\d+) reviews?$/,'復習 $1'],[/^(\d+) books?$/,'$1 冊'],[/^(\d+) chapters?$/,'$1 章'],[/^(\d+) pages?$/,'$1 ページ'],
-    [/^Text size (\d+%)$/,'文字サイズ $1'],[/^Saved to (.+)$/,'$1 に保存しました'],[/^Moved to (.+)$/,'$1 に移動しました'],[/^Sort: (.+)$/,'並べ替え: $1'],
+    [/^Text size (\d+%)$/,'文字サイズ $1'],[/^Saved to (.+)$/,'$1 に保存しました'],[/^Moved to (.+)$/,'$1 に移動しました'],
     [/^Group: (.+)$/,'グループ: $1'],[/^New type inside (.+)$/,'$1 内に新しい種類'],[/^Move up in (.+)$/,'$1 内で上へ'],[/^Move down in (.+)$/,'$1 内で下へ'],
     [/^Search definitions for “(.+)”$/,'「$1」を語義から検索'],[/^New folder named “(.+)”/,'新しいフォルダ「$1」'],[/^New folder “(.+)”/,'新しいフォルダ「$1」'],
     [/^Text recognition failed: (.+)$/,'テキスト認識に失敗: $1'],[/^Every (.+)$/,'$1 ごと'],[/^End of (.+) · press play for (.+)$/,'$1 の終わり · 再生で $2 へ'],
@@ -171,14 +171,18 @@
     [/^Reviews? ?· ?(\d+)$/,'復習 · $1'],[/^Looping this character$/,'このキャラクターをループ中'],[/^Looping: starts over at the end$/,'ループ中: 最後で最初に戻ります'],[/^Not looping$/,'ループなし']
   ];
   const ATTRS=['placeholder','title','aria-label'];
-  const orig=new WeakMap();// node → its English text
+  const orig=new WeakMap();// node → its English text and the translation shown
+  const LANGS=['en','ja','ko','zh-Hans','zh-Hant'];
+  const DATA={ja:{words:JA,pats:PAT},ko:{words:{},pats:[]},'zh-Hans':{words:{},pats:[]},'zh-Hant':{words:{},pats:[]}};
+  const pick=l=>LANGS.includes(l)?l:'en';
   let lang='en';
-  try{lang=(JSON.parse(localStorage.getItem('settings')||'{}').ui_lang)||'en';}catch(e){}
+  try{lang=pick(JSON.parse(localStorage.getItem('settings')||'{}').ui_lang);}catch(e){}
   function tr(s){
-    if(lang!=='ja')return s;
+    const D=DATA[lang];if(!D)return s;
     const m=/^(\s*)([\s\S]*?)(\s*)$/.exec(s);if(!m||!m[2])return s;
-    const t=m[2];let r=JA[t];
-    if(r==null)for(const [re,to] of PAT){if(re.test(t)){r=t.replace(re,to);break;}}
+    const t=m[2];let r=D.words[t];
+    if(r==null)for(const [re,to] of D.pats){if(re.test(t)){r=t.replace(re,to);break;}}
+    if(r==null&&t.startsWith('✓ ')){const x=tr(t.slice(2));if(x!==t.slice(2))r='✓ '+x;}
     if(r==null&&t.includes(' · ')){const ps=t.split(' · '),ts=ps.map(x=>tr(x));if(ts.some((x,i)=>x!==ps[i]))r=ts.join(' · ');}
     return r==null?s:m[1]+r+m[3];
   }
@@ -186,21 +190,21 @@
   const skip=el=>!el||SKIP.has(el.tagName)||(el.closest&&el.closest('[data-no-i18n],.mu-w,.entry,.card-frame'));
   function text(n){
     if(skip(n.parentElement))return;
-    const cur=n.nodeValue,o=orig.get(n);
-    if(lang==='ja'){
-      const src=o&&cur===o.ja?o.en:cur,out=tr(src);
-      if(out!==src&&cur!==out){orig.set(n,{en:src,ja:out});n.nodeValue=out;}
-    }else if(o&&cur===o.ja){n.nodeValue=o.en;orig.delete(n);}
+    const cur=n.nodeValue,o=orig.get(n),src=o&&cur===o.t?o.en:cur;
+    if(lang==='en'){if(src!==cur){n.nodeValue=src;orig.delete(n);}return;}
+    const out=tr(src);
+    if(out!==src){if(cur!==out){orig.set(n,{en:src,t:out});n.nodeValue=out;}}
+    else if(src!==cur){n.nodeValue=src;orig.delete(n);}
   }
   function attrs(el){
     if(skip(el))return;
     for(const a of ATTRS){
       const v=el.getAttribute&&el.getAttribute(a);if(v==null)continue;
-      const key='i18n-'+a,en=el.getAttribute('data-'+key);
-      if(lang==='ja'){
-        const src=en!=null&&v===tr(en)?en:v,out=tr(src);
-        if(out!==src){if(en==null||v!==out)el.setAttribute('data-'+key,src);if(v!==out)el.setAttribute(a,out);}
-      }else if(en!=null){el.setAttribute(a,en);el.removeAttribute('data-'+key);}
+      const ke='data-i18n-'+a,kt='data-i18n-t-'+a,en=el.getAttribute(ke);
+      const src=en!=null&&v===el.getAttribute(kt)?en:v;
+      const out=lang==='en'?src:tr(src);
+      if(out!==src){if(v!==out)el.setAttribute(a,out);el.setAttribute(ke,src);el.setAttribute(kt,out);}
+      else if(src!==v){el.setAttribute(a,src);el.removeAttribute(ke);el.removeAttribute(kt);}
     }
   }
   function walk(root){
@@ -225,12 +229,24 @@
     mo.observe(document.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:ATTRS});
   }
   function set(l){
-    lang=l==='ja'?'ja':'en';
+    lang=pick(l);
     try{const s=JSON.parse(localStorage.getItem('settings')||'{}');s.ui_lang=lang;localStorage.setItem('settings',JSON.stringify(s));}catch(e){}
     document.documentElement.lang=lang;tell();
     walk(document.body);
   }
   const tell=()=>{try{window.webkit.messageHandlers.kotoba.postMessage({type:'uiLang',lang});}catch(e){}};
-  window.I18N={get lang(){return lang;},set,tr};
+  // More languages: rows of [English, 한국어, 简体中文, 繁體中文] (with a leading 日本語 when ja is true); patterns are [regex, ko, hans, hant].
+  function add(rows,ja){
+    const cols=ja?['ja','ko','zh-Hans','zh-Hant']:['ko','zh-Hans','zh-Hant'];
+    for(const r of rows)cols.forEach((c,i)=>{if(r[i+1]!=null&&r[i+1]!==''&&!(c==='ja'&&DATA.ja.words[r[0]]!=null))DATA[c].words[r[0]]=r[i+1];});
+    if(document.body&&lang!=='en')walk(document.body);
+  }
+  function addPats(rows,ja,front){
+    const cols=ja?['ja','ko','zh-Hans','zh-Hant']:['ko','zh-Hans','zh-Hant'];
+    const add=[];
+    for(const r of rows)cols.forEach((c,i)=>{if(r[i+1]!=null)(front?add:DATA[c].pats).push(front?[c,r[0],r[i+1]]:[r[0],r[i+1]]);});
+    if(front)for(const c of cols)DATA[c].pats.unshift(...add.filter(x=>x[0]===c).map(x=>[x[1],x[2]]));
+  }
+  window.I18N={get lang(){return lang;},set,tr,add,addPats,langs:LANGS};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();
