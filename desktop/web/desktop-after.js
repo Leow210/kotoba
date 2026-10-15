@@ -10,9 +10,11 @@
   const settingsScreen=document.createElement('section');settingsScreen.className='screen';settingsScreen.id='screen-settings';settingsScreen.hidden=true;
   settingsScreen.innerHTML=`<div class="head"><h1>Settings</h1><p class="sub">Reading, audio, data and sync</p></div><div class="scroll"><div id="settings-home"></div></div>`;
   document.getElementById('screen-library').after(settingsScreen);
+  // Found by its contents, not its text: the label reads 読み when the interface is Japanese.
+  const readingLabel=()=>{const box=document.querySelector('#library-home #set-vertical');const l=box&&box.closest('.settings');return l&&l.previousElementSibling;};
   function moveSettings(){
     const library=document.getElementById('library-home'),home=document.getElementById('settings-home');
-    let node=[...library.querySelectorAll('.section-label')].find(x=>x.textContent.trim()==='Reading');
+    let node=readingLabel();
     home.replaceChildren();
     while(node){const next=node.nextSibling;home.appendChild(node);node=next;}
     if(!dicts.length)document.getElementById('library-sub').textContent='Dictionaries';
@@ -23,7 +25,7 @@
     window.renderLibrary=renderLibrary=async function(){
       await original();
       const local=document.getElementById('lib-local');if(local){local.nextElementSibling&&local.nextElementSibling.remove();local.remove();}
-      const reading=[...document.querySelectorAll('#library-home .section-label')].find(x=>x.textContent.trim()==='Reading');
+      const reading=readingLabel();
       const box=reading&&reading.nextElementSibling;
       if(box&&box.classList.contains('settings')){
         const values=['none','shift','alt','ctrl','meta'];
