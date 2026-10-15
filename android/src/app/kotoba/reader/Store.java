@@ -153,6 +153,8 @@ public class Store {
         String filter=q.optString("filter","");
         if(filter.equals("new"))where.append(" AND review=1 AND state=0");
         if(filter.equals("suspended"))where.append(" AND review=0");
+        // Saved by the browser helpers and the video player as plain text; the Mac app lays them out like its own cards.
+        if(filter.equals("pending"))where.append(" AND anchor='kotoba-pending' AND kind='entry'");
         if(filter.equals("due")){where.append(" AND review=1 AND state>0 AND due<=?");args.add(Long.toString(now()));}
         String order=q.optString("sort","updated");
         String orderBy=order.equals("headword")?"headword COLLATE NOCASE":order.equals("due")?"review DESC,state=0,due":"updated DESC";

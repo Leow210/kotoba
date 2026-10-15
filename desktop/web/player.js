@@ -457,7 +457,7 @@ async function onPopClick(P,e){
       const similar=await api('item.similar',{headword:res.key,reading});
       if(similar.length&&!confirm(`“${res.key}” is already a card (${similar[0].dict_name||'notes'} · ${similar[0].folder}). Save another?`))return;
       await api('item.save',{folder_id:store.get('player.folder',1),headword:st.lang==='zh'&&res.written&&!P.level?res.written:res.key,reading,back:g.text,dict:it.dict,dict_name:it.dictionary,page:it.page||res.key,
-        kind:'entry',context:(P.cue?P.cue.text:'').replace(/\n/g,' '),note:`${videoName} · ${fmt(P.cue?P.cue.start:st.t)}`,review:true});
+        kind:'entry',anchor:'kotoba-pending',context:(P.cue?P.cue.text:'').replace(/\n/g,' '),note:`${videoName} · ${fmt(P.cue?P.cue.start:st.t)}`,review:true});
       P.el.querySelector('.p-saved').textContent='★ saved';osd('Saved “'+res.key+'”');
     }catch(err){osd(err.message);}
   }

@@ -1595,6 +1595,36 @@ async function saveLookupResult(item,key,context,alternatives,review=true,source
   await openSaveSheet({review,headword:loaded.info.word||key,reading:loaded.info.reading,dict:item.dict,dict_name:item.dictionary,page:rec.key,anchor:loaded.unit.id||'',kind:'entry',doc:loaded.doc,unit:loaded.unit,parts:loaded.parts,context,alternatives,note:source?'📖 '+source:'',onClose:()=>loaded.frame.remove()});
 }
 
+/**
+ * Gives a card that was saved with only plain text (from the browser helpers and the video player, which have no
+ * dictionary pages to lay out) the same back as one saved here: the chosen senses as lines of text, the dictionary's own
+ * layout, the unit it came from, and a pronunciation clip. Returns true when the card was changed.
+ */
+async function completeCard(it){
+  if(!it||it.kind!=='entry'||it.anchor!=='kotoba-pending')return false;
+  if(!it.dict){await api('item.save',{id:it.id,folder_id:it.folder_id,headword:it.headword,anchor:'',review:!!it.review});return false;}
+  const rows=await api('exact',{key:it.headword}).catch(()=>[]);
+  const same=rows.filter(r=>r.dict===it.dict);
+  let pick=null;
+  for(const r of same){const rec=await api('record',{rec:r.rec}).catch(()=>null);if(rec&&rec.key===it.page){pick=r;break;}}
+  pick=pick||same[0];
+  if(!pick){await api('item.save',{id:it.id,folder_id:it.folder_id,headword:it.headword,anchor:'',review:!!it.review});return false;}
+  const loaded=await loadEntryDoc(pick.rec,pick.dict,it.headword);
+  try{
+    const parts=loaded.parts;
+    if(!parts.length)return false;
+    const back=parts.filter(p=>p.kind!=='Heading').map(p=>p.text).join('\n')||parts.map(p=>p.text).join('\n');
+    const reading=it.reading||loaded.info.reading||'';
+    let audio=it.audio||'';
+    if(!audio||audio==='[]'){
+      const clips=await api('audio',{key:it.headword,reading,dict:it.dict}).catch(()=>[]);
+      if(clips.length){const c=clips[0];audio=JSON.stringify([{dict:c.dict,path:c.path,dictionary:c.dictionary,label:c.label,accent:c.accent||'',...(c.url?{url:c.url}:{})}]);}
+    }
+    await api('item.save',{id:it.id,folder_id:it.folder_id,headword:it.headword,reading,back,back_html:partsHtml(loaded.doc,loaded.unit,parts),anchor:loaded.unit.id||'',dict:it.dict,dict_name:it.dict_name,page:it.page,kind:'entry',note:it.note||'',context:it.context||'',audio,review:!!it.review});
+    return true;
+  }finally{loaded.frame.remove();}
+}
+
 // ---------- save sheet (bookmark / flashcard) ----------
 async function openSaveSheet(o){
   const folders=await api('folders');

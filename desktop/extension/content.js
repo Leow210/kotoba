@@ -482,7 +482,7 @@ function darkenDoc(doc){
         const headword = P.lang === 'zh' && res.written && !P.level ? res.written : res.key;
         const reading = it.page && it.page !== res.key && /^[぀-ヿ가-힣a-zāáǎàēéěèīíǐìōóǒòūúǔùü\s0-9]+$/i.test(it.page) ? it.page : '';
                 await kotoba('item.save', { folder_id: +(P.el.querySelector('.k-folder') || {}).value || cardFolder(), headword, reading, back: g.text, dict: it.dict, dict_name: it.dictionary, page: it.page || res.key,
-          kind: 'entry', context: res.line || '', note: `${document.title} · ${location.href}`, review: true });
+          kind: 'entry', anchor: 'kotoba-pending', context: res.line || '', note: `${document.title} · ${location.href}`, review: true });
         P.el.querySelector('.k-saved').textContent = '★ saved'; b.textContent = 'Saved';
       } catch (err) { showMessage(err.message, text); }
     }

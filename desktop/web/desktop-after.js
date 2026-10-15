@@ -212,6 +212,15 @@
       :`<div class="empty"><span class="glyph">映</span><h2>Watch with subtitles</h2>Open a video (MKV, MP4…). Subtitle files beside it, or in a <b>subtitles</b> folder next to it, and the tracks inside it are found automatically. For subtitles printed into the picture, choose <b>OCR hardcoded subtitles</b> from the 字幕 menu in the player.<br><br>For YouTube, Viki, Netflix, GagaOOLala and Bilibili (burned-in subtitles are read from the picture) in Firefox, Chrome, Helium or another Chromium browser, install the subtitle helper above (needs Tampermonkey). Turn on the site's captions, then hold <b>Shift</b> over a word: Kotoba shows its definitions and can save a card, as long as this app is open.<br><br>${esc(hoverInstruction())}; <b>A</b> / <b>D</b> go to the previous / next line, <b>S</b> replays it, and <b>P</b> pauses after every line.</div>`;
     box.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>mac({type:'openVideo',path:recent[+b.dataset.v].path}));
   }
+  // Cards saved from the browser helpers and the video player arrive as plain text; lay them out here like the cards
+  // saved in this window (the dictionary's own layout, the chosen senses, a pronunciation clip), a few seconds later.
+  let completing=false;
+  async function completePending(){
+    if(completing)return;completing=true;
+    try{for(const it of await api('items',{filter:'pending'}))try{await completeCard(it);}catch(e){}}
+    catch(e){}finally{completing=false;}
+  }
+  completePending();setInterval(completePending,4000);
   const originalShow=showTab;
   window.showTab=showTab=function(name){originalShow(name);if(name==='video')renderVideos();if(name==='settings')renderLibrary();};
   window.addEventListener('focus',()=>{if(tab==='video')renderVideos();});
