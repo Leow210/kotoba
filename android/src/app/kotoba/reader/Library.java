@@ -114,6 +114,9 @@ public class Library {
         // Yomitan dictionaries: entries are stored here (deflated HTML) rather than read from the ZIP, which is JSON.
         try{db.execSQL("ALTER TABLE dicts ADD COLUMN format TEXT NOT NULL DEFAULT 'mdx'");}catch(Exception ignored){}
         db.execSQL("CREATE TABLE IF NOT EXISTS ytext(rec INTEGER PRIMARY KEY,reading TEXT NOT NULL DEFAULT '',tags TEXT NOT NULL DEFAULT '',body BLOB NOT NULL)");
+        // Definition tags per entry (a dialect dictionary's prefectures), read from the stored entries the first time a tag filter is used.
+        db.execSQL("CREATE TABLE IF NOT EXISTS ytags(rec INTEGER NOT NULL,tag TEXT NOT NULL,PRIMARY KEY(tag,rec)) WITHOUT ROWID");
+        db.execSQL("CREATE TABLE IF NOT EXISTS ytags_done(dict INTEGER PRIMARY KEY)");
         db.execSQL("CREATE TABLE IF NOT EXISTS ydict(dict INTEGER PRIMARY KEY,zdict BLOB,styles INTEGER NOT NULL DEFAULT 0)");
         // Frequency ranks, pitch accents and IPA from Yomitan term_meta banks.
         db.execSQL("CREATE TABLE IF NOT EXISTS meta(dict INTEGER NOT NULL,norm TEXT NOT NULL,reading TEXT NOT NULL DEFAULT '',mode TEXT NOT NULL,value REAL,display TEXT NOT NULL DEFAULT '')");
@@ -1598,8 +1601,40 @@ public class Library {
      * A window of a dictionary's pages in index order, for scrolling through it like a paper dictionary.
      * dir "after"/"before" continue from (norm,id); "from" starts at the first page >= prefix.
      */
+    static String[] cat(String[] a,String[] b,String... c){String[] r=new String[a.length+b.length+c.length];System.arraycopy(a,0,r,0,a.length);System.arraycopy(b,0,r,a.length,b.length);System.arraycopy(c,0,r,a.length+b.length,c.length);return r;}
+
     public JSONObject browse(long dict,String dir,String norm,long id,String prefix,int limit,boolean kanji) throws Exception {
+        return browse(dict,dir,norm,id,prefix,limit,kanji,"");
+    }
+
+    /** The distinct definition tags of a Yomitan dictionary's entries with how many entries carry each (indexed on first use). */
+    public JSONObject tags(long dict) throws Exception {
+        indexTags(dict);
+        return new JSONObject().put("tags",Store.rows(db,"SELECT t.tag,count(*) n FROM ytags t JOIN records r ON r.id=t.rec WHERE r.dict=? GROUP BY t.tag ORDER BY t.tag",Long.toString(dict)));
+    }
+
+    synchronized void indexTags(long dict) throws Exception {
+        if(Store.rows(db,"SELECT 1 FROM ytags_done WHERE dict=?",Long.toString(dict)).length()>0)return;
+        byte[] zd=zdict(dict);
+        java.util.regex.Pattern p=java.util.regex.Pattern.compile("class=\"yt-tag\"[^>]*>([^<]+)<");
+        db.beginTransaction();
+        try{
+            SQLiteStatement ins=db.compileStatement("INSERT OR IGNORE INTO ytags(rec,tag) VALUES(?,?)");
+            try(Cursor c=db.rawQuery("SELECT y.rec,y.body FROM ytext y JOIN records r ON r.id=y.rec WHERE r.dict=?",new String[]{Long.toString(dict)})){
+                while(c.moveToNext()){
+                    java.util.regex.Matcher m=p.matcher(inflate(c.getBlob(1),zd));
+                    while(m.find()){ins.bindLong(1,c.getLong(0));ins.bindString(2,HtmlText.entities(m.group(1)).trim());ins.executeInsert();}
+                }
+            }
+            db.execSQL("INSERT OR REPLACE INTO ytags_done(dict) VALUES(?)",new Object[]{dict});
+            db.setTransactionSuccessful();
+        }finally{db.endTransaction();}
+    }
+
+    public JSONObject browse(long dict,String dir,String norm,long id,String prefix,int limit,boolean kanji,String tag) throws Exception {
         String d=Long.toString(dict),n=Integer.toString(Math.max(1,Math.min(400,limit)));
+        String tagSql="";String[] tagArg=new String[0];
+        if(tag!=null&&!tag.isEmpty()&&!kanji){indexTags(dict);tagSql=" AND id IN (SELECT rec FROM ytags WHERE tag=?)";tagArg=new String[]{tag};}
         JSONArray rows;
         if(kanji&&Store.rows(db,"SELECT 1 FROM kanji WHERE dict=? LIMIT 1",d).length()>0){
             // Kanji dictionaries browse by head character, ordered by stroke count.
@@ -1617,14 +1652,14 @@ public class Library {
             return new JSONObject().put("items",rows).put("kanji",true);
         }
         if(dir.equals("before")){
-            rows=Store.rows(db,"SELECT id rec,key,norm FROM records WHERE dict=? AND (norm<? OR (norm=? AND id<?)) ORDER BY norm DESC,id DESC LIMIT ?",d,norm,norm,Long.toString(id),n);
+            rows=Store.rows(db,"SELECT id rec,key,norm FROM records WHERE dict=? AND (norm<? OR (norm=? AND id<?))"+tagSql+" ORDER BY norm DESC,id DESC LIMIT ?",cat(new String[]{d,norm,norm,Long.toString(id)},tagArg,n));
             ArrayList<Object> list=new ArrayList<>();for(int i=rows.length()-1;i>=0;i--)list.add(rows.get(i));
             rows=new JSONArray(list);
         }else if(dir.equals("after")){
-            rows=Store.rows(db,"SELECT id rec,key,norm FROM records WHERE dict=? AND (norm>? OR (norm=? AND id>?)) ORDER BY norm,id LIMIT ?",d,norm,norm,Long.toString(id),n);
+            rows=Store.rows(db,"SELECT id rec,key,norm FROM records WHERE dict=? AND (norm>? OR (norm=? AND id>?))"+tagSql+" ORDER BY norm,id LIMIT ?",cat(new String[]{d,norm,norm,Long.toString(id)},tagArg,n));
         }else{
-            rows=Store.rows(db,"SELECT id rec,key,norm FROM records WHERE dict=? AND norm>=? ORDER BY norm,id LIMIT ?",d,HtmlText.normalize(prefix==null?"":prefix),n);
-            if(rows.length()==0)rows=Store.rows(db,"SELECT id rec,key,norm FROM records WHERE dict=? ORDER BY norm DESC,id DESC LIMIT 1",d);
+            rows=Store.rows(db,"SELECT id rec,key,norm FROM records WHERE dict=? AND norm>=?"+tagSql+" ORDER BY norm,id LIMIT ?",cat(new String[]{d,HtmlText.normalize(prefix==null?"":prefix)},tagArg,n));
+            if(rows.length()==0)rows=Store.rows(db,"SELECT id rec,key,norm FROM records WHERE dict=?"+tagSql+" ORDER BY norm DESC,id DESC LIMIT 1",cat(new String[]{d},tagArg));
         }
         for(int i=0;i<rows.length();i++){JSONObject r=rows.getJSONObject(i);r.put("key",stripMarks(r.getString("key")));}
         return new JSONObject().put("items",rows);

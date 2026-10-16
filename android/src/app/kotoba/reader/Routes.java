@@ -116,7 +116,8 @@ public class Routes {
                 long rec=library.findRecord(d.getLong("dict"),d.getString("page"));
                 return new JSONObject().put("rec",rec==0?JSONObject.NULL:rec);
             }
-            case "browse":return library.browse(d.getLong("dict"),d.optString("dir","from"),d.optString("norm",""),d.optLong("id",0),d.optString("prefix",""),d.optInt("limit",120),d.optBoolean("kanji",false));
+            case "browse":return library.browse(d.getLong("dict"),d.optString("dir","from"),d.optString("norm",""),d.optLong("id",0),d.optString("prefix",""),d.optInt("limit",120),d.optBoolean("kanji",false),d.optString("tag",""));
+            case "tags":return library.tags(d.getLong("dict"));
             case "kanji.grid":return library.kanjiGrid(d.getLong("dict"),d.optString("level",""),d.optInt("strokes",0),d.optString("radical",""),d.optString("flag",""));
             case "random":return library.random(d.optLong("dict",0));
             case "neighbors":return library.neighbors(d.getLong("rec"));

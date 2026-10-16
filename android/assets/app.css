@@ -395,6 +395,7 @@ svg.i.sm{width:16px;height:16px}
 .deck.off .db{opacity:.5}
 
 .browse-head{display:flex;gap:6px;align-items:center;padding:8px 44px 6px 14px;position:sticky;top:0;background:var(--bg);z-index:2}
+.browse-head .region-pick{height:42px;max-width:42%;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:inherit;font-size:14px;padding:0 8px}
 .browse-head .field{flex:1;height:42px;border-radius:12px}
 .browse-head .field input{font-size:15px;font-family:var(--sans)}
 [data-f="rows"]{padding-right:34px}

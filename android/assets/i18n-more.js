@@ -395,4 +395,5 @@ I18N.addPats([
 I18N.add([["media","メディア付き","미디어 포함","含媒体","含媒體"],["frequency","頻度","빈도","频率","頻率"],["kanji","漢字","한자","汉字","漢字"]],true);
 I18N.add([["Vertical text (縦書き)","縦書き","세로쓰기 (縦書き)","竖排文字（縦書き）","直排文字（縦書き）"],["Documents in ~/Documents/Kotoba, with the dictionary, 類語 and a grammar check beside the page","~/Documents/Kotoba 内の書類。ページの横に辞書、類語、文法チェックを表示","~/Documents/Kotoba의 문서. 페이지 옆에 사전, 유의어, 문법 검사 표시","文档保存在 ~/Documents/Kotoba，页面旁提供词典、近义词和语法检查","文件儲存在 ~/Documents/Kotoba，頁面旁提供辭典、近義詞和文法檢查"]],true);
 I18N.addPats([[/^More (.+) ▾$/,'その他 $1 ▾','더 보기 $1 ▾','更多 $1 ▾','更多 $1 ▾']],true,true);
+I18N.add([["All prefectures","すべての都道府県","모든 도도부현","所有都道府县","所有都道府縣"],["Prefecture","都道府県","도도부현","都道府县","都道府縣"]],true);
 })();

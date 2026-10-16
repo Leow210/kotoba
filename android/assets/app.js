@@ -1195,7 +1195,10 @@ async function openBrowse(dictId,start={}){
 async function mountBrowse(container,dictId,start={},scroller){
   const d=dictById(dictId);if(!d)return;
   const kanjiMode=d.kind==='kanji';
-  container.innerHTML=`<div class="browse-head"><div class="field small">${icon('search')}<input data-f="jump" type="search" placeholder="Jump to…" autocomplete="off" autocapitalize="off"></div><button class="icon-btn" data-f="random" aria-label="Random word">${icon('shuffle')}</button>${kanjiMode?`<button class="btn small" data-f="grid">Kanji grid</button>`:''}</div><div data-f="rows"></div><div class="index-rail" data-f="rail"></div>`;
+  // 全国方言辞典: its entries are tagged with a prefecture, so the list can be narrowed to one.
+  const dialectDict=!kanjiMode&&d.format==='yomitan'&&/方言/.test(d.name+d.grp);
+  let tag='';
+  container.innerHTML=`<div class="browse-head"><div class="field small">${icon('search')}<input data-f="jump" type="search" placeholder="Jump to…" autocomplete="off" autocapitalize="off"></div><button class="icon-btn" data-f="random" aria-label="Random word">${icon('shuffle')}</button>${kanjiMode?`<button class="btn small" data-f="grid">Kanji grid</button>`:''}${dialectDict?`<select class="region-pick" data-f="region" aria-label="Prefecture"></select>`:''}</div><div data-f="rows"></div><div class="index-rail" data-f="rail"></div>`;
   const f=(n)=>container.querySelector(`[data-f="${n}"]`);
   const list=f('rows');
   let rows=[],loading=false,atStart=false,atEnd=false,current=start.rec||0;
@@ -1208,7 +1211,7 @@ async function mountBrowse(container,dictId,start={},scroller){
     if(anchor){const a=list.querySelector(`[data-rec="${keepAnchor}"]`);if(a)scroller.scrollTop+=a.getBoundingClientRect().top-top;}
   }
   async function jump(prefix,rec){
-    const r=await api('browse',{dict:d.id,dir:'from',prefix:prefix||'',limit:120,kanji:kanjiMode});
+    const r=await api('browse',{dict:d.id,dir:'from',prefix:prefix||'',limit:120,kanji:kanjiMode,tag});
     rows=r.items;atStart=false;atEnd=rows.length<120;
     const targetRec=rec&&rows.some(x=>x.rec===rec)?rec:(rows[0]&&rows[0].rec);
     render();
@@ -1221,7 +1224,7 @@ async function mountBrowse(container,dictId,start={},scroller){
     loading=true;
     try{
       const edge=dir==='before'?rows[0]:rows[rows.length-1];
-      const r=await api('browse',{dict:d.id,dir,norm:edge.norm,id:edge.rec,limit:120,kanji:kanjiMode});
+      const r=await api('browse',{dict:d.id,dir,norm:edge.norm,id:edge.rec,limit:120,kanji:kanjiMode,tag});
       if(dir==='before'){if(r.items.length<120)atStart=true;rows=r.items.concat(rows);if(rows.length>900){rows=rows.slice(0,900);atEnd=false;}render(edge.rec);}
       else{if(r.items.length<120)atEnd=true;rows=rows.concat(r.items);if(rows.length>900){rows=rows.slice(rows.length-900);atStart=false;render(edge.rec);}else render();}
     }finally{loading=false;}
@@ -1235,7 +1238,13 @@ async function mountBrowse(container,dictId,start={},scroller){
   scroller.addEventListener('scroll',onScroll,{passive:true});
   list.onclick=handle(e=>{const b=e.target.closest('[data-rec]');if(!b)return;current=+b.dataset.rec;list.querySelectorAll('.brow.cur').forEach(x=>x.classList.remove('cur'));b.classList.add('cur');return openEntry({rec:current,dict:d.id,key:b.dataset.key});});
   f('jump').addEventListener('input',debounce(()=>handle(()=>jump(f('jump').value))(),200));
-  const first=await api('browse',{dict:d.id,dir:'from',prefix:'',limit:40,kanji:kanjiMode});
+  if(dialectDict)handle(async()=>{
+    const r=await api('tags',{dict:d.id});const counts=new Map(r.tags.map(x=>[x.tag.replace(/の方言$/,''),x.n]));
+    const sel=f('region');
+    sel.innerHTML=`<option value="">All prefectures</option>`+PREFECTURES.filter(p=>counts.has(p)).concat([...counts.keys()].filter(p=>!PREFECTURES.includes(p))).map(p=>`<option value="${esc(p)}の方言">${esc(p)} (${counts.get(p)})</option>`).join('');
+    sel.onchange=handle(async()=>{tag=sel.value;f('jump').value='';rows=[];await jump('');scroller.scrollTop=0;});
+  })();
+  const first=await api('browse',{dict:d.id,dir:'from',prefix:'',limit:40,kanji:kanjiMode,tag});
   const letters=first.kanji?['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','18','20','24']:indexLetters(first.items.map(i=>i.key));
   f('rail').hidden=!letters.length;
   f('rail').innerHTML=letters.map(l=>`<button data-l="${esc(l)}">${esc(l)}</button>`).join('');
@@ -1245,6 +1254,8 @@ async function mountBrowse(container,dictId,start={},scroller){
   await jump(start.key||'',start.rec);
 }
 
+// Prefectures in the usual north-to-south order, as the dialect dictionary names them (北海道, then 青森 … 沖縄).
+const PREFECTURES=['北海道','青森','岩手','宮城','秋田','山形','福島','茨城','栃木','群馬','埼玉','千葉','東京','神奈川','新潟','富山','石川','福井','山梨','長野','岐阜','静岡','愛知','三重','滋賀','京都','大阪','兵庫','奈良','和歌山','鳥取','島根','岡山','広島','山口','徳島','香川','愛媛','高知','福岡','佐賀','長崎','熊本','大分','宮崎','鹿児島','沖縄'];
 // ---------- kanji grid ----------
 const levelLabel=(l)=>/^\d+$/.test(l)?l+'級':l+'級';
 const LEVEL_ORDER=['10','9','8','7','6','5','4','3','準2','2','準1','1'];
