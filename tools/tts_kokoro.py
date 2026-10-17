@@ -29,7 +29,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--set', required=True)
     ap.add_argument('--voice', default='')
-    ap.add_argument('--lang', default='zh', choices=['zh', 'en'], help='the translation language to voice')
+    ap.add_argument('--lang', default='zh', choices=['zh', 'en', 'ja'], help='the translation language to voice')
     ap.add_argument('--speed', type=float, default=1.0)
     args = ap.parse_args()
     from kokoro import KModel, KPipeline
@@ -37,6 +37,10 @@ def main():
         # English: Kokoro's own English model (hexgrad/Kokoro-82M), a male American voice by default.
         voice = args.voice or 'am_michael'
         pipe = KPipeline(lang_code='a', repo_id='hexgrad/Kokoro-82M')
+        simp = lambda t: t
+    elif args.lang == 'ja':
+        voice = args.voice or 'jm_kumo'
+        pipe = KPipeline(lang_code='j', repo_id='hexgrad/Kokoro-82M')
         simp = lambda t: t
     else:
         voice = args.voice or 'zm_010'

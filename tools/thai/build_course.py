@@ -5,7 +5,7 @@ Each unit starts "## id | level | name | grammar note"; each line after it is on
   TAG thai~roman~gloss thai~roman~gloss / … = English
 TAG is T (travel), B (BL), S (student) or E (everyday), with a trailing f for a woman speaking; "/" is a phrase break,
 a space in the Thai. Thai audio: OmniVoice base (TTS Fire's copy), after tools/thai_tts.py's clean-up, every line in
-one voice cloned from a first clip (one male, one female voice). English: tools/tts_kokoro.py --set th-course --lang en.
+one voice cloned from a first clip (one male, one female voice). Japanese: tools/tts_kokoro.py --set th-course --lang ja (translations: course_ja.txt, one per line).
 
   "/Users/leowoo/Documents/ChatGPT/TTS Fire/.venv-omnivoice/bin/python" tools/thai/build_course.py [--text-only]
 
@@ -26,6 +26,9 @@ REF = {'m': 'สวัสดีครับ ผมชื่อเล็ก ย�
 TOKEN = re.compile(r'(/)|([^\s~/]+)~([^~]+)~(.*?)(?=\s+(?:/|[^\s~]+~)|\s*$)')
 
 
+JA = None   # the Japanese translations, one per line in course_ja.txt, in the order of the course files
+
+
 def parse(path):
     groups, g = [], None
     for n, line in enumerate(path.read_text(encoding='utf-8').splitlines(), 1):
@@ -40,6 +43,7 @@ def parse(path):
             continue
         tag, rest = line.split(' ', 1)
         thai_part, english = rest.rsplit(' = ', 1)
+        japanese = next(JA)
         words, text, roman, pos = [], '', [], 0
         for m in TOKEN.finditer(thai_part):
             if thai_part[pos:m.start()].strip():
@@ -56,7 +60,7 @@ def parse(path):
             raise SystemExit(f'{path.name}:{n}: can\'t read the line')
         female = tag.endswith('f')
         g['items'].append({'id': f"{g['id']}-{len(g['items']) + 1}", 'title': SCENE[tag[0]], 'titleEn': '', 'text': text,
-                           'roman': ' '.join(roman), 'words': words, 'translation': english, 'audio': '', 'dur': 0,
+                           'roman': ' '.join(roman), 'words': words, 'translation': japanese, 'translationEn': english, 'audio': '', 'dur': 0,
                            'note': 'A woman speaking' if female else '', 'voice': 'f' if female else 'm'})
     return groups
 
@@ -65,7 +69,11 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--text-only', action='store_true', help='write set.json without making audio')
     args = ap.parse_args()
-    groups = [g for p in sorted(HERE.glob('course_*.txt')) for g in parse(p)]
+    global JA
+    JA = iter((HERE / 'course_ja.txt').read_text(encoding='utf-8').splitlines())
+    groups = [g for p in sorted(HERE.glob('course_[ab]*.txt')) for g in parse(p)]
+    if next(JA, None) is not None:
+        raise SystemExit('course_ja.txt has more lines than the course')
     OUT.mkdir(parents=True, exist_ok=True)
     old = {}
     if (OUT / 'set.json').exists():   # keep English audio already made for unchanged translations
@@ -79,7 +87,7 @@ def main():
             if it['translation'] in old and (OUT / old[it['translation']]).exists():
                 it['l1audio'] = old[it['translation']]
     s = {'id': OUT.name, 'title': 'ไทย · Thai course', 'subtitle': 'Beginner to B1: grammar step by step, for travel, BL, student life and every day',
-         'lang': 'th', 'translationLang': 'en', 'l1': 'en', 'groupLabel': 'Units', 'roman': 'paiboon', 'groups': groups}
+         'lang': 'th', 'translationLang': 'ja', 'l1': 'ja', 'groupLabel': 'Units', 'roman': 'paiboon', 'groups': groups}
 
     def save():
         (OUT / 'set.json').write_text(json.dumps(s, ensure_ascii=False, indent=0))
