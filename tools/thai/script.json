@@ -86,7 +86,37 @@
       {"ch": "ใ–", "sound": "ai", "len": "short", "word": "ใจ", "rom": "jai", "mean": "heart (only 20 words use ใ)"},
       {"ch": "เ–า", "sound": "ao", "len": "short", "word": "เขา", "rom": "kǎo", "mean": "he, she"}
     ]},
-    {"id": "u6", "title": "6 · Finals, live and dead syllables", "intro": "Only eight sounds can end a syllable. Many letters share them: all of ก ข ค ฆ end as -k; ด ต ถ ท ธ จ ช ซ ส ศ ษ … end as -t; บ ป พ ฟ ภ as -p. A syllable is LIVE if it ends in a long vowel or m n ng y w, and DEAD if it ends in a short vowel or -k -t -p. Live or dead decides the tone.", "kind": "syllable", "items": [
+    {"id": "u5b", "title": "6 · Vowels, part 2", "kind": "vowel", "intro": "The vowels from part 1 also come as short diphthongs and glide endings (–ย, –ว, –อย, –าย …) that make up many everyday words. ฤ and ฤๅ are rare letters used in a few Sanskrit-derived words. Short เ–ือะ is left out: almost no word uses it.", "items": [
+      {"ch": "เ–ียะ", "sound": "ia", "len": "short", "word": "เกี๊ยะ", "rom": "gía", "mean": "wooden clogs"},
+      {"ch": "–ัวะ", "sound": "ua", "len": "short", "word": "ผัวะ", "rom": "pùa", "mean": "smack (sound of a slap)"},
+      {"ch": "ไ–ย", "sound": "ai", "len": "short", "word": "ไทย", "rom": "tai", "mean": "Thai"},
+      {"ch": "–ัย", "sound": "ai", "len": "short", "word": "วัย", "rom": "wai", "mean": "age, stage of life"},
+      {"ch": "–าย", "sound": "aai", "len": "long", "word": "ชาย", "rom": "chaai", "mean": "man, male"},
+      {"ch": "–าว", "sound": "aao", "len": "long", "word": "ขาว", "rom": "kǎao", "mean": "white"},
+      {"ch": "–อย", "sound": "ɔɔi", "len": "long", "word": "น้อย", "rom": "nɔ́ɔi", "mean": "few, little"},
+      {"ch": "–ุย", "sound": "ui", "len": "short", "word": "คุย", "rom": "kui", "mean": "chat, talk"},
+      {"ch": "–ิว", "sound": "iu", "len": "short", "word": "ผิว", "rom": "pǐu", "mean": "skin"},
+      {"ch": "เ–็ว", "sound": "eo", "len": "short", "word": "เร็ว", "rom": "reo", "mean": "fast"},
+      {"ch": "แ–ว", "sound": "ɛɛo", "len": "long", "word": "แล้ว", "rom": "lɛ́ɛo", "mean": "already"},
+      {"ch": "เ–ียว", "sound": "iao", "len": "long", "word": "เขียว", "rom": "kǐao", "mean": "green"},
+      {"ch": "เ–ย", "sound": "əəi", "len": "long", "word": "เลย", "rom": "ləəi", "mean": "at all; right away"},
+      {"ch": "โ–ย", "sound": "ooi", "len": "long", "word": "โดย", "rom": "dooi", "mean": "by, through"},
+      {"ch": "–วย", "sound": "uai", "len": "long", "word": "สวย", "rom": "sǔai", "mean": "beautiful"},
+      {"ch": "เ–ือย", "sound": "ʉai", "len": "long", "word": "เหนื่อย", "rom": "nʉ̀ai", "mean": "tired"},
+      {"ch": "ฤ", "sound": "rʉ", "len": "short", "word": "ฤดู", "rom": "rʉ́-duu", "mean": "season"},
+      {"ch": "ฤๅ", "sound": "rʉʉ", "len": "long", "word": "ฤๅษี", "rom": "rʉʉ-sǐi", "mean": "hermit, sage"}
+    ]},
+    {"id": "u5c", "title": "7 · Vowels that need a final consonant", "kind": "vowel", "intro": "Some vowels have no stand-alone form: they only exist with a consonant after them, and the shape changes once it is there. –ั– (วัน), เ–็– (เป็น), –็อ (ก็), –รร– (กรรม) and –ร (พร) are written this way; –ว–, –อ– and เ–ือ– lose their usual look inside a word (ควร, ก่อน, เรื่อง). Read the dash as where the consonant, and the final, goes.", "items": [
+      {"ch": "–ั–", "sound": "a", "len": "short", "word": "วัน", "rom": "wan", "mean": "day"},
+      {"ch": "เ–็–", "sound": "e", "len": "short", "word": "เป็น", "rom": "bpen", "mean": "be (is, am, are)"},
+      {"ch": "–็อ", "sound": "ɔɔ", "len": "long", "word": "ก็", "rom": "gɔ̂ɔ", "mean": "also, then"},
+      {"ch": "–รร–", "sound": "am", "len": "short", "word": "กรรม", "rom": "gam", "mean": "karma"},
+      {"ch": "–ร", "sound": "ɔɔn", "len": "long", "word": "พร", "rom": "pɔɔn", "mean": "blessing, wish"},
+      {"ch": "–ว–", "sound": "ua", "len": "long", "word": "ควร", "rom": "kuan", "mean": "should, ought to"},
+      {"ch": "–อ–", "sound": "ɔɔ", "len": "long", "word": "ก่อน", "rom": "gɔ̀ɔn", "mean": "before"},
+      {"ch": "เ–ือ–", "sound": "ʉa", "len": "long", "word": "เรื่อง", "rom": "rʉ̂ang", "mean": "story, matter"}
+    ]},
+    {"id": "u6", "title": "8 · Finals, live and dead syllables", "intro": "Only eight sounds can end a syllable. Many letters share them: all of ก ข ค ฆ end as -k; ด ต ถ ท ธ จ ช ซ ส ศ ษ … end as -t; บ ป พ ฟ ภ as -p. A syllable is LIVE if it ends in a long vowel or m n ng y w, and DEAD if it ends in a short vowel or -k -t -p. Live or dead decides the tone.", "kind": "syllable", "items": [
       {"ch": "-k", "sound": "k", "word": "มาก", "rom": "mâak", "mean": "very (dead, long vowel, low class → falling)", "tone": "falling"},
       {"ch": "-t", "sound": "t", "word": "พูด", "rom": "pûut", "mean": "speak (dead, long, low → falling)", "tone": "falling"},
       {"ch": "-p", "sound": "p", "word": "จับ", "rom": "jàp", "mean": "catch (dead, mid → low)", "tone": "low"},
@@ -98,7 +128,7 @@
       {"ch": "dead · short", "sound": "", "word": "รัก", "rom": "rák", "mean": "love (dead, short, low → high)", "tone": "high"},
       {"ch": "dead · short", "sound": "", "word": "สุข", "rom": "sùk", "mean": "happy (dead, high → low)", "tone": "low"}
     ]},
-    {"id": "u7", "title": "7 · Tone marks and tone rules", "intro": "Four marks sit above the consonant. The tone they give depends on the class: ่ (ไม้เอก) → low for mid/high, falling for low. ้ (ไม้โท) → falling for mid/high, high for low. ๊ and ๋ are used on middle-class letters only: high and rising. ห before a sonorant (หนู, หมา) makes it high class; อ before ย (อยู่, อยาก, อย่า, อย่าง) makes it mid.", "kind": "tone", "marks": [
+    {"id": "u7", "title": "9 · Tone marks and tone rules", "intro": "Four marks sit above the consonant. The tone they give depends on the class: ่ (ไม้เอก) → low for mid/high, falling for low. ้ (ไม้โท) → falling for mid/high, high for low. ๊ and ๋ are used on middle-class letters only: high and rising. ห before a sonorant (หนู, หมา) makes it high class; อ before ย (อยู่, อยาก, อย่า, อย่าง) makes it mid.", "kind": "tone", "marks": [
       {"ch": "่", "name": "ไม้เอก", "rom": "mái èek", "rule": "mid/high → low · low → falling"},
       {"ch": "้", "name": "ไม้โท", "rom": "mái too", "rule": "mid/high → falling · low → high"},
       {"ch": "๊", "name": "ไม้ตรี", "rom": "mái dtrii", "rule": "mid only → high"},
