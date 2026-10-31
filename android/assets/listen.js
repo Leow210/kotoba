@@ -16,14 +16,16 @@
   // ---------- the sets ----------
   async function openListening(){
     const sets=await api('listen.sets');
-    if(sets.length===1)return openSet(sets[0].id);
+    const books=window.audiobookList?await audiobookList():[];// audiobooks (audiobook.js) are listed beside the sets
+    if(sets.length===1&&!books.length)return openSet(sets[0].id);
     const el=document.createElement('div');el.className='ls-page';
     el.innerHTML=`<div class="bar"><button class="icon-btn" data-a="back" aria-label="Back">${icon('back')}</button><div class="title"><b>Listening</b><small>hear it, repeat it, shadow it</small></div></div>
-      <div class="ls-scroll">${sets.length?sets.map(s=>`<button class="ls-set" data-set="${esc(s.id)}">${s.cover?`<img src="${url(s.id,s.cover)}" alt="">`:'<span class="ls-glyph">聴</span>'}<span><b>${esc(s.title)}</b><small>${esc(s.subtitle)}</small><small>${s.groups} groups · ${s.lines.toLocaleString()} lines</small></span></button>`).join('')
+      <div class="ls-scroll">${books.map((b,i)=>`<button class="ls-set" data-book="${i}"><span class="ls-glyph">朗</span><span><b>${esc(b.title)}</b><small>${esc(b.author||'')}</small><small>Audiobook · ${b.chapters.length} chapters</small></span></button>`).join('')}${sets.length||books.length?sets.map(s=>`<button class="ls-set" data-set="${esc(s.id)}">${s.cover?`<img src="${url(s.id,s.cover)}" alt="">`:'<span class="ls-glyph">聴</span>'}<span><b>${esc(s.title)}</b><small>${esc(s.subtitle)}</small><small>${s.groups} groups · ${s.lines.toLocaleString()} lines</small></span></button>`).join('')
         :`<p class="hint ls-empty">No listening sets on this device yet. Sets are folders in Kotoba’s <b>listening</b> folder (on the phone: Android/data/app.kotoba.reader/files/listening).</p>`}</div>`;
     pushPage(el);
     el.querySelector('[data-a="back"]').onclick=()=>popPage();
     el.querySelectorAll('[data-set]').forEach(b=>b.onclick=handle(()=>openSet(b.dataset.set)));
+    el.querySelectorAll('[data-book]').forEach(b=>b.onclick=()=>openAudiobook(books[+b.dataset.book]));
   }
 
   // ---------- one set: its groups (characters), by section (region) ----------

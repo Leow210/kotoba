@@ -76,6 +76,7 @@ public class Routes {
             case "accent.export":{if(accent==null)accent=new Accent(library);return accent.export(new java.io.File(listening.root,d.getString("set")));}
             case "accent.status":return accent==null?new JSONObject().put("running",false):accent.status();
             case "listen.sets":return listening==null?new JSONArray():listening.sets();
+            case "audiobook.list":return listening==null?new JSONArray():listening.audiobooks();
             case "listen.set":return listening.set(d.getString("id"));
             case "lyrics.get":return japaneseLyrics(lyrics().get(d.optString("title"),d.optString("artist"),d.optString("album",""),d.optDouble("duration",0),d.optBoolean("refresh",false)));
             case "ja.kanji":return new JSONObject().put("text",library.japaneseKanji(d.getString("text")));// simplified → Japanese kanji

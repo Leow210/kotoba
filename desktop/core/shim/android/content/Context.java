@@ -12,6 +12,11 @@ public class Context {
     public AssetManager getAssets(){return assets;}
     /** The phone's app-specific external folder; on the Mac the same data folder. */
     public File getExternalFilesDir(String type){return data;}
+    public static final String POWER_SERVICE="power";
+    /** No Android system services on the Mac. */
+    public Object getSystemService(String name){return null;}
+    /** No battery broadcasts on the Mac: callers see "no battery information" (always allowed to work). */
+    public Intent registerReceiver(Object receiver,IntentFilter filter){return null;}
     final ContentResolver resolver=new ContentResolver();
     public ContentResolver getContentResolver(){return resolver;}
 }

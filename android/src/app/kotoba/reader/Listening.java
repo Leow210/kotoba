@@ -42,6 +42,20 @@ public final class Listening {
         return out;
     }
 
+    /** Audiobooks: folders under listening/audiobooks/, each with a book.json (title, chapters → audio + rows file). */
+    public JSONArray audiobooks() throws Exception {
+        JSONArray out=new JSONArray();
+        File[] dirs=new File(root,"audiobooks").listFiles(File::isDirectory);
+        if(dirs==null)return out;
+        java.util.Arrays.sort(dirs);
+        for(File dir:dirs){
+            File f=new File(dir,"book.json");
+            if(!f.isFile()||!validId(dir.getName()))continue;
+            try{out.put(new JSONObject(Files.readString(f.toPath(),StandardCharsets.UTF_8)).put("id",dir.getName()));}catch(Exception ignored){}
+        }
+        return out;
+    }
+
     /** One set, whole (its lines, grouped). */
     public JSONObject set(String id) throws Exception {
         if(!validId(id))throw new Exception("No such set.");

@@ -816,6 +816,20 @@ public class DesktopServer {
             if(path.startsWith("/listen/")){
                 File f=routes.listening.file(path.substring(8));
                 if(f==null){send(x,404,"text/plain",new byte[0],null);return;}
+                // Audio needs byte ranges (WebKit insists, and seeking in an audiobook chapter depends on them).
+                x.getResponseHeaders().add("Accept-Ranges","bytes");
+                String range=x.getRequestHeaders().getFirst("Range");
+                if(range!=null&&range.matches("bytes=\\d*-\\d*")&&!range.equals("bytes=-")){
+                    long len=f.length();String[] se=range.substring(6).split("-",-1);
+                    long start=se[0].isEmpty()?Math.max(0,len-Long.parseLong(se[1])):Long.parseLong(se[0]);
+                    long end=se[0].isEmpty()||se[1].isEmpty()?len-1:Math.min(len-1,Long.parseLong(se[1]));
+                    if(start>end||start>=len){x.getResponseHeaders().add("Content-Range","bytes */"+len);send(x,416,"text/plain",new byte[0],null);return;}
+                    byte[] part=new byte[(int)(end-start+1)];
+                    try(java.io.RandomAccessFile r=new java.io.RandomAccessFile(f,"r")){r.seek(start);r.readFully(part);}
+                    x.getResponseHeaders().add("Content-Range","bytes "+start+"-"+end+"/"+len);
+                    send(x,206,Library.mime(f.getName()),part,null);
+                    return;
+                }
                 send(x,200,Library.mime(f.getName()),Files.readAllBytes(f.toPath()),null);
                 return;
             }
