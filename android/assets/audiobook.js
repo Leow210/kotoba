@@ -27,6 +27,32 @@
     el.querySelectorAll('[data-i]').forEach(b=>b.onclick=handle(()=>openChapter(book,+b.dataset.i)));
   }
 
+  /** The phone plays through the system player (exact seeking); this gives it the parts of an <audio> element the page uses. */
+  function nativeAudio(path){
+    const A=window.KotobaAudio,et=new EventTarget(),ok=A.load(path);let timer=0,rate=1;
+    const fire=t=>et.dispatchEvent(new Event(t));
+    const stop=()=>{clearInterval(timer);timer=0;};
+    const start=()=>{if(timer)return;timer=setInterval(()=>{
+      if(window.__abAudio!==o){stop();return;}
+      fire('timeupdate');
+      if(A.ended()){stop();fire('pause');fire('ended');}
+    },200);};
+    const o={
+      get currentTime(){return A.position();},set currentTime(v){A.seek(v);fire('timeupdate');},
+      get duration(){return A.duration();},get paused(){return !A.playing();},
+      get playbackRate(){return rate;},set playbackRate(v){rate=v;A.rate(v);},preservesPitch:true,
+      error:ok?null:{message:A.error()},
+      play(){A.rate(rate);A.play();start();fire('play');return Promise.resolve();},
+      pause(){A.pause();fire('pause');},
+      release(){stop();A.release();},
+      addEventListener:(t,fn,opt)=>et.addEventListener(t,fn,opt),removeEventListener:(t,fn)=>et.removeEventListener(t,fn)
+    };
+    if(window.__abAudio&&window.__abAudio.release)window.__abAudio.release();
+    window.__abAudio=o;
+    setTimeout(()=>fire('loadedmetadata'),30);
+    return o;
+  }
+
   async function openChapter(book,index){
     const chapter=book.chapters[index];
     const rows=await (await fetch(url(book.id,chapter.rows))).json();
@@ -39,9 +65,9 @@
         <button class="chip small" data-a="pause" title="Pause the audio while a word is looked up"></button><button class="chip small" data-a="follow" title="Keep the current line in view"></button><button class="chip small" data-a="who" title="Show who is speaking"></button></div>
       <div class="ab-presets" data-f="presets" hidden></div>
       <div class="ab-seek"><span data-f="t">0:00</span><input type="range" min="0" max="1000" value="0" data-f="seek" aria-label="Position"><span data-f="d"></span></div>
-      <audio preload="metadata" src="${url(book.id,chapter.audio)}"></audio>
+      ${window.KotobaAudio?'':`<audio preload="metadata" src="${url(book.id,chapter.audio)}"></audio>`}
       <div class="mu-scroll" data-f="scroll"><div class="mu-lines" data-f="lines"></div></div>`;
-    const f=n=>el.querySelector(`[data-f="${n}"]`),audio=el.querySelector('audio');
+    const f=n=>el.querySelector(`[data-f="${n}"]`),audio=window.KotobaAudio?nativeAudio(`audiobooks/${book.id}/${chapter.audio}`):el.querySelector('audio');
     f('lines').innerHTML=rows.map((r,i)=>`<div class="mu-line" data-i="${i}">${r.who&&r.who!=='ナレーション'?`<div class="ab-who">${esc(r.who)}</div>`:''}<div class="mu-text" lang="${lang}">${tappableText(r.text)}</div><div class="mu-acts"><button data-l="card">${icon('star')} Sentence</button><button data-l="copy">${icon('copy')}</button></div></div>`).join('');
     pushPage(el);
     let active=-1,userScrolled=0,pausedByUs=false;
@@ -76,7 +102,7 @@
     f('seek').oninput=()=>{if(audio.duration)audio.currentTime=f('seek').value/1000*audio.duration;};
     f('scroll').addEventListener('wheel',()=>{userScrolled=Date.now();},{passive:true});
     f('scroll').addEventListener('touchmove',()=>{userScrolled=Date.now();},{passive:true});
-    el.querySelector('[data-a="back"]').onclick=()=>{audio.pause();popPage();};
+    el.querySelector('[data-a="back"]').onclick=()=>{audio.pause();if(audio.release)audio.release();popPage();};
     el.querySelector('[data-a="toggle"]').onclick=()=>audio.paused?play():audio.pause();
     el.querySelector('[data-a="prev"]').onclick=()=>go(at(audio.currentTime)-1);
     el.querySelector('[data-a="next"]').onclick=()=>go(at(audio.currentTime)+1);

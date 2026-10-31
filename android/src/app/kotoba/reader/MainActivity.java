@@ -145,6 +145,7 @@ public class MainActivity extends Activity {
         s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         WebView.setWebContentsDebuggingEnabled(true);
         web.addJavascriptInterface(new Bridge(),"Kotoba");
+        web.addJavascriptInterface(new NativeAudio(),"KotobaAudio");
         web.setWebChromeClient(new WebChromeClient(){
             @Override public boolean onConsoleMessage(ConsoleMessage m){android.util.Log.d("Kotoba",m.message()+" @"+m.sourceId()+":"+m.lineNumber());return true;}
             // The scanner's own camera view (getUserMedia): only our page, only video.
@@ -203,6 +204,30 @@ public class MainActivity extends Activity {
             return new ParcelFileDescriptor.AutoCloseInputStream(pfd).getChannel();
         }
         return new FileInputStream(uri.startsWith("file://")?Uri.parse(uri).getPath():uri).getChannel();
+    }
+
+    /** Audiobook playback with the system player: it seeks exactly (the web view's player lands several seconds off in a long MP3). */
+    public class NativeAudio {
+        private android.media.MediaPlayer mp;private boolean ready;private float rate=1f;private String error="";
+        @JavascriptInterface public synchronized boolean load(String path){
+            release();
+            try{
+                File f=routes.listening.file(path);if(f==null||!f.isFile()){error="missing";return false;}
+                mp=new android.media.MediaPlayer();mp.setDataSource(f.getAbsolutePath());mp.prepare();ready=true;error="";
+                mp.setOnCompletionListener(m->{});return true;
+            }catch(Exception e){error=String.valueOf(e.getMessage());release();return false;}
+        }
+        @JavascriptInterface public synchronized double duration(){return ready?mp.getDuration()/1000.0:0;}
+        @JavascriptInterface public synchronized double position(){return ready?mp.getCurrentPosition()/1000.0:0;}
+        @JavascriptInterface public synchronized boolean playing(){return ready&&mp.isPlaying();}
+        @JavascriptInterface public synchronized boolean ended(){return ready&&!mp.isPlaying()&&mp.getDuration()-mp.getCurrentPosition()<200;}
+        @JavascriptInterface public synchronized String error(){return error;}
+        @JavascriptInterface public synchronized void play(){if(!ready)return;mp.start();applyRate();}
+        @JavascriptInterface public synchronized void pause(){if(ready&&mp.isPlaying())mp.pause();}
+        @JavascriptInterface public synchronized void seek(double sec){if(ready)mp.seekTo((int)Math.round(sec*1000),android.media.MediaPlayer.SEEK_CLOSEST);}
+        @JavascriptInterface public synchronized void rate(double r){rate=(float)Math.max(0.25,Math.min(4,r));if(ready&&mp.isPlaying())applyRate();}
+        private void applyRate(){try{android.media.PlaybackParams pp=mp.getPlaybackParams();pp.setSpeed(rate);pp.setPitch(1f);mp.setPlaybackParams(pp);}catch(Exception ignored){}}
+        @JavascriptInterface public synchronized void release(){if(mp!=null){try{mp.release();}catch(Exception ignored){}mp=null;}ready=false;}
     }
 
     // ---------- JavaScript bridge ----------
