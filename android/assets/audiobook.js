@@ -9,7 +9,10 @@
   const store={get(k,d){try{const v=localStorage.getItem(k);return v===null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
   const url=(book,p)=>`/listen/audiobooks/${encodeURIComponent(book)}/`+String(p).split('/').map(encodeURIComponent).join('/');
   const fmt=s=>{s=Math.max(0,Math.floor(s));const h=Math.floor(s/3600),m=Math.floor(s/60)%60;return (h?h+':'+String(m).padStart(2,'0'):m)+':'+String(s%60).padStart(2,'0');};
-  const opts=Object.assign({speed:1,follow:true,pause:true,who:true},store.get('audiobook.opts',{}));
+  const opts=Object.assign({speed:1,follow:true,pause:true,who:true,presets:[0.75,1,1.25,1.5,2,2.5,3,4]},store.get('audiobook.opts',{}));
+  const MIN_SPEED=0.5,MAX_SPEED=4;
+  const clampSpeed=v=>Math.min(MAX_SPEED,Math.max(MIN_SPEED,Math.round(v*100)/100));
+  const speedText=v=>(Math.round(v*100)/100)+'×';
   const saveOpts=()=>store.set('audiobook.opts',opts);
 
   const audiobookList=()=>api('audiobook.list').catch(()=>[]);
@@ -32,8 +35,9 @@
     const lang=window.textLang?textLang(rows.map(r=>r.text).join('\n'),''):'ja';
     el.innerHTML=`<div class="bar"><button class="icon-btn" data-a="back" aria-label="Back">${icon('back')}</button><div class="title"><b>${esc(chapter.title)}</b><small>${esc(book.title)}</small></div></div>
       <div class="mu-tools ab-tools"><button class="chip small" data-a="prev">◀ Line</button><button class="chip small" data-a="toggle">▶ Play</button><button class="chip small" data-a="next">Line ▶</button>
-        <button class="chip small" data-a="again" title="Play this line again">↺</button><button class="chip small" data-a="speed"></button>
+        <button class="chip small" data-a="again" title="Play this line again">↺</button><span class="ab-speed"><button class="chip small" data-a="slower" title="Slower ( [ )">−</button><input type="range" data-f="spd" min="${MIN_SPEED}" max="${MAX_SPEED}" step="0.05" aria-label="Playback speed"><button class="chip small" data-a="faster" title="Faster ( ] )">+</button><button class="chip small ab-speed-now" data-a="speed" title="Speed presets (double-click: back to 1×)"></button></span>
         <button class="chip small" data-a="pause" title="Pause the audio while a word is looked up"></button><button class="chip small" data-a="follow" title="Keep the current line in view"></button><button class="chip small" data-a="who" title="Show who is speaking"></button></div>
+      <div class="ab-presets" data-f="presets" hidden></div>
       <div class="ab-seek"><span data-f="t">0:00</span><input type="range" min="0" max="1000" value="0" data-f="seek" aria-label="Position"><span data-f="d"></span></div>
       <audio preload="metadata" src="${url(book.id,chapter.audio)}"></audio>
       <div class="mu-scroll" data-f="scroll"><div class="mu-lines" data-f="lines"></div></div>`;
@@ -42,7 +46,9 @@
     pushPage(el);
     let active=-1,userScrolled=0,pausedByUs=false;
     const paint=()=>{
-      el.querySelector('[data-a="speed"]').textContent=opts.speed+'×';
+      el.querySelector('[data-a="speed"]').textContent=speedText(opts.speed);
+      f('spd').value=opts.speed;
+      f('presets').innerHTML=opts.presets.map(p=>`<button class="chip small${p===opts.speed?' on':''}" data-p="${p}">${speedText(p)}</button>`).join('')+`<button class="chip small" data-a="savepreset" title="Add the current speed to these presets, or remove it again">${opts.presets.includes(opts.speed)?'− Remove':'＋ Save'} ${speedText(opts.speed)}</button>`;
       el.querySelector('[data-a="pause"]').textContent=(opts.pause?'☑':'☐')+' Pause on lookup';
       el.querySelector('[data-a="follow"]').textContent=(opts.follow?'☑':'☐')+' Follow';
       el.querySelector('[data-a="who"]').textContent=(opts.who?'☑':'☐')+' Speaker';
@@ -51,7 +57,7 @@
     paint();
     const at=t=>{let k=0;for(let i=0;i<rows.length;i++){if(rows[i].start<=t+.05)k=i;else break;}return k;};
     const go=i=>{i=Math.max(0,Math.min(rows.length-1,i));audio.currentTime=rows[i].start;audio.play();};
-    audio.addEventListener('loadedmetadata',()=>{f('d').textContent=fmt(audio.duration);const p=store.get(posKey,{})[index];if(p&&p<audio.duration-5)audio.currentTime=p;audio.playbackRate=opts.speed;});
+    audio.addEventListener('loadedmetadata',()=>{f('d').textContent=fmt(audio.duration);const p=store.get(posKey,{})[index];if(p&&p<audio.duration-5)audio.currentTime=p;audio.playbackRate=opts.speed;audio.preservesPitch=true;});
     audio.addEventListener('play',()=>{audio.playbackRate=opts.speed;});
     let saved=0;
     audio.addEventListener('timeupdate',()=>{
@@ -74,7 +80,20 @@
     el.querySelector('[data-a="prev"]').onclick=()=>go(at(audio.currentTime)-1);
     el.querySelector('[data-a="next"]').onclick=()=>go(at(audio.currentTime)+1);
     el.querySelector('[data-a="again"]').onclick=()=>go(at(audio.currentTime));
-    el.querySelector('[data-a="speed"]').onclick=()=>{const s=[.75,.9,1,1.15,1.3];opts.speed=s[(s.indexOf(opts.speed)+1)%s.length];audio.playbackRate=opts.speed;saveOpts();paint();};
+    const setSpeed=v=>{opts.speed=clampSpeed(v);audio.playbackRate=opts.speed;audio.preservesPitch=true;saveOpts();paint();};
+    f('spd').oninput=()=>setSpeed(+f('spd').value);
+    el.querySelector('[data-a="slower"]').onclick=()=>setSpeed(opts.speed-0.1);
+    el.querySelector('[data-a="faster"]').onclick=()=>setSpeed(opts.speed+0.1);
+    const nowBtn=el.querySelector('[data-a="speed"]');
+    nowBtn.onclick=()=>{f('presets').hidden=!f('presets').hidden;};
+    nowBtn.ondblclick=()=>{f('presets').hidden=true;setSpeed(1);};
+    f('presets').addEventListener('click',e=>{
+      const p=e.target.closest('[data-p]');if(p)return setSpeed(+p.dataset.p);
+      if(e.target.closest('[data-a="savepreset"]')){
+        opts.presets=opts.presets.includes(opts.speed)?opts.presets.filter(x=>x!==opts.speed):[...opts.presets,opts.speed].sort((a,b)=>a-b);
+        saveOpts();paint();
+      }
+    });
     el.querySelector('[data-a="pause"]').onclick=()=>{opts.pause=!opts.pause;saveOpts();paint();};
     el.querySelector('[data-a="follow"]').onclick=()=>{opts.follow=!opts.follow;userScrolled=0;saveOpts();paint();};
     el.querySelector('[data-a="who"]').onclick=()=>{opts.who=!opts.who;saveOpts();paint();};
@@ -105,12 +124,16 @@
       if(/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)||sheetStack.length)return;
       if(e.code==='Space'){e.preventDefault();audio.paused?audio.play():audio.pause();}
       else if(e.key==='ArrowLeft')go(at(audio.currentTime)-1);else if(e.key==='ArrowRight')go(at(audio.currentTime)+1);
+      else if(e.key==='['||e.key===']'){setSpeed(opts.speed+(e.key===']'?0.1:-0.1));toast(speedText(opts.speed),900);}
+      else if(e.key==='\\'){setSpeed(1);toast('1×',900);}
     });
   }
   window.audiobookList=audiobookList;window.openAudiobook=openBook;
 
   const css=document.createElement('style');
   css.textContent=`.ab-tools{position:sticky;top:0}.ab-seek{display:flex;gap:10px;align-items:center;padding:6px 16px;font-size:12px;color:var(--muted)}.ab-seek input{flex:1}
+  .ab-speed{display:inline-flex;gap:4px;align-items:center}.ab-speed input{width:110px}.ab-speed-now{min-width:48px}
+  .ab-presets{display:flex;flex-wrap:wrap;gap:6px;padding:6px 14px;border-bottom:1px solid var(--line)}.ab-presets .chip.on{background:var(--accent);color:var(--accent-ink)}
   .ab-who{font:600 12px var(--sans);color:var(--muted);margin-bottom:1px}.ab-nowho .ab-who{display:none}`;
   document.head.appendChild(css);
 })();
