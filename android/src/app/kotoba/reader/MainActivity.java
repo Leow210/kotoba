@@ -810,7 +810,31 @@ public class MainActivity extends Activity {
             if(path.startsWith("/listen/")){
                 File f=routes.listening==null?null:routes.listening.file(path.substring(8));
                 if(f==null)return response("text/plain",new byte[0],404,null);
-                return response(Library.mime(f.getName()),Files.readAllBytes(f.toPath()),200,null);
+                // Audio is streamed from the file in the byte range asked for (seeking an audiobook chapter depends on it),
+                // with an exact Content-Length, so a whole chapter is never held in memory.
+                String range=request.getRequestHeaders()==null?null:request.getRequestHeaders().get("Range");
+                long len=f.length(),start=0,end=len-1;int status=200;
+                if(range!=null&&range.matches("bytes=\\d*-\\d*")&&!range.equals("bytes=-")){
+                    String[] se=range.substring(6).split("-",-1);
+                    start=se[0].isEmpty()?Math.max(0,len-Long.parseLong(se[1])):Long.parseLong(se[0]);
+                    if(!se[0].isEmpty()&&!se[1].isEmpty())end=Math.min(len-1,Long.parseLong(se[1]));
+                    if(start>end||start>=len)return response("text/plain",new byte[0],416,null);
+                    status=206;
+                }
+                final long from=start,count=end-start+1;
+                final RandomAccessFile raf=new RandomAccessFile(f,"r");raf.seek(from);
+                InputStream body=new InputStream(){
+                    long left=count;
+                    @Override public int read() throws IOException{byte[] one=new byte[1];return read(one,0,1)<0?-1:one[0]&255;}
+                    @Override public int read(byte[] b,int o,int n) throws IOException{
+                        if(left<=0)return -1;int got=raf.read(b,o,(int)Math.min(n,left));if(got>0)left-=got;return got;}
+                    @Override public void close() throws IOException{raf.close();}
+                };
+                Map<String,String> h=new HashMap<>();
+                h.put("Accept-Ranges","bytes");h.put("Content-Length",String.valueOf(count));
+                h.put("Access-Control-Allow-Origin",ORIGIN);
+                if(status==206)h.put("Content-Range","bytes "+start+"-"+end+"/"+len);
+                return new WebResourceResponse(Library.mime(f.getName()),null,status,status==206?"Partial Content":"OK",h,body);
             }
             if(path.startsWith("/d/")){
                 String rest=path.substring(3);

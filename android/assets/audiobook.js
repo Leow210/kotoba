@@ -56,7 +56,8 @@
     };
     paint();
     const at=t=>{let k=0;for(let i=0;i<rows.length;i++){if(rows[i].start<=t+.05)k=i;else break;}return k;};
-    const go=i=>{i=Math.max(0,Math.min(rows.length-1,i));audio.currentTime=rows[i].start;audio.play();};
+    const play=()=>{const r=audio.play();if(r&&r.catch)r.catch(()=>{});};
+    const go=i=>{i=Math.max(0,Math.min(rows.length-1,i));audio.currentTime=rows[i].start;userScrolled=0;play();};
     audio.addEventListener('loadedmetadata',()=>{f('d').textContent=fmt(audio.duration);const p=store.get(posKey,{})[index];if(p&&p<audio.duration-5)audio.currentTime=p;audio.playbackRate=opts.speed;audio.preservesPitch=true;});
     audio.addEventListener('play',()=>{audio.playbackRate=opts.speed;});
     let saved=0;
@@ -76,7 +77,7 @@
     f('scroll').addEventListener('wheel',()=>{userScrolled=Date.now();},{passive:true});
     f('scroll').addEventListener('touchmove',()=>{userScrolled=Date.now();},{passive:true});
     el.querySelector('[data-a="back"]').onclick=()=>{audio.pause();popPage();};
-    el.querySelector('[data-a="toggle"]').onclick=()=>audio.paused?audio.play():audio.pause();
+    el.querySelector('[data-a="toggle"]').onclick=()=>audio.paused?play():audio.pause();
     el.querySelector('[data-a="prev"]').onclick=()=>go(at(audio.currentTime)-1);
     el.querySelector('[data-a="next"]').onclick=()=>go(at(audio.currentTime)+1);
     el.querySelector('[data-a="again"]').onclick=()=>go(at(audio.currentTime));
