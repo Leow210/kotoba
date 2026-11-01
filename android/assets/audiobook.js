@@ -29,7 +29,9 @@
 
   /** The phone plays through the system player (exact seeking); this gives it the parts of an <audio> element the page uses. */
   function nativeAudio(path){
-    const A=window.KotobaAudio,et=new EventTarget(),ok=A.load(path);let timer=0,rate=1;
+    const A=window.KotobaAudio,et=new EventTarget();
+    if(window.__abAudio&&window.__abAudio.release)window.__abAudio.release();// the old player goes first: releasing it later would take the new one with it
+    const ok=A.load(path);let timer=0,rate=1;
     const fire=t=>et.dispatchEvent(new Event(t));
     const stop=()=>{clearInterval(timer);timer=0;};
     const start=()=>{if(timer)return;timer=setInterval(()=>{
@@ -47,7 +49,6 @@
       release(){stop();A.release();},
       addEventListener:(t,fn,opt)=>et.addEventListener(t,fn,opt),removeEventListener:(t,fn)=>et.removeEventListener(t,fn)
     };
-    if(window.__abAudio&&window.__abAudio.release)window.__abAudio.release();
     window.__abAudio=o;
     setTimeout(()=>fire('loadedmetadata'),30);
     return o;
@@ -97,12 +98,14 @@
       lines.forEach((x,k)=>{x.classList.toggle('past',k<i);x.classList.toggle('now',k===i);});
       if(opts.follow&&Date.now()-userScrolled>4000&&!sheetStack.length)lines[i].scrollIntoView({block:'center',behavior:'smooth'});
     });
-    audio.addEventListener('pause',()=>{el.querySelector('[data-a="toggle"]').textContent='▶ Play';});
+    const savePos=()=>{if(audio.duration&&audio.currentTime>0){const p=store.get(posKey,{});p[index]=Math.floor(audio.currentTime);store.set(posKey,p);}};
+    audio.addEventListener('pause',()=>{el.querySelector('[data-a="toggle"]').textContent='▶ Play';savePos();});
+    document.addEventListener('visibilitychange',()=>{if(document.hidden)savePos();});
     audio.addEventListener('ended',()=>{if(index+1<book.chapters.length)toast('Chapter finished');});
     f('seek').oninput=()=>{if(audio.duration)audio.currentTime=f('seek').value/1000*audio.duration;};
     f('scroll').addEventListener('wheel',()=>{userScrolled=Date.now();},{passive:true});
     f('scroll').addEventListener('touchmove',()=>{userScrolled=Date.now();},{passive:true});
-    el.querySelector('[data-a="back"]').onclick=()=>{audio.pause();if(audio.release)audio.release();popPage();};
+    el.querySelector('[data-a="back"]').onclick=()=>{audio.pause();savePos();if(audio.release)audio.release();popPage();};
     el.querySelector('[data-a="toggle"]').onclick=()=>audio.paused?play():audio.pause();
     el.querySelector('[data-a="prev"]').onclick=()=>go(at(audio.currentTime)-1);
     el.querySelector('[data-a="next"]').onclick=()=>go(at(audio.currentTime)+1);
