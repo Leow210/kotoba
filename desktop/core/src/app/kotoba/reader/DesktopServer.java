@@ -66,6 +66,9 @@ public class DesktopServer {
         File ocrExe=new File(web.getParentFile().getParentFile(),"MacOS/kotoba-ocr");
         if(!ocrExe.canExecute())ocrExe=new File(web.getParentFile(),"mac/.build/release/KotobaOCR");
         if(ocrExe.canExecute())Ocr.external=new VisionOcr(ocrExe,store);
+        // HunyuanOCR (a helper running the model) re-reads each Korean bubble after Apple's first pass, if it is installed.
+        File hunyuanScript=new File(web.getParentFile(),"hunyuan/server.py");
+        if(hunyuanScript.isFile())Ocr.blockReader=new HunyuanReader(hunyuanScript,store);
         routes.listening=new Listening(new File(data,"listening"));
         routes.comics=new Comics(context,store.db,uri->FileChannel.open(Path.of(uri.startsWith("file://")?uri.substring(7):uri),StandardOpenOption.READ));
         byte[] t=new byte[18];new SecureRandom().nextBytes(t);
@@ -782,6 +785,53 @@ public class DesktopServer {
                 }
                 return lines;
             }finally{tmp.delete();}
+        }
+    }
+
+
+    /**
+     * HunyuanOCR through hunyuan/server.py: one long-running Python process that loads the model once (about 3 s) and
+     * then reads a bubble in about half a second. It is only used when its Python environment exists (settings
+     * hunyuan_python and hunyuan_home; by default the one on the T7 drive) and is stopped when background reading
+     * has been idle, so the 2-3 GB it holds goes back.
+     */
+    static final class HunyuanReader implements Ocr.BlockReader {
+        final File script;final Store store;
+        Process process;java.io.BufferedWriter in;java.io.BufferedReader out;
+        HunyuanReader(File script,Store store){this.script=script;this.store=store;}
+        File python(){return new File(store.setting("hunyuan_python","/Volumes/T7/kotoba-hunyuan-test/hv/bin/python"));}
+        public boolean handles(String lang){return ("ko".equals(lang))&&!"off".equals(store.setting("hunyuan","on"))&&python().canExecute();}
+        synchronized void start() throws Exception {
+            if(process!=null&&process.isAlive())return;
+            ProcessBuilder pb=new ProcessBuilder(python().getPath(),script.getPath());
+            pb.environment().put("HF_HOME",store.setting("hunyuan_home","/Volumes/T7/kotoba-hunyuan-test/hf"));
+            pb.environment().put("HF_HUB_OFFLINE","1");
+            pb.environment().put("PYTORCH_ENABLE_MPS_FALLBACK","1");
+            pb.redirectError(ProcessBuilder.Redirect.appendTo(new File(System.getProperty("java.io.tmpdir"),"kotoba-hunyuan.log")));
+            process=pb.start();
+            in=new java.io.BufferedWriter(new java.io.OutputStreamWriter(process.getOutputStream(),StandardCharsets.UTF_8));
+            out=new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream(),StandardCharsets.UTF_8));
+            String ready=readLine(180);
+            if(ready==null||!ready.contains("ready")){release();throw new Exception("HunyuanOCR did not start");}
+        }
+        String readLine(int seconds) throws Exception {
+            java.util.concurrent.CompletableFuture<String> f=java.util.concurrent.CompletableFuture.supplyAsync(()->{try{return out.readLine();}catch(IOException e){return null;}});
+            try{return f.get(seconds,java.util.concurrent.TimeUnit.SECONDS);}catch(java.util.concurrent.TimeoutException e){return null;}
+        }
+        public synchronized String read(android.graphics.Bitmap crop,String lang) throws Exception {
+            try{
+                start();
+                java.io.ByteArrayOutputStream png=new java.io.ByteArrayOutputStream();
+                crop.compress(android.graphics.Bitmap.CompressFormat.PNG,100,png);
+                in.write(new JSONObject().put("png",java.util.Base64.getEncoder().encodeToString(png.toByteArray())).put("lang",lang).toString()+"\n");in.flush();
+                String reply=readLine(60);
+                if(reply==null){release();return null;}
+                JSONObject r=new JSONObject(reply);
+                return r.has("text")?r.getString("text"):null;
+            }catch(Exception e){release();return null;}
+        }
+        public synchronized void release(){
+            if(process!=null){process.destroyForcibly();process=null;}
         }
     }
 

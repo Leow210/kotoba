@@ -91,7 +91,7 @@ public final class Ocr {
     }
     static boolean blocksFor(String lang){BlockReader r=blockReader;return r!=null&&r.handles(lang);}
     /** Cached results remember which recognizer made them. */
-    static int version(String lang){return externalFor(lang)?VERSION*1000+1:blocksFor(lang)?VERSION*1000+2:VERSION;}
+    static int version(String lang){return externalFor(lang)?(blocksFor(lang)?VERSION*1000+3:VERSION*1000+1):blocksFor(lang)?VERSION*1000+2:VERSION;}
 
     /**
      * Recognized text on one comic page, cached. With a block reader (PaddleOCR-VL, ~2.5 s a bubble on the phone) the
