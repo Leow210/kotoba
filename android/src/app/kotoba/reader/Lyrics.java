@@ -194,7 +194,8 @@ public class Lyrics {
         if(!fits(r,title,artist))d+=20;
         // Another artist: out, unless the names are in different scripts (Atom Chanakan / อะตอม ชนกันต์ may be the same person).
         if(!similar(candArtist,artist))d+=scripts(candArtist).equals(scripts(artist))?10:2;
-        if(!norm(candTitle).contains(norm(clean(title)))&&!norm(clean(title)).contains(norm(candTitle)))d+=4;
+        // Another song by the same artist (BOOM for Boogie Woogie) is out; only a title in another script (a translated one) gets a pass.
+        if(!norm(candTitle).contains(norm(clean(title)))&&!norm(clean(title)).contains(norm(candTitle)))d+=scripts(candTitle).equals(scripts(title))?20:4;
         if(!r.optBoolean("synced"))d+=1.5;
         return d;
     }
