@@ -429,7 +429,7 @@ public class Library {
         }
         boolean styles=false;
         try(Cursor c=db.rawQuery("SELECT styles FROM ydict WHERE dict=?",new String[]{Long.toString(dict)})){styles=c.moveToFirst()&&c.getInt(0)==1;}
-        return "<link rel=\"stylesheet\" href=\"/yomitan.css\">"+(styles?"<link rel=\"stylesheet\" href=\"styles.css\">":"")+Yomitan.entryHtml(key,reading,tags,body);
+        return Yomitan.ICON_STYLE+"<link rel=\"stylesheet\" href=\"/yomitan.css\">"+(styles?"<link rel=\"stylesheet\" href=\"styles.css\">":"")+Yomitan.entryHtml(key,reading,tags,body);
     }
 
     static byte[] deflate(String text,byte[] dictionary,java.util.zip.Deflater d){

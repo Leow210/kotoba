@@ -348,7 +348,7 @@ public class Routes {
         if(name.startsWith("item-")&&name.endsWith(".card")){
             JSONObject item=store.item(Long.parseLong(name.substring(5,name.length()-5)));
             String body=item.getString("back_html").isEmpty()?"<div class=\"kotoba-plain\">"+Store.escape(item.getString("back")).replace("\n","<br>")+"</div>":item.getString("back_html");
-            String page="<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><link rel=\"stylesheet\" href=\"/entry-base.css\">"+fontStyle(dict)+"</head><body class=\"kotoba-entry kotoba-card\">"+body+"</body></html>";
+            String page="<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><link rel=\"stylesheet\" href=\"/entry-base.css\">"+fontStyle(dict)+Yomitan.ICON_STYLE+"</head><body class=\"kotoba-entry kotoba-card\">"+body+"</body></html>";
             return new Object[]{"text/html",page.getBytes(StandardCharsets.UTF_8),"entry"};
         }
         if(name.endsWith(".entry")){

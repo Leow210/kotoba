@@ -286,6 +286,9 @@ public final class Yomitan {
         return href;
     }
 
+    /** Dictionary icons (gaiji) stay the size of a character; inline in the page so a cached stylesheet can't leave them huge. */
+    static final String ICON_STYLE="<style>img[src*=\"gaiji\"]{height:1.1em!important;width:auto!important;max-width:none!important;vertical-align:-.15em;box-shadow:none!important;border-radius:0!important}.gloss-image:has(img[src*=\"gaiji\"]){display:inline-block!important;width:auto!important;margin:0!important}</style>";
+
     /** {tag:img} and {type:image}: sized in em like Yomitan, served from the ZIP. */
     static void image(Map<String,Object> m,StringBuilder b){
         String path=str(m.get("path"));
