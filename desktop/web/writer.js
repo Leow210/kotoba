@@ -172,12 +172,22 @@
     screen.querySelector('[data-a="bigger"]').onclick=()=>size(1);
   }
   let lastSelected='';
+  let selectedAt=null;   // which occurrence of the word is selected in the text, so its own sentence is used
+  /** How many times the word appears in the editor before this selection (furigana ignored). */
+  function occurrencesBefore(range,word){
+    try{
+      const ed=editor();const pre=document.createRange();pre.selectNodeContents(ed);pre.setEnd(range.startContainer,range.startOffset);
+      const frag=pre.cloneContents();frag.querySelectorAll('rt,rp').forEach(x=>x.remove());
+      const t=frag.textContent;let n=0,i=-1;while((i=t.indexOf(word,i+1))>=0)n++;return n;
+    }catch(e){return 0;}
+  }
   const onEditorSelection=debounce(()=>{
     const ed=editor();if(!ed||tab!=='write')return;
     const sel=getSelection();if(!sel.rangeCount||!ed.contains(sel.anchorNode))return;
     const text=sel.toString().trim();
     if(!text||text.length>30||/\n/.test(text)||text===lastSelected)return;
     lastSelected=text;
+    selectedAt={word:text,nth:occurrencesBefore(sel.getRangeAt(0),text)};
     if(panel==='thes')brainstorm(text);else if(panel==='dict')dictLookup(text);
   },350);
   // The selected word goes to the side panel (dictionary, or 類語 when that's open).
@@ -308,7 +318,17 @@
     out.querySelector('[data-a="thes"]').onclick=()=>{showPanel('thes');brainstorm(r.key);};
     await show(0);
   }
-  function sentenceOf(word){const t=plainText();const i=t.indexOf(word);if(i<0)return '';const a=t.lastIndexOf('。',i)+1,b=t.indexOf('。',i);return t.slice(a,b<0?undefined:b+1).trim().slice(0,300);}
+  /** Just the sentence the word sits in (ends at 。！？.!? or a line break), not the whole document. */
+  function sentenceOf(word){
+    const t=plainText();
+    let i=-1;const nth=selectedAt&&selectedAt.word===word?selectedAt.nth:0;
+    for(let k=0;k<=nth;k++){const j=t.indexOf(word,i+1);if(j<0)break;i=j;}
+    if(i<0)return '';
+    const end=/[。！？!?．\n]/;
+    let a=i;while(a>0&&!end.test(t[a-1]))a--;
+    let b=i+word.length;while(b<t.length&&!end.test(t[b-1]))b++;
+    return t.slice(a,b).trim().slice(0,300);
+  }
 
   // ---------- 類語 brainstormer ----------
   function thesaurusGroups(){return [...new Set(dicts.filter(d=>d.enabled&&/\/類語$/.test(d.grp||'')&&(!current||groupLang(d.grp)===current.lang)).map(d=>d.grp))];}

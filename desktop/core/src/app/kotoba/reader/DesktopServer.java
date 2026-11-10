@@ -531,6 +531,8 @@ public class DesktopServer {
                 .put("duration",duration).put("position",num(f[4])).put("playing",f[5].trim().equals("playing")).put("control",true);
             if(best==null||o.getBoolean("playing")&&!best.getBoolean("playing"))best=o;
         }
+        JSONObject y=ytmDesktop();
+        if(y!=null&&(best==null||y.getBoolean("playing")&&!best.getBoolean("playing")))best=y;
         JSONObject b=browserMusic;
         if(b!=null&&System.currentTimeMillis()-browserMusicAt<4000){
             double pos=b.optDouble("position",0)+(b.optBoolean("playing")?(System.currentTimeMillis()-browserMusicAt)/1000.0:0);
@@ -540,9 +542,58 @@ public class DesktopServer {
         return best==null?new JSONObject().put("playing",false).put("title",""):best;
     }
 
+    /** The YouTube Music desktop app (th-ch) through its API Server plugin (authorization: none), when that is on. */
+    String ytmSig="";long ytmAnchor;
+    JSONObject ytmDesktop() {
+        try{
+            String body=ytmCall("GET","/api/v1/song",null);
+            if(body==null||body.isEmpty())return null;
+            JSONObject j=new JSONObject(body);
+            String title=j.optString("title");if(title.isEmpty())return null;
+            // The app only reports the position now and then (it can sit unchanged for many seconds), so count on from the last change.
+            double el=j.optDouble("elapsedSeconds",0);boolean playing=!j.optBoolean("isPaused",false);
+            String sig=title+"|"+el+"|"+playing;
+            long nowMs=System.currentTimeMillis();
+            if(!sig.equals(ytmSig)){ytmSig=sig;ytmAnchor=nowMs;}
+            double pos=el+(playing?(nowMs-ytmAnchor)/1000.0:0);
+            return new JSONObject().put("app","YouTube Music").put("title",title).put("artist",j.optString("artist")).put("album",j.optString("album"))
+                .put("duration",j.optDouble("songDuration",0)).put("position",pos).put("playing",playing).put("control",true).put("ytmApi",true);
+        }catch(Exception e){return null;}
+    }
+    static volatile String ytmToken="";
+    /** Calls the app's API with a token from its one-time approval (POST /auth/kotoba), asking again if the token is refused. */
+    static String ytmCall(String method,String path,String json) throws Exception {
+        for(int attempt=0;attempt<2;attempt++){
+            java.net.HttpURLConnection c=(java.net.HttpURLConnection)new java.net.URL("http://127.0.0.1:26538"+path).openConnection();
+            c.setConnectTimeout(300);c.setReadTimeout(attempt==0?1500:30000);c.setRequestMethod(method);
+            if(!ytmToken.isEmpty())c.setRequestProperty("Authorization","Bearer "+ytmToken);
+            if(json!=null){c.setDoOutput(true);c.setRequestProperty("Content-Type","application/json");c.getOutputStream().write(json.getBytes(StandardCharsets.UTF_8));}
+            int code=c.getResponseCode();
+            if(code==401||code==403){
+                java.net.HttpURLConnection a=(java.net.HttpURLConnection)new java.net.URL("http://127.0.0.1:26538/auth/kotoba").openConnection();
+                a.setConnectTimeout(300);a.setReadTimeout(30000);a.setRequestMethod("POST");
+                if(a.getResponseCode()/100!=2)return null;
+                ytmToken=new JSONObject(new String(a.getInputStream().readAllBytes(),StandardCharsets.UTF_8)).optString("accessToken");
+                continue;
+            }
+            if(code/100!=2)return null;
+            return new String(c.getInputStream().readAllBytes(),StandardCharsets.UTF_8);
+        }
+        return null;
+    }
+
     JSONObject musicControl(String action,double t) throws Exception {
         JSONObject now=musicNow();
         String app=now.optString("app");
+        if(now.optBoolean("ytmApi")){
+            try{
+                if(action.equals("seek"))ytmCall("POST","/api/v1/seek-to","{\"seconds\":"+t+"}");
+                else if(action.equals("pause")){if(now.optBoolean("playing"))ytmCall("POST","/api/v1/toggle-play",null);}
+                else if(action.equals("play")){if(!now.optBoolean("playing"))ytmCall("POST","/api/v1/toggle-play",null);}
+                else ytmCall("POST","/api/v1/toggle-play",null);
+            }catch(Exception ignored){}
+            return musicNow();
+        }
         if(app.equals("YouTube Music")){browserCommand=new JSONObject().put("action",action).put("t",t);return now;}
         String target=app.equals("Apple Music")?"Music":app.equals("Spotify")?"Spotify":null;
         if(target==null)return now;
