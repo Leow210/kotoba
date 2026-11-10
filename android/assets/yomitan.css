@@ -53,6 +53,8 @@ a.gloss-sc-a[data-external]{color:#72766f;border-bottom-style:dotted}
 .gloss-image img{max-width:100%;vertical-align:middle}
 .gloss-image.yt-image-block{display:block;margin:.5em 0}
 .gloss-image.yt-image-block img{border-radius:8px;box-shadow:0 0 0 1px rgba(0,0,0,.06)}
+.gloss-image img[src*="gaiji"],[data-sc-gaiji] img,[data-sc-class="gaiji"] img{height:1.1em;width:auto;max-width:none;vertical-align:-.15em;box-shadow:none;border-radius:0}
+.gloss-image.yt-image-block:has(img[src*="gaiji"]),[data-sc-gaiji] .gloss-image{display:inline-block;margin:0}
 .gloss-image-description{display:block;color:#72766f;font-size:.85em;margin-top:.2em}
 
 /* Kanji-bank entries. */
