@@ -741,7 +741,31 @@ public class DesktopServer {
      */
     static final class VisionOcr implements Ocr.LineReader {
         final File exe;final Store store;
-        VisionOcr(File exe,Store store){this.exe=exe;this.store=store;}
+        volatile long lastUse;
+        VisionOcr(File exe,Store store){
+            this.exe=exe;this.store=store;
+            // The first request after the Mac has been idle stalls for ~20 s (and often fails) while Apple's text model
+            // loads, then reads a page in under a second. Read a blank image now and every minute while pages are being
+            // read, so that wait happens here and not on a page you opened.
+            Thread t=new Thread(()->{
+                boolean first=true;
+                while(true){
+                    try{
+                        if(first||System.currentTimeMillis()-lastUse<20*60_000L){first=false;
+                            File img=File.createTempFile("kotoba-warm",".png");
+                            try{
+                                java.awt.image.BufferedImage b=new java.awt.image.BufferedImage(96,96,java.awt.image.BufferedImage.TYPE_INT_RGB);
+                                java.awt.Graphics2D g=b.createGraphics();g.setColor(java.awt.Color.WHITE);g.fillRect(0,0,96,96);g.dispose();
+                                javax.imageio.ImageIO.write(b,"png",img);
+                                try{ask("ko\t"+img.getPath());}catch(Exception ignored){}
+                            }finally{img.delete();}
+                        }
+                        Thread.sleep(60_000);
+                    }catch(InterruptedException e){return;}catch(Exception ignored){try{Thread.sleep(60_000);}catch(InterruptedException e){return;}}
+                }
+            },"ocr-warm");
+            t.setDaemon(true);t.start();
+        }
         public boolean handles(String lang){return "ko".equals(lang)&&!"paddle".equals(store.setting("ocr_engine",""));}
         /** One request to a fresh helper; its JSON answer. */
         synchronized JSONObject ask(String request) throws Exception {
@@ -754,7 +778,7 @@ public class DesktopServer {
                     java.io.BufferedReader fromHelper=new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream(),StandardCharsets.UTF_8));
                     toHelper.write(request+"\n");toHelper.flush();
                     java.util.concurrent.CompletableFuture<String> line=java.util.concurrent.CompletableFuture.supplyAsync(()->{try{return fromHelper.readLine();}catch(IOException e){return null;}});
-                    String reply=line.get(30,java.util.concurrent.TimeUnit.SECONDS);
+                    String reply=line.get(attempt==0?12:30,java.util.concurrent.TimeUnit.SECONDS);
                     if(reply==null)throw new Exception("Text recognition stopped.");
                     JSONObject r=new JSONObject(reply);
                     if(r.has("error"))throw new Exception(r.getString("error"));
@@ -766,6 +790,7 @@ public class DesktopServer {
             throw last;
         }
         public synchronized List<Ocr.Line> read(byte[] image,String lang,int[] size) throws Exception {
+            lastUse=System.currentTimeMillis();
             File tmp=File.createTempFile("kotoba-ocr",".img");
             try{
                 Files.write(tmp.toPath(),image);
