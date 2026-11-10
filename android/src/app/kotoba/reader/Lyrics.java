@@ -176,7 +176,7 @@ public class Lyrics {
         // อะตอม ชนกันต์). Each candidate is scored; lyrics in another script than the song's (a Vietnamese version of a
         // Japanese song) don't count.
         List<JSONObject> cands=new ArrayList<>();
-        for(String q:new String[]{"track_name="+enc(clean(title))+"&artist_name="+enc(artist),"q="+enc(clean(title))}){
+        for(String q:new String[]{"track_name="+enc(clean(title))+"&artist_name="+enc(artist),"q="+enc(clean(title)+" "+artist),"q="+enc(clean(title))}){
             try{JSONArray a=new JSONArray(http("https://lrclib.net/api/search?"+q,null));for(int i=0;i<a.length();i++)cands.add(a.getJSONObject(i));}catch(Exception ignored){}
         }
         JSONObject best=null;double bd=1e9;
