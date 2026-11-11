@@ -745,11 +745,13 @@ public class DesktopServer {
     static final class VisionOcr implements Ocr.LineReader {
         final File exe;final Store store;
         VisionOcr(File exe,Store store){this.exe=exe;this.store=store;}
-        public boolean handles(String lang){return "ko".equals(lang)&&!"paddle".equals(store.setting("ocr_engine",""));}
+        /** When Apple's reader last failed or stalled: for a while after that pages go straight to PaddleOCR instead of waiting again. */
+        volatile long brokenUntil;
+        public boolean handles(String lang){return "ko".equals(lang)&&!"paddle".equals(store.setting("ocr_engine",""))&&System.currentTimeMillis()>brokenUntil;}
         /** One request to a fresh helper; its JSON answer. */
         synchronized JSONObject ask(String request) throws Exception {
             Exception last=null;
-            for(int attempt=0;attempt<2;attempt++){
+            for(int attempt=0;attempt<1;attempt++){
                 File log=new File(System.getProperty("java.io.tmpdir"),"kotoba-ocr.log");
                 Process process=new ProcessBuilder(exe.getPath()).redirectError(ProcessBuilder.Redirect.appendTo(log)).start();
                 try{
@@ -757,7 +759,7 @@ public class DesktopServer {
                     java.io.BufferedReader fromHelper=new java.io.BufferedReader(new java.io.InputStreamReader(process.getInputStream(),StandardCharsets.UTF_8));
                     toHelper.write(request+"\n");toHelper.flush();
                     java.util.concurrent.CompletableFuture<String> line=java.util.concurrent.CompletableFuture.supplyAsync(()->{try{return fromHelper.readLine();}catch(IOException e){return null;}});
-                    String reply=line.get(attempt==0?12:20,java.util.concurrent.TimeUnit.SECONDS);
+                    String reply=line.get(8,java.util.concurrent.TimeUnit.SECONDS);
                     if(reply==null)throw new Exception("Text recognition stopped.");
                     JSONObject r=new JSONObject(reply);
                     if(r.has("error"))throw new Exception(r.getString("error"));
@@ -766,6 +768,7 @@ public class DesktopServer {
                 catch(Exception e){last=e;}
                 finally{process.destroyForcibly();}
             }
+            brokenUntil=System.currentTimeMillis()+120_000;
             throw last;
         }
         public synchronized List<Ocr.Line> read(byte[] image,String lang,int[] size) throws Exception {
