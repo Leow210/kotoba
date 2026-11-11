@@ -90,10 +90,13 @@ public final class Spacing {
                     int[] cc=chunks[ci].codePoints().toArray();
                     long hangul=java.util.Arrays.stream(cc).filter(c->c>=0xAC00&&c<=0xD7A3).count();
                     if(ci>0)b.append(' ');
+                    StringBuilder part=new StringBuilder();
                     for(int j=0;j<cc.length;j++,k++){
-                        b.appendCodePoint(cc[j]);
-                        if(hangul>=4&&j<cc.length-1&&k<spaceAfter.length&&spaceAfter[k])b.append(' ');
+                        part.appendCodePoint(cc[j]);
+                        if(hangul>=4&&j<cc.length-1&&k<spaceAfter.length&&spaceAfter[k])part.append(' ');
                     }
+                    // Words the tagger splits that read as one: 쓸만하네, 달아올라가지고 (spaces the recognizer made stay).
+                    b.append(part.toString().replaceAll("(?<=[가-힣]) (?=만하)","").replaceAll("(?<=[아어워]) (?=올라|올랐|오르)","").replaceAll("(?<=[아어라워]) (?=가지고|가져)",""));
                 }
                 return b.toString();
             }finally{if(m!=null)m.close();}

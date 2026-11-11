@@ -72,7 +72,7 @@ public final class Ocr {
     public static volatile Spacing spacing;
 
     /** Bumped when the spacing rules change, so pages are respaced from their recognized text. */
-    static final int SPACING=2;
+    static final int SPACING=3;
     /**
      * Redoes the Korean spacing of a page's bubbles (once per SPACING version). Each bubble keeps the recognizer's own
      * text in "raw", so spacing can always be redone from it; returns whether anything changed.
