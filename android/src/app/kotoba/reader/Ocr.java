@@ -72,7 +72,9 @@ public final class Ocr {
     public static volatile Spacing spacing;
 
     /** Bumped when the spacing rules change, so pages are respaced from their recognized text. */
-    static final int SPACING=4;
+    /** True when the block reader spaces text itself (HunyuanOCR on the Mac): then the spacing model is left out while that reader is available. */
+    public static volatile boolean readerSpaces;
+    static final int SPACING=5;
     /**
      * Redoes the Korean spacing of a page's bubbles (once per SPACING version). Each bubble keeps the recognizer's own
      * text in "raw", so spacing can always be redone from it; returns whether anything changed.
@@ -82,10 +84,11 @@ public final class Ocr {
         if(!"ko".equals(lang)||sp==null||!sp.available()||c.optInt("spaced")==SPACING)return false;
         JSONArray blocks=c.optJSONArray("blocks");
         if(blocks!=null)for(int i=0;i<blocks.length();i++){
+        boolean own=readerSpaces&&blocksFor(lang);
             JSONObject b=blocks.getJSONObject(i);
             String raw=b.optString("raw",b.optString("text",""));
             // A bubble the block reader re-read ("paddle" holds the first pass) keeps that reader's own spacing, which follows the picture.
-            b.put("raw",raw).put("text",b.has("paddle")?raw:sp.fix(raw));
+            b.put("raw",raw).put("text",b.has("paddle")||own?raw:sp.fix(raw));
         }
         c.put("spaced",SPACING);
         return true;

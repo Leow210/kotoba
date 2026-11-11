@@ -68,7 +68,7 @@ public class DesktopServer {
         if(ocrExe.canExecute())Ocr.external=new VisionOcr(ocrExe,store);
         // HunyuanOCR (a helper running the model) re-reads each Korean bubble after Apple's first pass, if it is installed.
         File hunyuanScript=new File(web.getParentFile(),"hunyuan/server.py");
-        if(hunyuanScript.isFile())Ocr.blockReader=new HunyuanReader(hunyuanScript,store);
+        if(hunyuanScript.isFile())Ocr.blockReader=new HunyuanReader(hunyuanScript,store);Ocr.readerSpaces=true;
         routes.listening=new Listening(new File(data,"listening"));
         routes.comics=new Comics(context,store.db,uri->FileChannel.open(Path.of(uri.startsWith("file://")?uri.substring(7):uri),StandardOpenOption.READ));
         byte[] t=new byte[18];new SecureRandom().nextBytes(t);
