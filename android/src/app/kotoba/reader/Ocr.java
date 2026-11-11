@@ -72,7 +72,7 @@ public final class Ocr {
     public static volatile Spacing spacing;
 
     /** Bumped when the spacing rules change, so pages are respaced from their recognized text. */
-    static final int SPACING=3;
+    static final int SPACING=4;
     /**
      * Redoes the Korean spacing of a page's bubbles (once per SPACING version). Each bubble keeps the recognizer's own
      * text in "raw", so spacing can always be redone from it; returns whether anything changed.
@@ -84,7 +84,8 @@ public final class Ocr {
         if(blocks!=null)for(int i=0;i<blocks.length();i++){
             JSONObject b=blocks.getJSONObject(i);
             String raw=b.optString("raw",b.optString("text",""));
-            b.put("raw",raw).put("text",sp.fix(raw));
+            // A bubble the block reader re-read ("paddle" holds the first pass) keeps that reader's own spacing, which follows the picture.
+            b.put("raw",raw).put("text",b.has("paddle")?raw:sp.fix(raw));
         }
         c.put("spaced",SPACING);
         return true;
