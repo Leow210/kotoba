@@ -405,7 +405,7 @@ This section holds the context needed to keep developing Kotoba in a new session
 ### Known issues / ideas
 - **Korean glosses:** KRJ keeps every homograph on one page, so the gloss for 먹다 shows the first definition on that page.
 - **OCR:**
-  - On the Mac, Apple Vision often fails while the Neural Engine is busy (see above); PaddleOCR is the fallback, and some mistakes in its first reading stay until Hunyuan's re-read. Hunyuan wasn't scored against hand-checked text, and it sometimes misreads where Apple was right (복싱한댔지 → 복싱한대지).
+  - On the Mac, Apple Vision often fails while the Neural Engine is busy (see above); PaddleOCR is the fallback, and some mistakes in its first reading stay until Hunyuan's re-read.
   - With the mobile models, remaining errors are mostly stylized fonts, sound effects and similar-looking kanji (令/命), and Korean often drops spaces (handled in the bubble sheet by tapping any syllable). PaddleOCR-VL (phone) and Apple Vision (Mac) fix most of this; Google ML Kit was tried on the phone and was no better on comic lettering.
   - A bubble split across two webtoon images is read as two halves.
   - Tuning for real scans may be needed: box/line thresholds in `Ocr.java` and bubble grouping in `group()`.
