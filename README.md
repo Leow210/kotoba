@@ -91,7 +91,7 @@ Tap a preview to play the video. Each one is silent and about 15–25 seconds lo
 - You can also browse a dictionary from beginning to end:
   - scroll through every headword in both directions;
   - jump with the index rail (あかさ… / 가나다 / ก / А–Я / A–Z) or the "Jump to…" box;
-  - 🎲 opens a random word.
+  - the shuffle button (crossed arrows) opens a random word.
 
 ### Entries
 - Entries keep the dictionary's own CSS, images and audio. Text size is adjustable and defaults to 125%.
