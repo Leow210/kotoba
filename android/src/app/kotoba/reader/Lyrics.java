@@ -42,7 +42,9 @@ public class Lyrics {
             if(c!=null)return c;
         }
         JSONObject r=null;
-        try{r=lrclib(title,artist,album,duration);}catch(Exception ignored){}
+        // YouTube Music first: its lyrics are timed, in the song's own script (Hangul, not romanized) and found by recording length.
+        try{r=ytmusic(title,artist,duration);}catch(Exception ignored){}
+        if(r==null)try{r=lrclib(title,artist,album,duration);}catch(Exception ignored){}
         // NetEase when LRCLIB has nothing, only plain text, or no translation for a CJK song.
         if(r==null||!r.optBoolean("synced")){
             JSONObject n=null;
@@ -297,6 +299,122 @@ public class Lyrics {
         JSONArray lines=parseLrc(lrc,tr.trim().isEmpty()?null:tr);
         if(lines.length()==0)return new JSONObject().put("source","NetEase").put("synced",false).put("lines",plainLines(lrc.replaceAll("\\[[^\\]]*\\]","")));
         return new JSONObject().put("source","NetEase").put("synced",true).put("lines",lines);
+    }
+
+    // ---------- YouTube Music ----------
+
+    static final String YTM_HEADERS="Content-Type: application/json\nOrigin: https://music.youtube.com";
+    static JSONObject ytmContext(String client,String version){
+        try{return new JSONObject().put("client",new JSONObject().put("clientName",client).put("clientVersion",version).put("hl","en"));}catch(Exception e){return new JSONObject();}
+    }
+    static String ytmPost(String url,String header,String body) throws Exception {
+        HttpURLConnection c=(HttpURLConnection)new URL(url).openConnection();
+        c.setConnectTimeout(8000);c.setReadTimeout(12000);c.setRequestMethod("POST");c.setDoOutput(true);
+        c.setRequestProperty("User-Agent","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15");
+        if(header!=null)for(String h:header.split("\n")){int i=h.indexOf(':');if(i>0)c.setRequestProperty(h.substring(0,i).trim(),h.substring(i+1).trim());}
+        try(java.io.OutputStream o=c.getOutputStream()){o.write(body.getBytes(StandardCharsets.UTF_8));}
+        if(c.getResponseCode()>=400)throw new Exception("YouTube Music answered "+c.getResponseCode());
+        try(InputStream in=c.getInputStream()){
+            ByteArrayOutputStream b=new ByteArrayOutputStream();byte[] buf=new byte[16384];int n;
+            while((n=in.read(buf))>0)b.write(buf,0,n);
+            return new String(b.toByteArray(),StandardCharsets.UTF_8);
+        }
+    }
+    /** Every object under this key, anywhere in the tree. */
+    static void collect(Object o,String key,List<JSONObject> out){
+        if(o instanceof JSONObject){
+            JSONObject j=(JSONObject)o;
+            for(String k:j.keySet()){
+                Object v=j.get(k);
+                if(k.equals(key)&&v instanceof JSONObject)out.add((JSONObject)v);
+                else collect(v,key,out);
+            }
+        }else if(o instanceof JSONArray){
+            JSONArray a=(JSONArray)o;for(int i=0;i<a.length();i++)collect(a.get(i),key,out);
+        }
+    }
+    static void texts(Object o,List<String> out){
+        if(o instanceof JSONObject){
+            JSONObject j=(JSONObject)o;
+            if(j.has("text")&&j.get("text") instanceof String)out.add(j.getString("text"));
+            for(String k:j.keySet())texts(j.get(k),out);
+        }else if(o instanceof JSONArray){JSONArray a=(JSONArray)o;for(int i=0;i<a.length();i++)texts(a.get(i),out);}
+    }
+    static String firstString(Object o,String key){
+        if(o instanceof JSONObject){
+            JSONObject j=(JSONObject)o;
+            if(j.has(key)&&j.get(key) instanceof String)return j.getString(key);
+            for(String k:j.keySet()){String r=firstString(j.get(k),key);if(r!=null)return r;}
+        }else if(o instanceof JSONArray){JSONArray a=(JSONArray)o;for(int i=0;i<a.length();i++){String r=firstString(a.get(i),key);if(r!=null)return r;}}
+        return null;
+    }
+    /** The song results of a YouTube Music search: videoId, title, artist, seconds. */
+    List<JSONObject> ytmSearch(String q) throws Exception {
+        JSONObject body=new JSONObject().put("context",ytmContext("WEB_REMIX","1.20240101.01.00")).put("query",q).put("params","EgWKAQIIAWoKEAkQBRAKEAMQBA%3D%3D");
+        JSONObject res=new JSONObject(ytmPost("https://music.youtube.com/youtubei/v1/search?prettyPrint=false",YTM_HEADERS,body.toString()));
+        List<JSONObject> items=new ArrayList<>(),out=new ArrayList<>();
+        collect(res,"musicResponsiveListItemRenderer",items);
+        for(JSONObject it:items){
+            JSONArray cols=it.optJSONArray("flexColumns");
+            String id=firstString(it,"videoId");
+            if(cols==null||cols.length()<2||id==null)continue;
+            List<String> t1=new ArrayList<>(),t2=new ArrayList<>();
+            texts(cols.getJSONObject(0),t1);texts(cols.getJSONObject(1),t2);
+            if(t1.isEmpty()||t2.isEmpty())continue;
+            double seconds=0;
+            for(String x:t2){Matcher m=Pattern.compile("^(\\d+):(\\d{2})$").matcher(x.trim());if(m.find())seconds=Integer.parseInt(m.group(1))*60+Integer.parseInt(m.group(2));}
+            out.add(new JSONObject().put("id",id).put("title",t1.get(0)).put("artist",t2.get(0)).put("duration",seconds));
+        }
+        return out;
+    }
+    /** Timed lines of one video's lyrics (from the Android Music client), or its plain text, or null. */
+    JSONObject ytmLyrics(String videoId) throws Exception {
+        JSONObject next=new JSONObject().put("context",ytmContext("WEB_REMIX","1.20240101.01.00")).put("enablePersistentPlaylistPanel",true).put("isAudioOnly",true)
+            .put("tunerSettingValue","AUTOMIX_SETTING_NORMAL").put("videoId",videoId).put("playlistId","RDAMVM"+videoId)
+            .put("watchEndpointMusicSupportedConfigs",new JSONObject().put("watchEndpointMusicConfig",new JSONObject().put("hasPersistentPlaylistPanel",true).put("musicVideoType","MUSIC_VIDEO_TYPE_ATV")));
+        String page=ytmPost("https://music.youtube.com/youtubei/v1/next?prettyPrint=false",YTM_HEADERS,next.toString());
+        Matcher bm=Pattern.compile("\"browseId\":\\s*\"(MPLY[^\"]+)\"").matcher(page);
+        if(!bm.find())return null;
+        String browse=bm.group(1);
+        try{
+            JSONObject body=new JSONObject().put("context",ytmContext("ANDROID_MUSIC","7.21.50")).put("browseId",browse);
+            String timed=ytmPost("https://music.youtube.com/youtubei/v1/browse?prettyPrint=false",YTM_HEADERS+"\nUser-Agent: com.google.android.apps.youtube.music/7.21.50 (Linux; U; Android 14) gzip",body.toString());
+            List<JSONObject> models=new ArrayList<>();collect(new JSONObject(timed),"timedLyricsModel",models);
+            if(!models.isEmpty()){
+                List<JSONObject> data=new ArrayList<>();
+                JSONArray arr=null;
+                Object d=models.get(0).optJSONObject("lyricsData");
+                if(d instanceof JSONObject)arr=((JSONObject)d).optJSONArray("timedLyricsData");
+                JSONArray lines=new JSONArray();
+                if(arr!=null)for(int i=0;i<arr.length();i++){
+                    JSONObject x=arr.getJSONObject(i);
+                    String text=x.optString("lyricLine","").trim();
+                    if(text.isEmpty()||text.equals("♪"))continue;
+                    double t=Double.parseDouble(x.getJSONObject("cueRange").optString("startTimeMilliseconds","0"))/1000.0;
+                    lines.put(new JSONObject().put("t",Math.round(t*100)/100.0).put("text",text));
+                }
+                if(lines.length()>0)return new JSONObject().put("source","YouTube Music").put("synced",true).put("lines",lines);
+            }
+        }catch(Exception ignored){}
+        JSONObject body=new JSONObject().put("context",ytmContext("WEB_REMIX","1.20240101.01.00")).put("browseId",browse);
+        JSONObject plain=new JSONObject(ytmPost("https://music.youtube.com/youtubei/v1/browse?prettyPrint=false",YTM_HEADERS,body.toString()));
+        List<JSONObject> shelves=new ArrayList<>();collect(plain,"musicDescriptionShelfRenderer",shelves);
+        if(shelves.isEmpty())return null;
+        List<String> t=new ArrayList<>();texts(shelves.get(0).optJSONObject("description"),t);
+        String text=String.join("",t);
+        if(text.trim().isEmpty())return null;
+        return new JSONObject().put("source","YouTube Music").put("synced",false).put("lines",plainLines(text));
+    }
+    JSONObject ytmusic(String title,String artist,double duration) throws Exception {
+        List<JSONObject> found=ytmSearch(clean(title)+" "+artist);
+        JSONObject best=null;double bd=1e9;
+        for(JSONObject s:found.subList(0,Math.min(3,found.size()))){
+            JSONObject r;try{r=ytmLyrics(s.getString("id"));}catch(Exception e){continue;}
+            if(r==null)continue;
+            double d=score(r,s.optString("title"),s.optString("artist"),s.optDouble("duration",0),title,artist,duration);
+            if(d<bd){bd=d;best=r;}
+        }
+        return best==null||bd>8?null:best;
     }
 
     // ---------- Bugs (Korean) ----------
