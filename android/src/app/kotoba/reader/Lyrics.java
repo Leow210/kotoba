@@ -49,6 +49,17 @@ public class Lyrics {
             try{n=netease(title,artist,duration);}catch(Exception ignored){}
             if(n!=null&&(r==null||n.optBoolean("synced")))r=n;
         }
+        // Bugs (Korean) and Kugou (Chinese, also Japanese and Korean pop) when those found nothing synced.
+        if(r==null||!r.optBoolean("synced")){
+            JSONObject n=null;
+            try{n=bugs(title,artist,duration);}catch(Exception ignored){}
+            if(n!=null&&(r==null||n.optBoolean("synced")))r=n;
+        }
+        if(r==null||!r.optBoolean("synced")){
+            JSONObject n=null;
+            try{n=kugou(title,artist,duration);}catch(Exception ignored){}
+            if(n!=null&&(r==null||n.optBoolean("synced")))r=n;
+        }
         if(r==null)r=new JSONObject().put("lines",new JSONArray()).put("source","");
         r.put("title",title).put("artist",artist);
         if(r.getJSONArray("lines").length()>0){
@@ -146,6 +157,10 @@ public class Lyrics {
         try{
             for(JSONObject s:neteaseSearch(query))out.put(s);
         }catch(Exception ignored){}
+        try{
+            List<JSONObject> b=bugsSearch(query);
+            for(JSONObject s:b.subList(0,Math.min(5,b.size())))out.put(s);
+        }catch(Exception ignored){}
         return out;
     }
 
@@ -153,6 +168,7 @@ public class Lyrics {
     public JSONObject pick(String title,String artist,String source,long id) throws Exception {
         JSONObject r;
         if(source.equals("lrclib"))r=fromLrclib(new JSONObject(http("https://lrclib.net/api/get/"+id,null)));
+        else if(source.equals("bugs"))r=bugsLyrics(id);
         else r=neteaseLyrics(id);
         if(r==null)throw new Exception("No lyrics there");
         r.put("title",title).put("artist",artist);
@@ -281,6 +297,82 @@ public class Lyrics {
         JSONArray lines=parseLrc(lrc,tr.trim().isEmpty()?null:tr);
         if(lines.length()==0)return new JSONObject().put("source","NetEase").put("synced",false).put("lines",plainLines(lrc.replaceAll("\\[[^\\]]*\\]","")));
         return new JSONObject().put("source","NetEase").put("synced",true).put("lines",lines);
+    }
+
+    // ---------- Bugs (Korean) ----------
+
+    static final Pattern BUGS_ROW=Pattern.compile("<tr[^>]*trackId=\"(\\d+)\"(.*?)</tr>",Pattern.DOTALL);
+    static final Pattern BUGS_TITLE=Pattern.compile("class=\"title\"[^>]*>\\s*<a[^>]*title=\"([^\"]*)\"",Pattern.DOTALL);
+    static final Pattern BUGS_ARTIST=Pattern.compile("class=\"artist\"[^>]*>\\s*<a[^>]*title=\"([^\"]*)\"",Pattern.DOTALL);
+    static String unescapeHtml(String s){return s.replace("&amp;","&").replace("&quot;","\"").replace("&#39;","'").replace("&lt;","<").replace("&gt;",">");}
+    List<JSONObject> bugsSearch(String q) throws Exception {
+        String html=http("https://music.bugs.co.kr/search/track?q="+enc(q),null);
+        List<JSONObject> out=new ArrayList<>();
+        Matcher m=BUGS_ROW.matcher(html);
+        while(m.find()&&out.size()<6){
+            Matcher t=BUGS_TITLE.matcher(m.group(2)),a=BUGS_ARTIST.matcher(m.group(2));
+            if(!t.find())continue;
+            out.add(new JSONObject().put("source","bugs").put("id",Long.parseLong(m.group(1))).put("title",unescapeHtml(t.group(1)))
+                .put("artist",a.find()?unescapeHtml(a.group(1)):"").put("duration",0).put("synced",true));
+        }
+        return out;
+    }
+    /** Bugs sends "seconds|line" pairs joined by ＃ (or plain lines when it has no timing). */
+    JSONObject bugsLyrics(long id) throws Exception {
+        String raw=new JSONObject(http("https://music.bugs.co.kr/player/lyrics/T/"+id,null)).optString("lyrics","");
+        if(raw.trim().isEmpty())return null;
+        JSONArray lines=new JSONArray();boolean timed=true;
+        for(String part:raw.split("＃|\\r?\\n")){
+            if(part.trim().isEmpty())continue;
+            int bar=part.indexOf('|');
+            double t=-1;
+            if(bar>0){try{t=Double.parseDouble(part.substring(0,bar));}catch(NumberFormatException e){bar=-1;}}
+            if(t<0)timed=false;
+            lines.put(new JSONObject().put("t",t).put("text",(bar>0&&t>=0?part.substring(bar+1):part).trim()));
+        }
+        if(lines.length()==0)return null;
+        if(!timed)lines=plainLines(raw.replace("＃","\n").replaceAll("(?m)^[0-9.]+\\|",""));
+        return new JSONObject().put("source","Bugs").put("synced",timed).put("lines",lines);
+    }
+    JSONObject bugs(String title,String artist,double duration) throws Exception {
+        List<JSONObject> found=bugsSearch(clean(title)+" "+artist);
+        if(found.isEmpty())found=bugsSearch(clean(title));
+        JSONObject best=null;double bd=1e9;
+        for(JSONObject s:found.subList(0,Math.min(4,found.size()))){
+            JSONObject r;try{r=bugsLyrics(s.getLong("id"));}catch(Exception e){continue;}
+            if(r==null)continue;
+            double d=score(r,s.optString("title"),s.optString("artist"),0,title,artist,duration);
+            if(d<bd){bd=d;best=r;}
+        }
+        return best==null||bd>8?null:best;
+    }
+
+    // ---------- Kugou (Chinese; also Japanese and Korean pop) ----------
+
+    JSONObject kugou(String title,String artist,double duration) throws Exception {
+        JSONObject r=new JSONObject(http("http://mobileservice.kugou.com/api/v3/search/song?format=json&page=1&pagesize=6&keyword="+enc(clean(title)+" "+artist),null));
+        JSONArray info=r.optJSONObject("data")==null?null:r.getJSONObject("data").optJSONArray("info");
+        if(info==null)return null;
+        JSONObject best=null;double bd=1e9;
+        for(int i=0;i<Math.min(4,info.length());i++){
+            JSONObject s=info.getJSONObject(i);
+            JSONObject lyr;try{lyr=kugouLyrics(s.getString("hash"),s.optString("singername")+" "+s.optString("songname"),s.optDouble("duration",0));}catch(Exception e){continue;}
+            if(lyr==null)continue;
+            double d=score(lyr,s.optString("songname"),s.optString("singername"),s.optDouble("duration",0),title,artist,duration);
+            if(d<bd){bd=d;best=lyr;}
+        }
+        return best==null||bd>8?null:best;
+    }
+    JSONObject kugouLyrics(String hash,String keyword,double seconds) throws Exception {
+        JSONObject c=new JSONObject(http("http://lyrics.kugou.com/search?ver=1&man=yes&client=pc&keyword="+enc(keyword)+"&duration="+Math.round(seconds*1000)+"&hash="+hash,null));
+        JSONArray cands=c.optJSONArray("candidates");
+        if(cands==null||cands.length()==0)return null;
+        JSONObject first=cands.getJSONObject(0);
+        JSONObject d=new JSONObject(http("http://lyrics.kugou.com/download?ver=1&client=pc&id="+first.getString("id")+"&accesskey="+first.getString("accesskey")+"&fmt=lrc&charset=utf8",null));
+        String text=new String(java.util.Base64.getDecoder().decode(d.optString("content","")),StandardCharsets.UTF_8).replace("\uFEFF","");
+        JSONArray lines=parseLrc(text,null);
+        if(lines.length()==0)return null;
+        return new JSONObject().put("source","Kugou").put("synced",true).put("lines",lines);
     }
 
     // ---------- LRC ----------
