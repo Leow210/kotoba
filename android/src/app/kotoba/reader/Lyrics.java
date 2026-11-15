@@ -169,11 +169,8 @@ public class Lyrics {
         if(album!=null&&!album.isEmpty())u.append("&album_name=").append(enc(album));
         if(duration>0)u.append("&duration=").append(Math.round(duration));
         try{
-            JSONObject got=new JSONObject(http(u.toString(),null));
-            JSONObject r=fromLrclib(got);
-            // The same song's other recording (more than 4 s off) is not this one.
-            boolean sameLength=duration<=0||got.optDouble("duration",0)<=0||Math.abs(got.optDouble("duration",0)-duration)<=4;
-            if(r!=null&&sameLength&&fits(r,title,artist))return r;
+            JSONObject r=fromLrclib(new JSONObject(http(u.toString(),null)));
+            if(r!=null&&fits(r,title,artist))return r;
         }catch(Exception ignored){}
         // Search: by title and artist, then by title alone (the artist may be written another way: Atom Chanakan /
         // อะตอม ชนกันต์). Each candidate is scored; lyrics in another script than the song's (a Vietnamese version of a
@@ -194,8 +191,6 @@ public class Lyrics {
     /** Lower is better: seconds off the song's length, plus penalties for another script, artist or title, unsynced. */
     static double score(JSONObject r,String candTitle,String candArtist,double candDuration,String title,String artist,double duration){
         double d=duration>0&&candDuration>0?Math.abs(candDuration-duration):2;
-        // A recording more than 4 s longer or shorter is another version (and lyrics synced to it would run off by that much).
-        if(duration>0&&candDuration>0&&d>4)d+=20;
         if(!fits(r,title,artist))d+=20;
         // Another artist: out, unless the names are in different scripts (Atom Chanakan / อะตอม ชนกันต์ may be the same person).
         // The same person's name in another script only counts when the recording is the same length to within 1.5 s (a Chinese
