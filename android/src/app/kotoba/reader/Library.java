@@ -2487,7 +2487,8 @@ public class Library {
         JSONArray out=new JSONArray();
         int knownCount=0,fit=0;
         for(int i=0;i<rows.length();i++){
-            JSONObject r=rows.getJSONObject(i);
+            JSONObject r=rows.optJSONObject(i);
+            if(r==null)continue;
             if(i>=24){out.put(r);continue;}// beyond the first two dozen entries the answer is already clear
             int cls=entryClass(r);
             if(cls!=0)knownCount++;
