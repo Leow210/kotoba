@@ -62,6 +62,11 @@ public class CoreTests {
         for(String[] k:jaCases)check(has(Deinflect.japanese(k[0]),k[1],null),"Japanese "+k[0]+" → "+k[1]);
         check(classOf(Deinflect.japanese("しない"),"しる")==Deinflect.V1&&classOf(Deinflect.japanese("しない"),"する")==Deinflect.VS,"candidates keep their word class");
         check((classOf(Deinflect.japanese("入れた"),"入れる")&Deinflect.V1)!=0,"入れた → 入れる as ichidan");
+        // Breakdowns show the stem as written and each ending in its actual form.
+        String[][] jaShown={{"食べさせられなかった","食べる","食べ + させ + られ + なかった"},{"書いてもらった","書く","書い + てもらっ + た"},{"食べてる","食べる","食べ + てる"},
+            {"書きました","書く","書き + ました"},{"勉強しています","勉強する","勉強し + てい + ます"},{"いらっしゃいます","いらっしゃる","いらっしゃい + ます"},{"行くべき","行く","行く + べき"},
+            {"高かった","高い","高 + かった"},{"行った","行く","行っ + た"},{"食べちゃった","食べる","食べ + ちゃっ + た"},{"知らなかった","知る","知ら + なかった"}};
+        for(String[] k:jaShown)check(k[2].equals(shownOf(Deinflect.japanese(k[0]),k[1])),"breakdown "+k[0]+" = "+shownOf(Deinflect.japanese(k[0]),k[1]));
         // Word classes read from dictionary entries.
         check(Deinflect.entryClass("しる0【知る・領る】一（動ラ五［四］）一《知》","しる",null)==Deinflect.V5,"大辞林 godan mark");
         check(Deinflect.entryClass("きる【着る】［他上一］❶衣服を","きる",null)==Deinflect.V1,"明鏡 ichidan mark");
@@ -81,6 +86,17 @@ public class CoreTests {
         String[][] koCases={{"추워요","춥다"},{"먹었어요","먹다"},{"해요","하다"},{"몰라요","모르다"},{"들어요","듣다"},{"하얘요","하얗다"},{"봐요","보다"},{"됐어요","되다"},{"마셔요","마시다"},{"사는","살다"},{"예뻐요","예쁘다"},{"써요","쓰다"},{"도와요","돕다"},{"나아요","낫다"},{"공부했어요","공부"},{"학교에서","학교"},{"먹고싶어요","먹다"},{"안가요","가다"},{"먹을수있어요","먹다"},{"가세요","가다"},{"먹지않았어요","먹다"}};
         for(String[] k:koCases)check(has(Deinflect.korean(k[0],ko::contains,stems),k[1],null),"Korean "+k[0]+" → "+k[1]+" got "+names(Deinflect.korean(k[0],ko::contains,stems)));
         check(!has(Deinflect.korean("먹어요",ko::contains,stems),"하다",null),"Korean does not over-match");
+        // Irregular stem changes only for verbs that are irregular: 밀어요 is 밀다, not 믿다; 내요 is 내다, not 낳다 or 넣다.
+        Set<String> ko2=new HashSet<>(Arrays.asList("듣다","모르다","가다","돕다","먹다","짓다","하다","살다","밀다","믿다","달다","닫다","얼다","얻다","내다","낳다","넣다","대다","닿다","놓다","하얗다","춥다","보다","있다","않다","씻다","시다"));
+        java.util.function.Function<String,List<String>> stems2=w->new ArrayList<>(ko2);
+        String[][] notIrregular={{"밀어요","믿다"},{"달아요","닫다"},{"얼어요","얻다"},{"내요","낳다"},{"내요","넣다"},{"대요","닿다"},{"노면","놓다"},{"시어요","씻다"}};
+        for(String[] k:notIrregular)check(!has(Deinflect.korean(k[0],ko2::contains,stems2),k[1],null),"Korean "+k[0]+" is not "+k[1]);
+        String[][] stillIrregular={{"들었어요","듣다"},{"지어요","짓다"},{"하얘요","하얗다"},{"추워요","춥다"},{"도와요","돕다"},{"몰랐어","모르다"}};
+        for(String[] k:stillIrregular)check(has(Deinflect.korean(k[0],ko2::contains,stems2),k[1],null),"Korean "+k[0]+" → "+k[1]);
+        String[][] koShown={{"들었어요","듣다","듣 → 들 + 었 + 어요"},{"몰랐어","모르다","모르 → 몰ㄹ + 았 + 어"},{"도와요","돕다","돕 → 도오 + 아요"},{"했어요","하다","하 + 였 + 어요"},
+            {"먹으면","먹다","먹 + 으면"},{"사세요","살다","살 → 사 + 세요"},{"들으셨어요","듣다","듣 → 들 + 으시 + 었 + 어요"},{"먹고 있었어요","먹다","먹 + 고 있 + 었 + 어요"},
+            {"먹지 않았어요","먹다","먹 + 지 않 + 았 + 어요"},{"간","가다","가 + ㄴ"},{"먹은","먹다","먹 + 은"}};
+        for(String[] k:koShown){String got="";for(Deinflect.Candidate x:Deinflect.korean(k[0],ko2::contains,stems2))if(x.base.equals(k[1])){got=x.shown();break;}check(k[2].equals(got),"breakdown "+k[0]+" = "+got);}
 
         // Russian.
         String[][] ruCases={{"читала","читать"},{"книги","книга"},{"говорю","говорить"},{"красивая","красивый"},{"занимаюсь","заниматься"},{"пишу","писать"},{"хожу","ходить"},{"столом","стол"}};
@@ -194,6 +210,7 @@ public class CoreTests {
         System.out.println(passed+" passed, "+failures+" failed");
         if(failures>0)System.exit(1);
     }
+    static String shownOf(List<Deinflect.Candidate> list,String base){for(Deinflect.Candidate k:list)if(k.base.equals(base))return k.shown();return "";}
     static int classOf(List<Deinflect.Candidate> list,String base){int c=0;for(Deinflect.Candidate k:list)if(k.base.equals(base)&&k.steps.size()==1)c|=k.wordClass;return c;}
     static boolean has(List<Deinflect.Candidate> list,String base,String explain){
         for(Deinflect.Candidate c:list)if(c.base.equals(base)&&(explain==null||c.explain().equals(explain)))return true;

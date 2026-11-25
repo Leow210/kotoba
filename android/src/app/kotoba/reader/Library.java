@@ -476,7 +476,8 @@ public class Library {
         String f=file+" "+title;
         String lang=f.matches("(?s).*(\\[KO|KO-|KRDICT|STDICT|OPENDICT|[Hh]anja|Korean|[\\uac00-\\ud7a3]).*")?"Korean"
             :f.matches("(?s).*(\\[ZH|ZH-|CEDICT|Mandarin|Cantonese|CantoDict|粵|汉|漢語|國語辭典|现代汉语).*")?"Chinese"
-            :f.matches("(?s).*(\\[DE|DE-|German|Deutsch).*")?"German":"Japanese";
+            :f.matches("(?s).*(\\[DE|DE-|German|Deutsch).*")?"German"
+            :f.matches("(?s).*(\\[RU|RU-|Russian|Русск|ロシア|露和|和露).*")?"Russian":"Japanese";
         String sub="";
         if(kind.equals("freq")||f.matches("(?is).*(\\bFreq|Frequency|CC100).*"))sub="Frequency";
         else if(f.matches("(?is).*\\bPitch.*"))return PRONUNCIATION;
@@ -1860,6 +1861,12 @@ public class Library {
      * Korean analyses, best first. Each has base (the dictionary word), explain, chain, items (its entries)
      * and extra (entries for the ending/particle/second part), so the real word leads and grammar is one tab away.
      */
+    /** A Korean candidate with a dictionary-listed ending added after it (갔다 + 다며), for its breakdown. */
+    static Deinflect.Candidate withEnding(Deinflect.Candidate c,String ending){
+        ArrayList<Deinflect.Step> st=new ArrayList<>(c.steps);st.add(new Deinflect.Step(ending,"ending"));
+        return new Deinflect.Candidate(c.base,st,c.strength);
+    }
+
     public JSONArray koreanAnalyses(String word) throws Exception {
         ArrayList<JSONObject> out=new ArrayList<>();
         java.util.HashSet<String> seen=new java.util.HashSet<>();
@@ -1872,7 +1879,7 @@ public class Library {
         for(Deinflect.Candidate c:Deinflect.korean(word,w->{try{return koKey(w);}catch(Exception e){return false;}},this::koreanStems)){
             if(c.steps.size()==1&&c.steps.get(0).label.startsWith("noun + particle"))continue;// handled below with the dictionary
             JSONArray rows=koEntries(c.base);if(rows.length()==0)continue;
-            add.accept(new JSONObject().put("base",c.base).put("explain",c.explain()).put("chain",c.chain()).put("items",rows),c.base);
+            add.accept(new JSONObject().put("base",c.base).put("explain",c.explain()).put("chain",c.shown()).put("items",rows),c.base);
         }
         // 아세요 is 알다 (ㄹ drops) far more often than the rare 아다.
         preferCommon(out,rulesFrom,out.size());
@@ -1906,14 +1913,14 @@ public class Library {
                 if(!koKey(endingKey))continue;
                 String verb=sp[0]+"다";
                 JSONArray rows=koEntries(verb);
-                if(rows.length()>0){add.accept(new JSONObject().put("base",verb).put("explain","ending -"+sp[1]).put("chain",verb+" + -"+sp[1]).put("items",rows).put("extra",koEntries(endingKey)),verb);continue;}
+                if(rows.length()>0){add.accept(new JSONObject().put("base",verb).put("explain","ending -"+sp[1]).put("chain",sp[0]+" + "+sp[1]).put("items",rows).put("extra",koEntries(endingKey)),verb);continue;}
                 // A conjugated stem before the ending: 갔다며 = 갔(가다, past) + -다며. When two verbs fit (걸었다고: 걷다 "walk"
                 // or 걸다 "bet"), both are kept, since only the context can tell; lookups offer the second as "or 걸다".
                 int found=0;
                 for(Deinflect.Candidate c:Deinflect.korean(verb,w->{try{return koKey(w);}catch(Exception e){return false;}},this::koreanStems)){
                     JSONArray r2=koEntries(c.base);if(r2.length()==0)continue;
                     String ex=c.explain().replaceAll("\\s*·?\\s*plain$","");
-                    add.accept(new JSONObject().put("base",c.base).put("explain",(ex.isEmpty()?"":ex+" + ")+"ending -"+sp[1]).put("chain",c.base+" + "+c.chain().substring(c.base.length()).replaceFirst("\\s*\\+\\s*다$","")+" + -"+sp[1]).put("items",r2).put("extra",koEntries(endingKey)),c.base);
+                    add.accept(new JSONObject().put("base",c.base).put("explain",(ex.isEmpty()?"":ex+" + ")+"ending -"+sp[1]).put("chain",withEnding(c,sp[1]).shown()).put("items",r2).put("extra",koEntries(endingKey)),c.base);
                     if(++found==2)break;
                 }
             }
@@ -1979,7 +1986,7 @@ public class Library {
                     String note="compound: "+head+" + "+c.base+" · "+c.explain()+" (not listed as one word)";
                     JSONArray headRows=koEntries(head);
                     add.accept(new JSONObject().put("base",head).put("explain",note).put("chain",head).put("items",headRows).put("split",true),head);
-                    add.accept(new JSONObject().put("base",c.base).put("explain",note).put("chain",head+" + "+c.chain()).put("items",rows),c.base);
+                    add.accept(new JSONObject().put("base",c.base).put("explain",note).put("chain",head+" + "+c.shown()).put("items",rows),c.base);
                     break;
                 }
             }
@@ -2052,6 +2059,167 @@ public class Library {
         });
     }
     void dictionariesChanged(){verbCache.clear();mixedCache.clear();entryClasses.clear();dictGroups.clear();germanPresent=null;germanIdSet=null;germanKnownCache.clear();}
+
+    // ---------- Russian ----------
+    // A Russian word is looked up whole (never a piece of it: рисую is not рис). Its dictionary form comes from, in turn:
+    // a form index (dforms, from the Russian–English Wiktionary: every declined and conjugated form, with stress), the
+    // dictionary's own pages for irregular forms (иду́〔1単現〕＜идти́ in プログレッシブ), and the ending rules.
+    static final Pattern RU_WORD=Pattern.compile("^[\\p{IsCyrillic}\\u0300\\u0301]+(?:-[\\p{IsCyrillic}\\u0300\\u0301]+)*");
+    // ма́тери〔単数；生・与・前置格〕，〔複数；主格〕＜ма́ть — one or more grammar notes, then ＜ and the dictionary form(s).
+    static final Pattern RU_POINTER=Pattern.compile("^\\s*[\\p{IsCyrillic}\\u0300\\u0301-]+\\d*\\s*((?:〔[^〕]{1,40}〕[，,\\s]*)+)＜\\s*([\\p{IsCyrillic}\\u0300\\u0301]+\\d*(?:\\s*[,，、]\\s*[\\p{IsCyrillic}\\u0300\\u0301]+\\d*)*)");
+    static boolean cyrillic(String s){return s.codePoints().anyMatch(c->c>=0x0400&&c<=0x04FF);}
+    static String stripStress(String s){return s.replace("\u0301","").replace("\u0300","");}
+    /** Japanese grammar notes of the dictionary's form pages, in English: 〔単数；生格〕 → singular genitive. */
+    static String ruPointerLabel(String ja){
+        String[][] map={{"1単現","1st person singular present"},{"2単現","2nd person singular present"},{"3単現","3rd person singular present"},{"1複現","1st person plural present"},{"2複現","2nd person plural present"},{"3複現","3rd person plural present"},
+            {"1単未","1st person singular future"},{"2単未","2nd person singular future"},{"3単未","3rd person singular future"},{"1複未","1st person plural future"},{"2複未","2nd person plural future"},{"3複未","3rd person plural future"},
+            {"単数","singular"},{"複数","plural"},{"主格","nominative"},{"生格","genitive"},{"与格","dative"},{"対格","accusative"},{"造格","instrumental"},{"前置格","prepositional"},
+            {"過去","past"},{"命令","imperative"},{"男性","masculine"},{"女性","feminine"},{"中性","neuter"},{"男","masculine"},{"女","feminine"},{"中","neuter"},{"比較級","comparative"},{"短語尾","short form"},{"短","short form"},{"・"," "},{"；"," "},{"，"," "}};
+        // 生・対・前置格 lists several cases under one 格.
+        String out=ja.replaceAll("(主|生|与|対|造|前置)(?=・)","$1格");
+        for(String[] m:map)out=out.replace(m[0],m[1]);
+        out=out.replaceAll("\\s+"," ").trim();
+        return cyrillic(out)||out.matches(".*[\\p{IsHan}\\p{IsHiragana}\\p{IsKatakana}].*")?ja:out;
+    }
+    /** {stressed form, lemma, grammar} for a Russian word from the form index. */
+    List<String[]> ruFormRows(String norm){
+        ArrayList<String[]> out=new ArrayList<>();
+        if(norm.isEmpty())return out;
+        try(Cursor c=db.rawQuery("SELECT f.form,f.lemma,f.label FROM dforms f JOIN dicts d ON d.id=f.dict WHERE f.norm=? AND d.enabled=1 AND d.status='ready'",new String[]{norm})){
+            while(c.moveToNext())out.add(new String[]{c.getString(0),c.getString(1),c.getString(2)});
+        }
+        return out;
+    }
+    /**
+     * For a page that begins by pointing to the dictionary form (иду́〔1単現〕＜идти́): {grammar, lemma, lemma…}, else
+     * null. The last element is "+" when the page goes on to a word of its own (бра́тья2, a noun of its own).
+     */
+    String[] ruPointer(JSONObject row){
+        try{
+            String text=HtmlText.entities(TAG.matcher(STYLE_OR_SCRIPT.matcher(recordHtml(row.getLong("rec"))).replaceAll(" ")).replaceAll("")).trim();
+            Matcher m=RU_POINTER.matcher(text);
+            if(!m.find())return null;
+            ArrayList<String> out=new ArrayList<>();
+            out.add(m.group(1).replaceAll("〕[，,\\s]*〔"," / ").replaceAll("[〔〕]","").trim());
+            for(String l:m.group(2).split("[,，、]")){String x=stripStress(l).replaceAll("\\d+$","").trim();if(!x.isEmpty())out.add(x);}
+            if(out.size()<2)return null;
+            if(text.length()-m.end()>20)out.add("+");
+            return out.toArray(new String[0]);
+        }catch(Exception e){return null;}
+    }
+    /** Every reading of a Russian word, best first: {base, explain, chain, steps, items}. */
+    public JSONArray russianAnalyses(String word) throws Exception {
+        String w=stripStress(word).trim();
+        ArrayList<JSONObject> out=new ArrayList<>();
+        java.util.LinkedHashSet<String> seen=new java.util.LinkedHashSet<>();
+        boolean capital=!w.isEmpty()&&Character.isUpperCase(w.charAt(0));
+        java.util.function.Function<String,String> cased=b->capital&&!b.isEmpty()&&Character.isLowerCase(b.charAt(0))?Character.toUpperCase(b.charAt(0))+b.substring(1):b;
+        // 1. The word as a page of its own, unless that page only points elsewhere.
+        JSONArray whole=wordEntries(exact(w,null,false)),plain=new JSONArray();
+        ArrayList<String[]> pointers=new ArrayList<>();
+        for(int i=0;i<whole.length();i++){
+            String[] p=ruPointer(whole.getJSONObject(i));
+            if(p!=null)pointers.add(p);
+            if(p==null||p[p.length-1].equals("+"))plain.put(whole.get(i));
+        }
+        // The word's own page leads only when a main dictionary has it, spelled the same: идёт has a Wiktionary page of
+        // its own (the idiom "agreed"), and берёт matches бере́т "beret" once ё is read as е; both are forms first.
+        boolean yo=w.indexOf('ё')>=0||w.indexOf('Ё')>=0,plainFirst=false;
+        for(int i=0;i<plain.length()&&!plainFirst;i++){
+            JSONObject r=plain.getJSONObject(i);
+            if(r.optString("dictionary").contains("Wiktionary"))continue;
+            String page=stripStress(r.optString("page",r.optString("key","")));
+            plainFirst=!yo||page.equalsIgnoreCase(w);
+        }
+        if(plain.length()>0)seen.add(HtmlText.normalize(w));
+        if(plainFirst)out.add(germanAnalysis(cased.apply(w),"",w,plain,0));
+        // 2. The form index: labels grouped by lemma; the word with the fuller entries first (мать before матерь).
+        java.util.LinkedHashMap<String,ArrayList<String>> byLemma=new java.util.LinkedHashMap<>();
+        java.util.HashMap<String,String> stressed=new java.util.HashMap<>();
+        // Lowercase rows first: тигры is ти́гры → тигр, not Ти́гры → Тигр (the river), and a capital is most often just the
+        // start of a sentence. Both spellings bring up the same entries; only the name shown differs. (Москве has no other.)
+        List<String[]> formRows=ruFormRows(HtmlText.normalize(w));
+        formRows.sort((a,b)->Boolean.compare(Character.isUpperCase(a[0].charAt(0)),Character.isUpperCase(b[0].charAt(0))));
+        for(String[] r:formRows){
+            ArrayList<String> labels=byLemma.computeIfAbsent(r[1],k->new ArrayList<>());
+            for(String l:r[2].split("\\s*\\|\\s*"))if(!l.isEmpty()&&!labels.contains(l))labels.add(l);
+            stressed.putIfAbsent(r[1],r[0]);
+        }
+        ArrayList<JSONObject> fromIndex=new ArrayList<>();
+        for(java.util.Map.Entry<String,ArrayList<String>> e:byLemma.entrySet()){
+            String lemma=e.getKey();
+            if(!seen.add(HtmlText.normalize(lemma)))continue;
+            JSONArray items=wordEntries(exact(lemma,null,false));
+            if(items.length()==0)continue;
+            fromIndex.add(germanAnalysis(lemma,germanExplain(e.getValue()),stressed.get(lemma)+" ← "+lemma,items,1));
+        }
+        // Which word a form most likely belongs to: one written in the same case (тигры is тигр, not the river Тигр),
+        // then the fuller entry in a main dictionary (вещи: вещь before вещий). Wiktionary's own pages don't count
+        // there, since an adjective's page carries some thirty forms and would outweigh any noun.
+        java.util.function.ToLongFunction<JSONObject> mainSize=o->{
+            long m=0;JSONArray it=o.optJSONArray("items");
+            if(it!=null)for(int i=0;i<it.length();i++){JSONObject r=it.optJSONObject(i);if(r!=null&&!r.optString("dictionary").contains("Wiktionary"))m=Math.max(m,r.optLong("size"));}
+            return m;
+        };
+        boolean lower=!w.isEmpty()&&Character.isLowerCase(w.charAt(0));
+        fromIndex.sort((a,b)->{
+            int ca=lower&&Character.isUpperCase(a.optString("base"," ").charAt(0))?1:0,cb=lower&&Character.isUpperCase(b.optString("base"," ").charAt(0))?1:0;
+            if(ca!=cb)return ca-cb;
+            int c=Long.compare(mainSize.applyAsLong(b),mainSize.applyAsLong(a));
+            return c!=0?c:Long.compare(b.optLong("size"),a.optLong("size"));
+        });
+        out.addAll(fromIndex);
+        if(plain.length()>0&&!plainFirst)out.add(germanAnalysis(cased.apply(w),"",w,plain,0));
+        // 3. The dictionary's own pages for irregular forms.
+        for(String[] p:pointers)for(int i=1;i<p.length;i++){
+            if(p[i].equals("+")||!seen.add(HtmlText.normalize(p[i])))continue;
+            JSONArray items=wordEntries(exact(p[i],null,false));
+            if(items.length()==0)continue;
+            String label=ruPointerLabel(p[0]);
+            out.add(germanAnalysis(p[i],label,w+" ← "+p[i],items,1));
+        }
+        // 4. Ending rules, only when nothing above knew the word as a form (they guess: живу is not живо).
+        if(out.size()==(plain.length()>0?1:0)&&fromIndex.isEmpty()&&pointers.isEmpty()){
+            List<Deinflect.Candidate> cands=Deinflect.russian(w);
+            cands.sort((a,b)->b.strength-a.strength);
+            for(Deinflect.Candidate c:cands){
+                if(out.size()>=4)break;
+                if(!seen.add(HtmlText.normalize(c.base)))continue;
+                JSONArray items=wordEntries(exact(c.base,null,false));
+                if(items.length()==0)continue;
+                out.add(germanAnalysis(cased.apply(c.base),c.explain(),c.chain(),items,2));
+            }
+        }
+        JSONArray result=new JSONArray();
+        for(JSONObject o:out){o.remove("size");o.remove("rank");result.put(o);}
+        return result;
+    }
+    /** A Russian phrase the dictionary lists (потому что, в течение), else the first word with its dictionary form. */
+    JSONObject russianLookup(String clean) throws Exception {
+        String text=stripStress(clean);
+        Matcher m=RU_WORD.matcher(text);
+        if(!m.find())return null;
+        String word=m.group();
+        // Phrases of up to four words, longest first.
+        Matcher ws=Pattern.compile("[\\p{IsCyrillic}-]+").matcher(text);
+        ArrayList<int[]> spans=new ArrayList<>();
+        while(ws.find()&&spans.size()<4){
+            if(!spans.isEmpty()&&!text.substring(spans.get(spans.size()-1)[1],ws.start()).matches("\\s+"))break;
+            spans.add(new int[]{ws.start(),ws.end()});
+        }
+        for(int k=spans.size();k>=2;k--){
+            String phrase=text.substring(0,spans.get(k-1)[1]);
+            JSONArray rows=wordEntries(exact(phrase,null,false));
+            if(rows.length()>0)return new JSONObject().put("matched",clean.substring(0,Math.min(clean.length(),phrase.length()+(clean.length()-text.length())))).put("key",phrase).put("items",rows).put("forms",new JSONArray()).put("kanji",new JSONArray());
+        }
+        JSONArray analyses=russianAnalyses(word);
+        // The word as it appears in the text (with any stress marks it had).
+        String matched=word;
+        Matcher orig=RU_WORD.matcher(clean);if(orig.find())matched=orig.group();
+        if(analyses.length()==0)return new JSONObject().put("matched","").put("key",word).put("items",new JSONArray()).put("forms",new JSONArray()).put("kanji",new JSONArray());
+        JSONObject a0=analyses.getJSONObject(0);
+        return new JSONObject().put("matched",matched).put("key",a0.getString("base")).put("items",a0.getJSONArray("items")).put("explain",a0.optString("explain","")).put("forms",analyses).put("kanji",new JSONArray());
+    }
 
     // ---------- German ----------
     // German comes from the dictionary's own form index (dforms): every inflected form with its grammar, so gegangen
@@ -2346,7 +2514,10 @@ public class Library {
             for(int i=0;i<all.length();i++)if(!HtmlText.normalize(all.getJSONObject(i).getString("base")).equals(qn0))out2.put(all.get(i));
             return out2;
         }else if(q.chars().anyMatch(c->c>=0x0400&&c<=0x04FF)){
-            candidates=Deinflect.russian(q.replace("\u0301","").replace("\u0300",""));
+            JSONArray all=russianAnalyses(q),out2=new JSONArray();
+            String qn0=HtmlText.normalize(stripStress(q));
+            for(int i=0;i<all.length();i++)if(!HtmlText.normalize(all.getJSONObject(i).getString("base")).equals(qn0))out2.put(all.get(i));
+            return out2;
         }else if(German.startsLatin(q)&&germanOn()){
             return germanForms(q);
         }else if(q.chars().anyMatch(c->(c>=0x3040&&c<=0x30ff)||(c>=0x4e00&&c<=0x9fff))){
@@ -2395,7 +2566,7 @@ public class Library {
             JSONArray steps=new JSONArray();
             for(Deinflect.Step s:c.steps)steps.put(new JSONObject().put("suffix",s.suffix).put("label",s.label));
             long size=0;for(int i=0;i<rows.length();i++)size=Math.max(size,rows.getJSONObject(i).optLong("size"));
-            found.add(new JSONObject().put("base",base).put("explain",c.explain()).put("chain",c.chain().replaceFirst("^"+java.util.regex.Pattern.quote(c.base),base+(c.suffixNote.isEmpty()?"":" + する"))).put("steps",steps).put("items",rows).put("size",size).put("rank",c.steps.size())
+            found.add(new JSONObject().put("base",base).put("explain",c.explain()).put("chain",c.shown()).put("steps",steps).put("items",rows).put("size",size).put("rank",c.steps.size())
                 .put("irr",(c.wordClass&(Deinflect.VS|Deinflect.VK))!=0&&(base.equals("する")||base.equals("くる")||base.equals("来る"))?1:0));
         }
         // Ambiguous endings (行って: 行く/行う) — the word with the fuller entry is usually the intended one,
@@ -2465,6 +2636,20 @@ public class Library {
             }
             return out;
         }
+        if("ru".equals(lang)){
+            Matcher m=Pattern.compile("[\\p{IsCyrillic}\\u0300\\u0301]+(?:-[\\p{IsCyrillic}\\u0300\\u0301]+)*").matcher(text);
+            while(m.find()){
+                String w=stripStress(m.group());
+                String base=baseCache.get("ru:"+w);
+                if(base==null){
+                    JSONObject r=lookup(w,"ru");
+                    base=r.getJSONArray("items").length()>0?r.optString("key",""):"";
+                    baseCache.put("ru:"+w,base);
+                }
+                if(!base.isEmpty())count(out,base,w);
+            }
+            return out;
+        }
         if("de".equals(lang)){
             Matcher m=Pattern.compile("\\p{L}[\\p{L}'\u2019-]*").matcher(text);
             while(m.find()){
@@ -2522,6 +2707,10 @@ public class Library {
         if((lang==null||lang.isEmpty()||"de".equals(lang))&&German.startsLatin(clean)&&germanOn()){
             JSONObject de=germanLookup(clean);
             if(de!=null)return de;
+        }
+        if(!"zh".equals(lang)&&!"ja".equals(lang)&&RU_WORD.matcher(stripStress(clean)).find()){
+            JSONObject ru=russianLookup(clean);
+            if(ru!=null)return ru;
         }
         String group="zh".equals(lang)?"Chinese":"th".equals(lang)?"Thai":null;
         if(group!=null){

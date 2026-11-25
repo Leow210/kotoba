@@ -16,7 +16,10 @@ public final class Deinflect {
     /** One grammatical step, e.g. suffix "ます", label "polite". */
     public static final class Step {
         public final String suffix,label;
-        Step(String suffix,String label){this.suffix=suffix;this.label=label;}
+        /** Japanese: the rule's surface ending and what replaced it (書きました: "きました" → "く"), for the breakdown. */
+        final String in,out;
+        Step(String suffix,String label){this(suffix,label,null,null);}
+        Step(String suffix,String label,String in,String out){this.suffix=suffix;this.label=label;this.in=in;this.out=out;}
     }
     public static final class Candidate {
         public final String base;
@@ -34,11 +37,20 @@ public final class Deinflect {
             for(Step s:steps){if(b.length()>0)b.append(" · ");b.append(s.label.replaceAll("\\s*\\(～[^)]*\\)",""));}
             return b.toString();
         }
-        /** Morpheme chain: "食べ + させ + られ + なかった" style, as base + added endings. */
+        /** The base followed by each step's ending (食べる + させる + られる + ない + かった); see shown() for display. */
         public String chain(){
             StringBuilder b=new StringBuilder(base);
             for(Step s:steps)if(!s.suffix.isEmpty())b.append(" + ").append(s.suffix);
             return b.toString();
+        }
+        /**
+         * The word split as it is written, for showing: the stem as it appears and each ending in its actual form —
+         * 食べ + させ + られ + なかった, 書い + てもらっ + た, 듣 → 들 + 으시 + 었 + 겠 + 네요, 모르 → 몰ㄹ + 았 + 어.
+         */
+        public String shown(){
+            if(!steps.isEmpty()&&steps.get(0).in!=null)return jaShown(base,steps);
+            if(!base.isEmpty()&&hangul(base.charAt(0)))return koShown(base,steps);
+            return chain();
         }
     }
 
@@ -172,7 +184,7 @@ public final class Deinflect {
             String base=word.substring(0,word.length()-r.in.length())+r.out;
             if(base.length()<2)continue;
             ArrayList<Step> next=new ArrayList<>(steps.size()+1);
-            next.add(new Step(r.suffix,r.label));next.addAll(steps);
+            next.add(new Step(r.suffix,r.label,r.in,r.out));next.addAll(steps);
             int s=strength+r.in.length();
             int cls=r.rulesOut&(V1|V5|VS|VK|ADJ);
             if(cls!=0){
@@ -182,6 +194,101 @@ public final class Deinflect {
             ArrayList<String> nextVia=new ArrayList<>(via);nextVia.add(base);
             walk(base,r.rulesOut,next,s,out,seen,depth+1,nextVia);
         }
+    }
+
+    /**
+     * Japanese breakdown. Each rule turned an ending `in` into `out` (書きました → 書く); the part of `in` before the
+     * step's own ending (き) belongs to the piece before it, and the next rule's `out` (る, う, い) is not written.
+     */
+    static String jaShown(String base,List<Step> steps){
+        int n=steps.size();
+        String[] pre=new String[n],core=new String[n];
+        for(int k=0;k<n;k++){
+            Step s=steps.get(k);
+            boolean split=!s.suffix.isEmpty()&&s.in.endsWith(s.suffix);
+            pre[k]=split?s.in.substring(0,s.in.length()-s.suffix.length()):"";
+            core[k]=split?s.suffix:s.in;
+        }
+        Step first=steps.get(0);
+        String stem=(base.endsWith(first.out)?base.substring(0,base.length()-first.out.length()):base)+pre[0];
+        ArrayList<String> pieces=new ArrayList<>();
+        for(int k=0;k<n;k++){
+            String p=core[k];
+            if(k+1<n){
+                String o=steps.get(k+1).out;
+                if(!o.isEmpty()&&p.endsWith(o))p=p.substring(0,p.length()-o.length());
+                p+=pre[k+1];
+                // ない and たい conjugate as adjectives: な + かった reads better as なかった.
+                if(o.equals("い")&&!p.isEmpty()){core[k+1]=p+core[k+1];continue;}
+            }
+            if(!p.isEmpty())pieces.add(p);
+        }
+        StringBuilder b=new StringBuilder(stem.isEmpty()?base:stem);
+        for(String p:pieces)b.append(" + ").append(p);
+        return b.toString();
+    }
+
+    /**
+     * Korean breakdown: the stem, with its irregular change (듣 → 들), then each ending in the form it takes after what
+     * comes before it — 었 or 았 by vowel harmony (였 after 하), 으 only after a consonant, 은/을 or ㄴ/ㄹ.
+     */
+    static String koShown(String base,List<Step> steps){
+        ArrayList<Step> st=new ArrayList<>(steps);
+        StringBuilder b=new StringBuilder();
+        if(!st.isEmpty()&&st.get(0).suffix.equals("안")){b.append("안 + ");st.remove(0);}
+        String stem;
+        if(!st.isEmpty()&&st.get(0).suffix.equals("하다")&&!base.endsWith("다")){stem=base+"하";st.remove(0);}
+        else if(base.endsWith("다")&&base.length()>=2)stem=base.substring(0,base.length()-1);
+        else{StringBuilder c=new StringBuilder(base);for(Step s:steps)if(!s.suffix.isEmpty())c.append(" + ").append(s.suffix);return c.toString();}
+        st.removeIf(s->s.label.startsWith("하 merged")||s.label.startsWith("하 dropped"));
+        String kind="";
+        for(Step s:st){for(String k:new String[]{"ㄷ-irregular","ㅂ-irregular","ㅅ-irregular","ㅎ-irregular","르-irregular","ㄹ drops"})if(s.label.contains(k)){kind=k;break;}if(!kind.isEmpty())break;}
+        char last=stem.charAt(stem.length()-1);
+        String head=stem.substring(0,stem.length()-1),changed=stem;
+        if(hangul(last)){
+            char open=compose(cho(last),jung(last),0);
+            String firstEnding="";for(Step s:st)if(!s.suffix.isEmpty()){firstEnding=s.suffix;break;}
+            switch(kind){
+                case "ㄷ-irregular":changed=head+compose(cho(last),jung(last),F('ㄹ'));break;
+                case "ㅂ-irregular":changed=head+open+((last=='돕'||last=='곱')&&firstEnding.startsWith("아")||(last=='돕'||last=='곱')&&firstEnding.startsWith("았")?"오":"우");break;
+                case "ㅅ-irregular":case "ㅎ-irregular":case "ㄹ drops":changed=head+open;break;
+                case "르-irregular":if(!head.isEmpty()){char p=head.charAt(head.length()-1);if(hangul(p)&&jong(p)==0)changed=head.substring(0,head.length()-1)+compose(cho(p),jung(p),F('ㄹ'))+"ㄹ";}break;
+            }
+        }
+        b.append(stem);if(!changed.equals(stem))b.append(" → ").append(changed);
+        // What the next ending attaches to: a verb stem (harmony from its vowel) or another ending (then always 어).
+        String att=stem;boolean atStem=true;boolean keepEu=kind.equals("ㄷ-irregular")||kind.equals("ㅅ-irregular")||kind.isEmpty()&&closedSyllable(stem);
+        if(kind.equals("ㅂ-irregular")||kind.equals("ㅎ-irregular")||kind.equals("ㄹ drops")||kind.equals("르-irregular"))keepEu=false;
+        boolean bright=kind.equals("ㅂ-irregular")?(last=='돕'||last=='곱'):brightStem(stem);
+        ArrayList<String> parts=new ArrayList<>();
+        for(Step s:st)for(String p:s.suffix.split("\\+"))if(!p.trim().isEmpty())parts.add(p.trim());
+        for(int i=0;i<parts.size();i++){
+            String p=parts.get(i);
+            boolean ha=atStem&&att.endsWith("하");
+            String v=ha?"여":atStem&&bright?"아":"어";
+            p=p.replace("았/었",ha?"였":atStem&&bright?"았":"었").replaceAll("아([^/ ]*)/어\\1",v+"$1");
+            p=p.replace("ㄴ/은","ㄴ").replace("ㄹ/을","ㄹ").replace("ㅁ/음","ㅁ");
+            if(p.startsWith("으")&&!keepEu)p=p.substring(1);
+            else if(keepEu&&!p.isEmpty()&&"ㄴㄹㅁ".indexOf(p.charAt(0))>=0)p=compose(CHO.indexOf('ㅇ'),J('ㅡ'),F(p.charAt(0)))+p.substring(1);
+            boolean verbPart=p.endsWith("다")&&i+1<parts.size();
+            if(verbPart)p=p.substring(0,p.length()-1);
+            if(p.isEmpty())continue;
+            b.append(" + ").append(p);
+            // Helper verbs (고 있다, 지 않다) become the new stem; anything else is an ending.
+            String tail=p.replaceAll(".*\\s","");
+            if(verbPart){att=tail;atStem=true;bright=brightStem(tail);}else{att=tail;atStem=false;}
+            keepEu=closedSyllable(tail);
+        }
+        return b.toString();
+    }
+    static boolean closedSyllable(String s){if(s.isEmpty())return false;char c=s.charAt(s.length()-1);return hangul(c)&&jong(c)!=0&&jong(c)!=F('ㄹ');}
+    static boolean brightStem(String stem){
+        if(stem.isEmpty())return false;
+        char c=stem.charAt(stem.length()-1);
+        if(!hangul(c))return false;
+        int ju=jung(c);
+        if(ju==J('ㅡ')&&stem.length()>1&&hangul(stem.charAt(stem.length()-2))){int pj=jung(stem.charAt(stem.length()-2));return pj==J('ㅏ')||pj==J('ㅗ');}
+        return ju==J('ㅏ')||ju==J('ㅗ')||ju==J('ㅑ');
     }
 
     /** Entry class for a dictionary entry that isn't a verb or i-adjective (noun, adverb, na-adjective, set phrase…). */
@@ -249,6 +356,17 @@ public final class Deinflect {
         return s.substring(0,s.length()-1)+compose(cho(last),jung(last),F(finalJamo));
     }
 
+    // Which stems really are irregular. ㄷ and ㅅ irregulars are short closed lists (compounds end in them: 알아듣다, 깨닫다);
+    // without them 밀어요 would also read as 믿다, 달아요 as 닫다, 이어요 as 잇다 for the wrong reason. ㅎ stems are
+    // irregular except 좋다 and the ㅎ verbs (놓다, 넣다…), else 내요 reads as 낳다 and 대요 as 닿다.
+    static final String[] D_IRREGULAR={"듣","걷","묻","싣","깨닫","치닫","내닫","일컫","붇","긷","눋","겯"};
+    static final String[] S_IRREGULAR={"낫","짓","붓","잇","젓","긋","잣"};
+    static final String[] H_REGULAR={"좋","놓","넣","낳","닿","쌓","찧","땋","빻"};
+    static boolean endsWithAny(String stem,String[] list){for(String e:list)if(stem.endsWith(e))return true;return false;}
+    static boolean dIrregular(String stem){return endsWithAny(stem,D_IRREGULAR);}
+    static boolean sIrregular(String stem){return endsWithAny(stem,S_IRREGULAR);}
+    static boolean hIrregular(String stem){return !endsWithAny(stem,H_REGULAR);}
+
     /** Stem forms before 아/어 endings, with a note when an irregular rule applied. */
     static List<String[]> infinitive(String stem){
         ArrayList<String[]> out=new ArrayList<>();
@@ -281,9 +399,9 @@ public final class Deinflect {
         out.add(new String[]{stem+a,""});
         char open=compose(ch,ju,0);
         if(jo==F('ㅂ')){out.add(new String[]{head+open+(last=='돕'||last=='곱'?"와":"워"),"ㅂ-irregular"});}
-        if(jo==F('ㄷ')){out.add(new String[]{head+compose(ch,ju,F('ㄹ'))+a,"ㄷ-irregular"});}
-        if(jo==F('ㅅ')){out.add(new String[]{head+open+a,"ㅅ-irregular"});}
-        if(jo==F('ㅎ')){out.add(new String[]{head+compose(ch,ju==J('ㅑ')?J('ㅒ'):J('ㅐ'),0),"ㅎ-irregular"});}
+        if(jo==F('ㄷ')&&dIrregular(stem)){out.add(new String[]{head+compose(ch,ju,F('ㄹ'))+a,"ㄷ-irregular"});}
+        if(jo==F('ㅅ')&&sIrregular(stem)){out.add(new String[]{head+open+a,"ㅅ-irregular"});}
+        if(jo==F('ㅎ')&&hIrregular(stem)){out.add(new String[]{head+compose(ch,ju==J('ㅑ')?J('ㅒ'):J('ㅐ'),0),"ㅎ-irregular"});}
         return out;
     }
     /** Stem forms before 으-initial endings (으면, 은, 을, 으세요…). */
@@ -296,9 +414,9 @@ public final class Deinflect {
         out.add(new String[]{stem+"으",""});
         char open=compose(cho(last),jung(last),0);
         if(jo==F('ㅂ'))out.add(new String[]{head+open+"우","ㅂ-irregular"});
-        if(jo==F('ㄷ'))out.add(new String[]{head+compose(cho(last),jung(last),F('ㄹ'))+"으","ㄷ-irregular"});
-        if(jo==F('ㅅ'))out.add(new String[]{head+open+"으","ㅅ-irregular"});
-        if(jo==F('ㅎ'))out.add(new String[]{head+open,"ㅎ-irregular"});
+        if(jo==F('ㄷ')&&dIrregular(stem))out.add(new String[]{head+compose(cho(last),jung(last),F('ㄹ'))+"으","ㄷ-irregular"});
+        if(jo==F('ㅅ')&&sIrregular(stem))out.add(new String[]{head+open+"으","ㅅ-irregular"});
+        if(jo==F('ㅎ')&&hIrregular(stem))out.add(new String[]{head+open,"ㅎ-irregular"});
         return out;
     }
     /** Attaches ㄴ/ㄹ/ㅁ/ㅂ endings that merge into the last syllable (간, 갈, 감, 갑니다). */
