@@ -103,6 +103,13 @@ public class DesktopServer {
             case "sync.status":return syncStatus();
             case "sync.setFolder":routes.store.setSetting("sync_folder",d.getString("path"));return syncNow();
             case "sync.now":return syncNow();
+            case "sync.wake":{
+                // The phone starts Syncthing here if Android stopped it; on the Mac it runs as its own service, so just report it.
+                boolean up=false;
+                // The GUI port first: a bare connection to 22000 shows up in Syncthing's log as a failed TLS handshake.
+                for(int p:new int[]{8384,22000})try(java.net.Socket s=new java.net.Socket()){s.connect(new InetSocketAddress(InetAddress.getLoopbackAddress(),p),400);up=true;break;}catch(Exception ignored){}
+                return new JSONObject().put("running",up).put("started",false);
+            }
             case "translate.config":return translator.config();
             case "translate.set":translator.set(d);return translator.config();
             case "translate":return translator.translate(d.getString("text"),d.optString("from",""),d.optString("to",""),d.optString("engine",""),d.optString("context",""));
