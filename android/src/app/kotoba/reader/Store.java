@@ -26,6 +26,8 @@ public class Store {
         db.execSQL("CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY,value TEXT NOT NULL)");
         // Words marked as known (known=0 keeps an unmarking, so it syncs too).
         db.execSQL("CREATE TABLE IF NOT EXISTS known(lang TEXT NOT NULL,norm TEXT NOT NULL,word TEXT NOT NULL,known INTEGER NOT NULL DEFAULT 1,changed INTEGER NOT NULL,PRIMARY KEY(lang,norm))");
+        // Where each audiobook chapter was left (seconds), so the phone and the Mac carry on from the same place.
+        db.execSQL("CREATE TABLE IF NOT EXISTS listen_pos(book TEXT NOT NULL,chapter INTEGER NOT NULL,sec INTEGER NOT NULL,changed INTEGER NOT NULL,PRIMARY KEY(book,chapter))");
         db.execSQL("CREATE TABLE IF NOT EXISTS folders(id INTEGER PRIMARY KEY,name TEXT NOT NULL UNIQUE,position INTEGER NOT NULL DEFAULT 0,created INTEGER NOT NULL DEFAULT 0)");
         db.execSQL("INSERT OR IGNORE INTO folders(id,name,position,created) VALUES(1,'Inbox',0,strftime('%s','now'))");
         db.execSQL("CREATE TABLE IF NOT EXISTS items(id INTEGER PRIMARY KEY,folder_id INTEGER NOT NULL REFERENCES folders(id),kind TEXT NOT NULL DEFAULT 'entry',dict INTEGER NOT NULL DEFAULT 0,dict_name TEXT NOT NULL DEFAULT '',page TEXT NOT NULL DEFAULT '',anchor TEXT NOT NULL DEFAULT '',headword TEXT NOT NULL,reading TEXT NOT NULL DEFAULT '',back TEXT NOT NULL DEFAULT '',back_html TEXT NOT NULL DEFAULT '',note TEXT NOT NULL DEFAULT '',context TEXT NOT NULL DEFAULT '',created INTEGER NOT NULL,updated INTEGER NOT NULL,review INTEGER NOT NULL DEFAULT 0,state INTEGER NOT NULL DEFAULT 0,step INTEGER NOT NULL DEFAULT 0,stability REAL NOT NULL DEFAULT 0,difficulty REAL NOT NULL DEFAULT 0,due INTEGER NOT NULL DEFAULT 0,last_review INTEGER NOT NULL DEFAULT 0,reps INTEGER NOT NULL DEFAULT 0,lapses INTEGER NOT NULL DEFAULT 0,introduced INTEGER NOT NULL DEFAULT 0)");
@@ -177,6 +179,21 @@ public class Store {
      * so homophones (橋/箸 はし) and other readings (人気 にんき/ひとけ) don't count. Kana/width/separators are ignored.
      */
     // ---------- known words ----------
+    /** Remembers where a chapter was left. An unchanged second is not a change, so it doesn't make the sync file rewrite. */
+    public void setListenPos(String book,int chapter,int sec)throws Exception{
+        if(book.length()>64||chapter<0||sec<0)throw new IllegalArgumentException("Bad position");
+        JSONArray cur=rows(db,"SELECT sec FROM listen_pos WHERE book=? AND chapter=?",book,Integer.toString(chapter));
+        if(cur.length()>0&&cur.getJSONObject(0).optInt("sec",-1)==sec)return;
+        db.execSQL("INSERT OR REPLACE INTO listen_pos(book,chapter,sec,changed) VALUES(?,?,?,?)",new Object[]{book,chapter,sec,System.currentTimeMillis()});
+    }
+    /** A book's places: {"<chapter>":{"sec":n,"changed":ms}}. */
+    public JSONObject listenPos(String book)throws Exception{
+        JSONObject out=new JSONObject();
+        for(Object o:iter(rows(db,"SELECT chapter,sec,changed FROM listen_pos WHERE book=?",book))){
+            JSONObject r=(JSONObject)o;out.put(Integer.toString(r.getInt("chapter")),new JSONObject().put("sec",r.getInt("sec")).put("changed",r.getLong("changed")));
+        }
+        return out;
+    }
     public void setKnown(String word,String lang,boolean known){
         String norm=HtmlText.normalize(word);if(norm.isEmpty())return;
         db.execSQL("INSERT OR REPLACE INTO known(lang,norm,word,known,changed) VALUES(?,?,?,?,?)",new Object[]{lang,norm,word.trim(),known?1:0,System.currentTimeMillis()});

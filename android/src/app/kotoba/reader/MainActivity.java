@@ -118,6 +118,7 @@ public class MainActivity extends Activity {
         books=new Books(this,store.db);
         comics=new Comics(this,store.db,this::openChannel);
         ocr=new Ocr(this,store.db);
+        Ocr.refineMode=()->store.setting("ocr_refine","auto");
         // Korean word spacing for recognized text, when the model is in files/models/korean-spacing/.
         Ocr.spacing=new Spacing(getExternalFilesDir(null));Ocr.readerSpaces=true;
         // PaddleOCR-VL for speech bubbles, when the build includes LiteRT-LM (tools/fetch_android_libs.py) and the model is on the phone.
@@ -514,8 +515,9 @@ public class MainActivity extends Activity {
         pool.execute(()->{try{syncNow();}catch(Exception e){android.util.Log.w("Kotoba","sync",e);}});
         syncTimer.postDelayed(this,60_000);
     }};
-    @Override protected void onResume(){super.onResume();syncTimer.removeCallbacks(syncTick);syncTimer.postDelayed(syncTick,3000);}
+    @Override protected void onResume(){super.onResume();Ocr.foreground=true;syncTimer.removeCallbacks(syncTick);syncTimer.postDelayed(syncTick,3000);}
     @Override protected void onPause(){
+        Ocr.foreground=false;
         syncTimer.removeCallbacks(syncTick);
         // One last write so the Mac sees what was just done here.
         pool.execute(()->{try{syncNow();}catch(Exception ignored){}});

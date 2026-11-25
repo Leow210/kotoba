@@ -2051,7 +2051,7 @@ public class Library {
             return list;
         });
     }
-    void dictionariesChanged(){verbCache.clear();mixedCache.clear();germanPresent=null;germanIdSet=null;germanKnownCache.clear();}
+    void dictionariesChanged(){verbCache.clear();mixedCache.clear();entryClasses.clear();dictGroups.clear();germanPresent=null;germanIdSet=null;germanKnownCache.clear();}
 
     // ---------- German ----------
     // German comes from the dictionary's own form index (dforms): every inflected form with its grammar, so gegangen
@@ -2284,6 +2284,52 @@ public class Library {
         return new JSONObject().put("matched",matched).put("key",a0.getString("base")).put("items",items).put("explain",a0.optString("explain","")).put("forms",forms).put("kanji",new JSONArray());
     }
 
+    /** Word class of each entry (Deinflect.entryClass), kept because reading an entry costs a millisecond or two. */
+    final java.util.Map<Long,Integer> entryClasses=java.util.Collections.synchronizedMap(new java.util.LinkedHashMap<Long,Integer>(1024,0.75f,true){
+        protected boolean removeEldestEntry(java.util.Map.Entry<Long,Integer> e){return size()>50000;}
+    });
+    final java.util.Map<Long,String> dictGroups=new java.util.concurrent.ConcurrentHashMap<>();
+    static final Pattern STYLE_OR_SCRIPT=Pattern.compile("(?is)<(style|script)\\b.*?</\\1>"),TAG=Pattern.compile("<[^>]*>");
+    int entryClass(JSONObject row){
+        long rec=row.optLong("rec",-1);
+        Integer known=entryClasses.get(rec);
+        if(known!=null)return known;
+        int cls;
+        try{
+            long dict=row.optLong("dict");
+            String grp=dictGroups.computeIfAbsent(dict,d->{try{JSONArray r=Store.rows(db,"SELECT grp FROM dicts WHERE id=?",Long.toString(d));return r.length()==0?"":r.getJSONObject(0).optString("grp","");}catch(Exception e){return "";}});
+            if(grp.contains("人名")||grp.contains("地名")||grp.contains("助数詞")||grp.contains("四字熟語"))cls=Deinflect.NONCONJ;
+            else if(!grp.equals("Japanese")&&!grp.startsWith("Japanese/古語"))cls=0;// frequency, grammar, thesaurus…: no say
+            else{
+                String text=HtmlText.entities(TAG.matcher(STYLE_OR_SCRIPT.matcher(recordHtml(rec)).replaceAll(" ")).replaceAll(""));
+                ArrayList<String> words=new ArrayList<>();
+                JSONArray w=row.optJSONArray("words");
+                if(w!=null)for(int i=0;i<w.length();i++)words.add(w.optString(i));
+                cls=Deinflect.entryClass(text,row.optString("key",""),words);
+            }
+        }catch(Exception e){cls=0;}
+        entryClasses.put(rec,cls);
+        return cls;
+    }
+    /**
+     * The rows that can be this candidate: entries declaring another class are dropped, and when the entries that say
+     * anything all say another class, none is left. Entries with no mark are kept, as before.
+     */
+    JSONArray fittingRows(JSONArray rows,int candidateClass){
+        JSONArray out=new JSONArray();
+        int knownCount=0,fit=0;
+        for(int i=0;i<rows.length();i++){
+            JSONObject r=rows.getJSONObject(i);
+            if(i>=24){out.put(r);continue;}// beyond the first two dozen entries the answer is already clear
+            int cls=entryClass(r);
+            if(cls!=0)knownCount++;
+            if(!Deinflect.classFits(cls,candidateClass))continue;
+            if(cls!=0)fit++;
+            out.put(r);
+        }
+        return knownCount>0&&fit==0?new JSONArray():out;
+    }
+
     /**
      * Dictionary forms for a conjugated word (食べさせられた, 추웠어요, читала), each with its grammatical explanation.
      * Only bases that are real headwords are returned, at most four, strongest explanation first.
@@ -2343,20 +2389,24 @@ public class Library {
                 if(rows.length()>0){c.suffixNote="する verb";base=noun;n=HtmlText.normalize(noun);if(seen.contains(n))continue;}
             }
             if(rows.length()==0)continue;
+            // Entries of another word class aren't this word: しない is not 知る (godan) or 汁, 帰った is not 帰う.
+            if(c.wordClass!=0&&c.suffixNote.isEmpty()){rows=fittingRows(rows,c.wordClass);if(rows.length()==0)continue;}
             seen.add(n);
             JSONArray steps=new JSONArray();
             for(Deinflect.Step s:c.steps)steps.put(new JSONObject().put("suffix",s.suffix).put("label",s.label));
             long size=0;for(int i=0;i<rows.length();i++)size=Math.max(size,rows.getJSONObject(i).optLong("size"));
-            found.add(new JSONObject().put("base",base).put("explain",c.explain()).put("chain",c.chain().replaceFirst("^"+java.util.regex.Pattern.quote(c.base),base+(c.suffixNote.isEmpty()?"":" + する"))).put("steps",steps).put("items",rows).put("size",size).put("rank",c.steps.size()));
+            found.add(new JSONObject().put("base",base).put("explain",c.explain()).put("chain",c.chain().replaceFirst("^"+java.util.regex.Pattern.quote(c.base),base+(c.suffixNote.isEmpty()?"":" + する"))).put("steps",steps).put("items",rows).put("size",size).put("rank",c.steps.size())
+                .put("irr",(c.wordClass&(Deinflect.VS|Deinflect.VK))!=0&&(base.equals("する")||base.equals("くる")||base.equals("来る"))?1:0));
         }
-        // Ambiguous endings (行って: 行く/行う) — the word with the fuller entry is usually the intended one.
-        found.sort((a,b)->a.optInt("rank")!=b.optInt("rank")?a.optInt("rank")-b.optInt("rank"):Long.compare(b.optLong("size"),a.optLong("size")));
+        // Ambiguous endings (行って: 行く/行う) — the word with the fuller entry is usually the intended one,
+        // except that kana する/来る forms (します, きます) mean する/来る far more often than 着る or 汁.
+        found.sort((a,b)->a.optInt("rank")!=b.optInt("rank")?a.optInt("rank")-b.optInt("rank"):a.optInt("irr")!=b.optInt("irr")?b.optInt("irr")-a.optInt("irr"):Long.compare(b.optLong("size"),a.optLong("size")));
         long best=found.isEmpty()?0:found.get(0).optLong("size");
         for(JSONObject f:found){
             if(out.length()>=3)break;
             // Drop rare readings whose entries are tiny next to the best match.
             if(out.length()>0&&f.optInt("rank")==found.get(0).optInt("rank")&&f.optLong("size")*20<best)continue;
-            f.remove("size");f.remove("rank");out.put(f);
+            f.remove("size");f.remove("rank");f.remove("irr");out.put(f);
         }
         return out;
     }

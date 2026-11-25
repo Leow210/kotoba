@@ -17,11 +17,24 @@
 
   const audiobookList=()=>api('audiobook.list').catch(()=>[]);
 
-  function openBook(book){
+  /** Places in a book's chapters, {chapter: seconds}. The database copy is the one that syncs between devices; the browser's own
+   *  copy is the fallback, and fills in a chapter the database has never heard of (a place saved before sync existed). */
+  async function getPos(bookId){
+    const local=store.get('audiobook.pos.'+bookId,{}),out={};
+    let remote={};
+    try{remote=await api('listen.pos',{book:bookId})||{};}catch(e){}
+    Object.keys(local).forEach(k=>{out[k]=local[k];});
+    Object.keys(remote).forEach(k=>{out[k]=remote[k].sec;});
+    Object.keys(local).forEach(k=>{if(!remote[k]&&local[k]>0)api('listen.setPos',{book:bookId,chapter:+k,sec:local[k]}).catch(()=>{});});
+    return out;
+  }
+  const savePosRemote=(bookId,index,sec)=>api('listen.setPos',{book:bookId,chapter:index,sec}).catch(()=>{});
+
+  async function openBook(book){
     const el=document.createElement('div');el.className='ls-page';
-    const pos=store.get('audiobook.pos.'+book.id,{});
+    const pos=await getPos(book.id);
     el.innerHTML=`<div class="bar"><button class="icon-btn" data-a="back" aria-label="Back">${icon('back')}</button><div class="title"><b>${esc(book.title)}</b><small>${esc(book.author||'')}</small></div></div>
-      <div class="ls-scroll"><div class="ls-lines">${book.chapters.map((c,i)=>`<button class="ls-line" data-i="${i}"><span class="ls-line-title">${i+1}${pos[i]?` · ${fmt(pos[i])} in`:''}</span><span class="ls-line-text">${esc(c.title)}</span></button>`).join('')}</div></div>`;
+      <div class="ls-scroll">${book.cover?`<div class="ls-bookcover"><img src="${url(book.id,book.cover)}" alt=""></div>`:''}<div class="ls-lines">${book.chapters.map((c,i)=>`<button class="ls-line" data-i="${i}"><span class="ls-line-title">${i+1}${pos[i]?` · ${fmt(pos[i])} in`:''}</span><span class="ls-line-text">${esc(c.title)}</span></button>`).join('')}</div></div>`;
     pushPage(el);
     el.querySelector('[data-a="back"]').onclick=()=>popPage();
     el.querySelectorAll('[data-i]').forEach(b=>b.onclick=handle(()=>openChapter(book,+b.dataset.i)));
@@ -58,6 +71,7 @@
     const chapter=book.chapters[index];
     const rows=await (await fetch(url(book.id,chapter.rows))).json();
     const posKey='audiobook.pos.'+book.id;
+    const startAt=(await getPos(book.id))[index];
     const el=document.createElement('div');el.className='music-page ab-page';
     const lang=window.textLang?textLang(rows.map(r=>r.text).join('\n'),''):'ja';
     el.innerHTML=`<div class="bar"><button class="icon-btn" data-a="back" aria-label="Back">${icon('back')}</button><div class="title"><b>${esc(chapter.title)}</b><small>${esc(book.title)}</small></div></div>
@@ -85,20 +99,21 @@
     const at=t=>{let k=0;for(let i=0;i<rows.length;i++){if(rows[i].start<=t+.05)k=i;else break;}return k;};
     const play=()=>{const r=audio.play();if(r&&r.catch)r.catch(()=>{});};
     const go=i=>{i=Math.max(0,Math.min(rows.length-1,i));audio.currentTime=rows[i].start;userScrolled=0;play();};
-    audio.addEventListener('loadedmetadata',()=>{f('d').textContent=fmt(audio.duration);const p=store.get(posKey,{})[index];if(p&&p<audio.duration-5)audio.currentTime=p;audio.playbackRate=opts.speed;audio.preservesPitch=true;});
+    audio.addEventListener('loadedmetadata',()=>{f('d').textContent=fmt(audio.duration);const p=startAt;if(p&&p<audio.duration-5)audio.currentTime=p;audio.playbackRate=opts.speed;audio.preservesPitch=true;});
     audio.addEventListener('play',()=>{audio.playbackRate=opts.speed;});
-    let saved=0;
+    let saved=0,savedRemote=0;
     audio.addEventListener('timeupdate',()=>{
       f('t').textContent=fmt(audio.currentTime);
       if(audio.duration&&document.activeElement!==f('seek'))f('seek').value=Math.round(audio.currentTime/audio.duration*1000);
       el.querySelector('[data-a="toggle"]').textContent=audio.paused?'▶ Play':'⏸ Pause';
       if(Date.now()-saved>3000){saved=Date.now();const p=store.get(posKey,{});p[index]=Math.floor(audio.currentTime);store.set(posKey,p);}
+      if(Date.now()-savedRemote>15000){savedRemote=Date.now();savePosRemote(book.id,index,Math.floor(audio.currentTime));}
       const i=at(audio.currentTime);if(i===active)return;
       const lines=f('lines').querySelectorAll('.mu-line');active=i;
       lines.forEach((x,k)=>{x.classList.toggle('past',k<i);x.classList.toggle('now',k===i);});
       if(opts.follow&&Date.now()-userScrolled>4000&&!sheetStack.length)lines[i].scrollIntoView({block:'center',behavior:'smooth'});
     });
-    const savePos=()=>{if(audio.duration&&audio.currentTime>0){const p=store.get(posKey,{});p[index]=Math.floor(audio.currentTime);store.set(posKey,p);}};
+    const savePos=()=>{if(audio.duration&&audio.currentTime>0){const p=store.get(posKey,{});p[index]=Math.floor(audio.currentTime);store.set(posKey,p);savePosRemote(book.id,index,Math.floor(audio.currentTime));}};
     audio.addEventListener('pause',()=>{el.querySelector('[data-a="toggle"]').textContent='▶ Play';savePos();});
     document.addEventListener('visibilitychange',()=>{if(document.hidden)savePos();});
     audio.addEventListener('ended',()=>{if(index+1<book.chapters.length)toast('Chapter finished');});

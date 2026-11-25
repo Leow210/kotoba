@@ -57,13 +57,13 @@ public final class Accent {
         if(nhk==0)throw new Exception("Install the NHK accent dictionary first.");
         java.util.LinkedHashSet<String> texts=new java.util.LinkedHashSet<>();
         java.io.File setFile=new java.io.File(dir,"set.json"),storyFile=new java.io.File(dir,"stories.json");
-        JSONObject set=new JSONObject(java.nio.file.Files.readString(setFile.toPath()));
+        JSONObject set=new JSONObject(new String(java.nio.file.Files.readAllBytes(setFile.toPath()),java.nio.charset.StandardCharsets.UTF_8));
         if("ja".equals(set.optString("lang"))){
             JSONArray gs=set.getJSONArray("groups");
             for(int i=0;i<gs.length();i++){JSONArray it=gs.getJSONObject(i).getJSONArray("items");for(int k=0;k<it.length();k++)texts.add(it.getJSONObject(k).getString("text"));}
         }
         if(storyFile.isFile()){
-            JSONObject gs=new JSONObject(java.nio.file.Files.readString(storyFile.toPath())).getJSONObject("groups");
+            JSONObject gs=new JSONObject(new String(java.nio.file.Files.readAllBytes(storyFile.toPath()),java.nio.charset.StandardCharsets.UTF_8)).getJSONObject("groups");
             for(java.util.Iterator<String> ids=gs.keys();ids.hasNext();){// keys(): Android's JSONObject has no keySet()
                 String id=ids.next();
                 JSONArray secs=gs.getJSONObject(id).getJSONObject("sections").optJSONArray("ja");
@@ -75,12 +75,12 @@ public final class Accent {
             try{
                 JSONObject out=new JSONObject();
                 java.io.File file=new java.io.File(dir,"accents.json");
-                if(file.isFile())out=new JSONObject(java.nio.file.Files.readString(file.toPath()));
+                if(file.isFile())out=new JSONObject(new String(java.nio.file.Files.readAllBytes(file.toPath()),java.nio.charset.StandardCharsets.UTF_8));
                 int n=0;
                 for(String t:texts){
                     if(!out.has(t))synchronized(lib){out.put(t,words(t,nhk));}
                     progress[0]=++n;
-                    if(n%200==0||n==texts.size())java.nio.file.Files.writeString(file.toPath(),out.toString());
+                    if(n%200==0||n==texts.size())java.nio.file.Files.write(file.toPath(),out.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
                 }
             }catch(Exception e){progress[1]=-1;}
         },"accent-export");

@@ -42,6 +42,7 @@ public class DesktopServer {
     final Sync sync;
     final Translator translator;
     final Writing writing;
+    final Ask ask;
     final Store store;
     final java.util.Map<String,Long> installLinks=new java.util.concurrent.ConcurrentHashMap<>();
     volatile int port;volatile boolean helperRunning;
@@ -59,6 +60,7 @@ public class DesktopServer {
         sync=new Sync(store);
         translator=new Translator(store,data);
         writing=new Writing(translator);
+        ask=new Ask(store,translator,data);
         routes.books=new Books(context,store.db);
         routes.ocr=new Ocr(context,store.db);
         Ocr.spacing=new Spacing(context.getExternalFilesDir(null));
@@ -113,6 +115,9 @@ public class DesktopServer {
             case "translate.config":return translator.config();
             case "translate.set":translator.set(d);return translator.config();
             case "translate":return translator.translate(d.getString("text"),d.optString("from",""),d.optString("to",""),d.optString("engine",""),d.optString("context",""));
+            case "ask.config":return ask.config();
+            case "ask.set":return ask.set(d);
+            case "ask":return ask.ask(d);
             case "pleco.phone":return plecoPhone(d.getString("text"),d.optBoolean("reader",false));
             case "captions.report":return captionsReport(d);
             case "captions.add":return captionsAdd(d);
@@ -981,7 +986,7 @@ public class DesktopServer {
                 int at=html.indexOf("<script");
                 String inject="<link rel=\"stylesheet\" href=\"/desktop.css\"><script src=\"/hover-modifier.js\"></script><script src=\"/desktop.js\"></script>";
                 html=at<0?html+inject:html.substring(0,at)+inject+html.substring(at);
-                html=html.replace("</body>","<script src=\"/desktop-after.js\"></script><link rel=\"stylesheet\" href=\"/writer.css\"><script src=\"/writer.js\"></script></body>");
+                html=html.replace("</body>","<script src=\"/desktop-after.js\"></script><link rel=\"stylesheet\" href=\"/ask.css\"><script src=\"/ask.js\"></script><link rel=\"stylesheet\" href=\"/writer.css\"><script src=\"/writer.js\"></script></body>");
                 bytes=html.getBytes(StandardCharsets.UTF_8);
             }
             send(x,200,mime,bytes,null);

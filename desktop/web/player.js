@@ -251,7 +251,7 @@ async function showPop(res,cue,r1,r2,P=pop){
       ${res.explain||alts(res).length?`<div class="p-explain">${esc(res.explain||'')}${alts(res).map((f,j)=>`<button class="p-alt" data-p="alt" data-j="${j}" title="${esc(f.explain||'')}">or ${esc(f.base)}</button>`).join('')}</div>`:''}
       <div class="p-tabs">${items.map((it,n)=>`<button class="p-tab${n?'':' on'}" data-p="tab" data-n="${n}">${esc(shortName(it.dictionary))}</button>`).join('')}</div>
       <div class="p-entry"></div>
-      <div class="p-actions"><button data-p="card">＋ Card</button><select class="p-folder" title="Folder for new cards"></select><button data-p="main">Open in Kotoba</button>${(P.level?P.lang:st.lang)==='zh'?'':''}<button data-p="copy">Copy</button></div>`;
+      <div class="p-actions"><button data-p="card">＋ Card</button><select class="p-folder" title="Folder for new cards"></select><button data-p="ask">Ask</button><button data-p="main">Open in Kotoba</button>${(P.level?P.lang:st.lang)==='zh'?'':''}<button data-p="copy">Copy</button></div>`;
     P.items=items;
     fillFolders(P.el.querySelector('.p-folder'));
     const kb=P.el.querySelector('.p-known');
@@ -456,6 +456,10 @@ async function onPopClick(P,e){
   }
   if(b.dataset.p==='copy'){navigator.clipboard.writeText(res.key).catch(()=>{});osd('Copied');}
   if(b.dataset.p==='main')send({cmd:'lookupInMain',word:res.key});
+  if(b.dataset.p==='ask'){
+    // A word from a definition (a child popup) has no subtitle line around it.
+    openAsk({text:res.written||res.key,kind:'word',context:!P.level&&P.cue?P.cue.text.replace(/\n/g,' '):'',lang:P.level?P.lang:st.lang});return;
+  }
   if(b.dataset.p==='tab'){closeFrom(P.level+1);showEntry(P,+b.dataset.n);return;}
   if(b.dataset.p==='card'&&it){
     try{
@@ -590,7 +594,7 @@ function showSelbar(){
 }
 function resumeAfterSelection(){if(selPaused){selPaused=false;send({cmd:'play'});}}
 document.addEventListener('mousedown',(e)=>{
-  if(e.target.closest('#selbar,#trpop'))return;
+  if(e.target.closest('#selbar,#trpop,#askpop'))return;
   hideSelbar();
   // Clicking the picture plays/pauses by itself, so closing here doesn't also resume.
   if(!$('trpop').hidden)closeTranslation(!e.target.closest('#hit'));
@@ -608,6 +612,12 @@ $('selbar').addEventListener('click',(e)=>{
   const sel=subSelection();if(!sel){hideSelbar();return;}
   if(b.dataset.s==='copy'){navigator.clipboard.writeText(sel.text).catch(()=>{});osd('Copied');hideSelbar();getSelection().removeAllRanges();resumeAfterSelection();return;}
   hideSelbar();
+  if(b.dataset.s==='ask'){
+    const kind=KotobaAsk.kindOf(sel.text),line=sel.cue?sel.cue.text.replace(/\n/g,' '):'';
+    // A word is asked about within its line; a sentence with the lines around it.
+    const context=kind==='word'?line:[line,cueContext(sel.cue)].filter(Boolean).join('\n');
+    openAsk({text:sel.text,kind,context,lang:st.lang});return;
+  }
   translateSelection(sel);
 });
 const ENGINE_NAMES={llm:'Gemma (on this Mac)',cloud:'Google Cloud',google:'Google (free)'};
@@ -654,6 +664,24 @@ async function translateSelection(sel){
     if(b.dataset.t==='copysrc'){navigator.clipboard.writeText(sel.text).catch(()=>{});osd('Copied');}
   };
   run();
+}
+// ---------- asking about a word or a line (ask.js) ----------
+let askPaused=false;
+function openAsk(o){
+  // The video stays paused until the panel is closed, whether a hover, a selection or this paused it.
+  askPaused=askPaused||!st.paused||st.pausedByHover||selPaused;
+  if(!st.paused)send({cmd:'pause'});
+  st.pausedByHover=false;selPaused=false;
+  hidePop();hideSelbar();if(!$('trpop').hidden)closeTranslation(false);
+  getSelection().removeAllRanges();applyDark();
+  const P=$('askpop');
+  P.innerHTML='<div class="p-head"><b class="tr-title">Ask</b><button class="p-close" title="Close (Esc)">×</button></div>';
+  P.querySelector('.p-close').onclick=closeAsk;P.hidden=false;
+  KotobaAsk.panel(P,{...o,api,source:videoName,onClose:closeAsk});
+}
+function closeAsk(){
+  $('askpop').hidden=true;$('askpop').innerHTML='';
+  if(askPaused){askPaused=false;send({cmd:'play'});}
 }
 
 function closeTranslation(resume=true){
@@ -793,6 +821,7 @@ document.addEventListener('keydown',(e)=>{
     if(sel){e.preventDefault();navigator.clipboard.writeText(sel.text).catch(()=>{});osd('Copied');}
     return;
   }
+  if(e.key==='Escape'&&!$('askpop').hidden){e.preventDefault();closeAsk();return;}
   if(e.key==='Escape'&&(!$('trpop').hidden||!$('selbar').hidden)){e.preventDefault();hideSelbar();if(!$('trpop').hidden)closeTranslation();else resumeAfterSelection();getSelection().removeAllRanges();return;}
   const k=e.key.length===1?e.key.toLowerCase():e.key;
   const run={' ':()=>send({cmd:'toggle'}),'ArrowLeft':()=>send({cmd:'seekBy',t:e.shiftKey?-1:-5}),'ArrowRight':()=>send({cmd:'seekBy',t:e.shiftKey?1:5}),

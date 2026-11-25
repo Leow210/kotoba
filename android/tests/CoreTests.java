@@ -54,6 +54,26 @@ public class CoreTests {
         check(has(Deinflect.japanese("行って"),"行く",null),"行って");
         check(!has(Deinflect.japanese("かった"),"かく",null),"no 行く-type rule for かった");
         check(has(Deinflect.japanese("高くなかった"),"高い",null),"高くなかった");
+        // Literary, colloquial and contracted forms, te-form auxiliaries, honorific -aru verbs.
+        String[][] jaCases={{"知らぬ","知る"},{"知らざる","知る"},{"行くべき","行く"},{"すべき","する"},{"知らねば","知る"},{"知らずに","知る"},{"知らん","知る"},{"分からん","分かる"},
+            {"食べなきゃ","食べる"},{"行かなきゃ","行く"},{"高くなきゃ","高い"},{"行かなくちゃ","行く"},{"やっとく","やる"},{"食べとく","食べる"},{"読んどく","読む"},{"持ってく","持つ"},
+            {"食べてもらった","食べる"},{"食べてみた","食べる"},{"読んでみる","読む"},{"書いてあげた","書く"},{"教えてくれた","教える"},{"来てほしい","来る"},{"食べちゃった","食べる"},{"行っちまった","行く"},
+            {"いらっしゃいます","いらっしゃる"},{"いらっしゃいませ","いらっしゃる"},{"おっしゃいました","おっしゃる"},{"ください","くださる"},{"ございます","ござる"},{"なさいました","なさる"}};
+        for(String[] k:jaCases)check(has(Deinflect.japanese(k[0]),k[1],null),"Japanese "+k[0]+" → "+k[1]);
+        check(classOf(Deinflect.japanese("しない"),"しる")==Deinflect.V1&&classOf(Deinflect.japanese("しない"),"する")==Deinflect.VS,"candidates keep their word class");
+        check((classOf(Deinflect.japanese("入れた"),"入れる")&Deinflect.V1)!=0,"入れた → 入れる as ichidan");
+        // Word classes read from dictionary entries.
+        check(Deinflect.entryClass("しる0【知る・領る】一（動ラ五［四］）一《知》","しる",null)==Deinflect.V5,"大辞林 godan mark");
+        check(Deinflect.entryClass("きる【着る】［他上一］❶衣服を","きる",null)==Deinflect.V1,"明鏡 ichidan mark");
+        check(Deinflect.entryClass("える【得る】（動ア下一［下二］）","える",null)==Deinflect.V1,"modern class before the classical one");
+        check(Deinflect.entryClass("し・る【痴】〘自ラ下二〙 ⇒しれる","しる",null)==Deinflect.CLASSICAL&&!Deinflect.classFits(Deinflect.CLASSICAL,Deinflect.V1),"classical 下二 doesn't fit ichidan");
+        check(Deinflect.entryClass("くる＊＊くる［来る］｟自カ｠〔終止形は","くる",null)==Deinflect.VK,"三省堂 カ変 mark");
+        check(Deinflect.entryClass("べんきょう【勉強】［名・自他サ変］❶学問","べんきょう",null)==(Deinflect.NONCONJ|Deinflect.VS),"noun + する mark");
+        check(Deinflect.entryClass("たかい【高】〘形口〙 たか・し","たかい",null)==Deinflect.ADJ,"日国 adjective mark");
+        check(Deinflect.entryClass("しる1【汁】①物の内部にある液体。","しる",null)==Deinflect.NONCONJ,"unmarked kanji-only headword is a noun");
+        check(Deinflect.entryClass("","シル",null)==Deinflect.NONCONJ,"katakana entry is not a verb");
+        check(Deinflect.entryClass("しる【知る】知っての通り","しる",null)==0,"unmarked verb is unknown");
+        check(!Deinflect.classFits(Deinflect.V5,Deinflect.V1)&&Deinflect.classFits(0,Deinflect.V1)&&Deinflect.classFits(Deinflect.NONCONJ|Deinflect.VS,Deinflect.VS),"class fit");
 
         // Korean: forms generated from real stems (the predicate stands in for the dictionary).
         Set<String> ko=new HashSet<>(Arrays.asList("춥다","먹다","하다","모르다","듣다","들다","하얗다","가다","보다","되다","마시다","살다","사다","예쁘다","학교","공부","쓰다","돕다","낫다"));
@@ -174,6 +194,7 @@ public class CoreTests {
         System.out.println(passed+" passed, "+failures+" failed");
         if(failures>0)System.exit(1);
     }
+    static int classOf(List<Deinflect.Candidate> list,String base){int c=0;for(Deinflect.Candidate k:list)if(k.base.equals(base)&&k.steps.size()==1)c|=k.wordClass;return c;}
     static boolean has(List<Deinflect.Candidate> list,String base,String explain){
         for(Deinflect.Candidate c:list)if(c.base.equals(base)&&(explain==null||c.explain().equals(explain)))return true;
         return false;

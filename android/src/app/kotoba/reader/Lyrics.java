@@ -320,11 +320,13 @@ public class Lyrics {
             return new String(b.toByteArray(),StandardCharsets.UTF_8);
         }
     }
+    /** An object's keys (JSONObject.keySet() only exists from Android 16, so the phone build can't use it). */
+    static List<String> keys(JSONObject j){List<String> k=new ArrayList<>();for(java.util.Iterator<String> it=j.keys();it.hasNext();)k.add(it.next());return k;}
     /** Every object under this key, anywhere in the tree. */
-    static void collect(Object o,String key,List<JSONObject> out){
+    static void collect(Object o,String key,List<JSONObject> out)throws Exception{
         if(o instanceof JSONObject){
             JSONObject j=(JSONObject)o;
-            for(String k:j.keySet()){
+            for(String k:keys(j)){
                 Object v=j.get(k);
                 if(k.equals(key)&&v instanceof JSONObject)out.add((JSONObject)v);
                 else collect(v,key,out);
@@ -333,18 +335,18 @@ public class Lyrics {
             JSONArray a=(JSONArray)o;for(int i=0;i<a.length();i++)collect(a.get(i),key,out);
         }
     }
-    static void texts(Object o,List<String> out){
+    static void texts(Object o,List<String> out)throws Exception{
         if(o instanceof JSONObject){
             JSONObject j=(JSONObject)o;
             if(j.has("text")&&j.get("text") instanceof String)out.add(j.getString("text"));
-            for(String k:j.keySet())texts(j.get(k),out);
+            for(String k:keys(j))texts(j.get(k),out);
         }else if(o instanceof JSONArray){JSONArray a=(JSONArray)o;for(int i=0;i<a.length();i++)texts(a.get(i),out);}
     }
-    static String firstString(Object o,String key){
+    static String firstString(Object o,String key)throws Exception{
         if(o instanceof JSONObject){
             JSONObject j=(JSONObject)o;
             if(j.has(key)&&j.get(key) instanceof String)return j.getString(key);
-            for(String k:j.keySet()){String r=firstString(j.get(k),key);if(r!=null)return r;}
+            for(String k:keys(j)){String r=firstString(j.get(k),key);if(r!=null)return r;}
         }else if(o instanceof JSONArray){JSONArray a=(JSONArray)o;for(int i=0;i<a.length();i++){String r=firstString(a.get(i),key);if(r!=null)return r;}}
         return null;
     }

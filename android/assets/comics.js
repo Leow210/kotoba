@@ -436,6 +436,8 @@ async function openComic(series,chapterId,startPage=0){
       <div class="switch-row"><div><b>Chapter titles between chapters</b><small>In webtoon mode</small></div><label class="toggle"><input type="checkbox" id="cm-sep" ${settings.separators?'checked':''}><span></span></label></div>
       <div class="switch-row"><div><b>Small gap between images</b><small>Off = seamless strip</small></div><label class="toggle"><input type="checkbox" id="cm-gap" ${settings.gap?'checked':''}><span></span></label></div>
       <div class="switch-row"><div><b>Page turn animation</b></div><label class="toggle"><input type="checkbox" id="cm-anim" ${settings.pageAnim?'checked':''}><span></span></label></div>
+      <div class="switch-row"><div><b>Background text reading</b><small>Better bubble text is read ahead only while the app is open and the phone is cool</small></div></div>
+      <div class="seg" id="cm-refine" style="min-width:210px"><button data-r="page">This page</button><button data-r="auto">Next page too</button><button data-r="charging">Charging only</button></div>
       <button class="btn small" id="cm-default" style="margin-top:10px">Use for all series</button></div>`,{title:'Reading'});
     const save=()=>api('comic.settings',{id:series.id,settings});
     s.sheet.querySelectorAll('[data-k]').forEach(b=>b.onclick=handle(async()=>{
@@ -445,6 +447,11 @@ async function openComic(series,chapterId,startPage=0){
     s.sheet.querySelector('#cm-sep').onchange=handle(async e=>{settings.separators=e.target.checked;await save();await open(state.chapter,state.page);});
     s.sheet.querySelector('#cm-gap').onchange=handle(async e=>{settings.gap=e.target.checked;await save();view.querySelectorAll('img.cpage').forEach(i=>i.classList.toggle('gap',settings.gap));});
     s.sheet.querySelector('#cm-anim').onchange=handle(e=>{settings.pageAnim=e.target.checked;return save();});
+    const refine=s.sheet.querySelector('#cm-refine');
+    const markRefine=v=>refine.querySelectorAll('[data-r]').forEach(x=>x.classList.toggle('on',x.dataset.r===v));
+    markRefine('auto');
+    api('settings').then(all=>markRefine(all.ocr_refine||'auto')).catch(()=>{});
+    refine.querySelectorAll('[data-r]').forEach(b=>b.onclick=handle(async()=>{markRefine(b.dataset.r);await api('setting',{key:'ocr_refine',value:b.dataset.r});}));
     s.sheet.querySelector('#cm-default').onclick=()=>{try{localStorage.setItem('comicDefaults',JSON.stringify({...settings,mode:''}));}catch(e){}toast('Saved as default');};
   }
   async function open(ch,page){
@@ -499,4 +506,10 @@ function ocrTextSheet(text,opts={}){
   s.sheet.querySelector('#ob-tr').onclick=()=>window.__translateInApp?window.__translateInApp(text,opts.context||''):Kotoba.translate(text);
   // Save keeps the bubble as a sentence card, with the bubble's picture when it came from a comic page.
   s.sheet.querySelector('#ob-card').onclick=handle(async()=>{closeSheet(s);await saveSentence({text,image:opts.image?await opts.image():'',note:opts.source||''});});
+  // The Mac can answer questions about the bubble (web/ask.js).
+  if(window.__askAbout){
+    const b=document.createElement('button');b.className='btn wide';b.innerHTML=`${icon('ask')} Ask`;
+    s.sheet.querySelector('#ob-tr').after(b);
+    b.onclick=()=>window.__askAbout({text,context:opts.context||'',kind:'sentence',lang:opts.lang||'',source:opts.source||''});
+  }
 }

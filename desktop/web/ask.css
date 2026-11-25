@@ -1,0 +1,29 @@
+/* The Ask panel: a sheet in the main window, a popup in the video player. */
+.ask{--a-ink:var(--ink);--a-muted:var(--muted);--a-line:var(--line);--a-field:var(--surface);--a-soft:var(--sunken);--a-accent:var(--accent);--a-accent-ink:var(--accent-ink);--a-danger:var(--danger);
+  color:var(--a-ink);font:15px/1.6 var(--sans);user-select:text;-webkit-user-select:text}
+.ask-text{white-space:pre-wrap;font-size:17px}
+.ask-text.word{font-size:24px;font-weight:700;line-height:1.35}
+.ask-context{color:var(--a-muted);font-size:14px;margin-top:3px;white-space:pre-wrap}
+.ask-log:not(:empty){border-top:1px solid var(--a-line);margin-top:10px;padding-top:4px}
+.ask-q{margin:8px 0 6px auto;width:fit-content;max-width:88%;background:var(--a-soft);border-radius:12px;padding:5px 11px;font-size:14px}
+.ask-a{white-space:pre-wrap;overflow-wrap:anywhere;margin-bottom:6px}
+.ask-a.busy{color:var(--a-muted);font-style:italic}
+.ask-a.failed{color:var(--a-danger)}
+.ask-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.ask-chips button{font:600 13px var(--sans);color:var(--a-accent);border:1px solid var(--a-line);background:var(--a-field);border-radius:999px;padding:4px 12px;cursor:pointer}
+.ask-form{display:flex;gap:8px;margin-top:10px}
+.ask-form input{flex:1;min-width:0;font:15px var(--sans);padding:8px 11px;border-radius:10px;border:1px solid var(--a-line);background:var(--a-field);color:var(--a-ink)}
+.ask-form button{font:700 13px var(--sans);border:0;border-radius:10px;padding:0 16px;background:var(--a-accent);color:var(--a-accent-ink);cursor:pointer}
+.ask-chips button:disabled,.ask-form button:disabled{opacity:.45;cursor:default}
+.ask-foot{display:flex;align-items:center;gap:10px;margin-top:8px;font-size:12px;color:var(--a-muted)}
+.ask-foot select{font:600 12px var(--sans);color:var(--a-muted);background:var(--a-field);border:1px solid var(--a-line);border-radius:8px;padding:2px 4px}
+.ask-sheet{padding-bottom:18px}
+
+/* video player: its popups have their own light and dark colors */
+.askpop .ask{--a-ink:#1d211f;--a-muted:#72766f;--a-line:#ebe5da;--a-field:#fff;--a-soft:#efebe2;--a-accent:#2f6b55;--a-accent-ink:#fff;--a-danger:#b4442f}
+.k-dark .askpop .ask{--a-ink:#e6e5df;--a-muted:#a3a69e;--a-line:#2c302b;--a-field:#232723;--a-soft:#262b26;--a-accent:#7cc2a0;--a-accent-ink:#0f1a14;--a-danger:#e0806c}
+.kpop.askpop{z-index:26;width:min(500px,90vw);max-height:min(76vh,620px);left:50%;top:6vh;transform:translateX(-50%)}
+.askpop .p-head{display:flex;justify-content:space-between}
+.askpop[hidden]{display:none}
+.kpop:not(.big) .p-actions button[data-p="ask"]:not(:first-child){display:inline-block}
+.ask-settings select{font:inherit;padding:4px 8px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}

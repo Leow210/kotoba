@@ -825,6 +825,21 @@ function fitVertical(doc){
   if(top<-.5)doc.body.style.paddingTop=(px(getComputedStyle(doc.body).paddingTop)-top+2)+'px';
 }
 
+/**
+ * An entry page's text size. CSS zoom everywhere but the iPad, where WebKit lays the page out zoomed but draws the text at
+ * its own size: there the body is scaled instead (from its top-left corner, and made narrower by the same factor so lines
+ * still wrap at the frame's edge). A vertical entry keeps zoom, which a scale anchored at the left would push off-screen.
+ */
+function setDocZoom(doc,z,vertical){
+  z=+z||1;
+  if(!document.documentElement.classList.contains('ipad')||vertical){doc.documentElement.style.zoom=String(z);return;}
+  const b=doc.body;if(!b)return;
+  doc.documentElement.style.zoom='';
+  b.style.transformOrigin='0 0';
+  b.style.transform=z===1?'':`scale(${z})`;
+  b.style.width=z===1?'':`calc(100% / ${z})`;
+  b.style.boxSizing=z===1?'':'border-box';
+}
 function frameSetup(frame,opts){
   // Wires a dictionary-page iframe: sizing, zoom, links, audio, selection.
   const doc=frame.contentDocument;if(!doc||!doc.body)return null;
@@ -845,7 +860,7 @@ function frameSetup(frame,opts){
       link.appendChild(child);
     });
   }
-  doc.documentElement.style.zoom=String(opts.zoom||settings.zoom);
+  setDocZoom(doc,opts.zoom||settings.zoom,opts.vertical);
   // Dictionaries that are vertical by design (無礼語) get the vertical layout whatever the setting.
   opts.nativeVertical=/^vertical/.test(getComputedStyle(doc.body).writingMode||'');
   if(opts.nativeVertical){
@@ -863,7 +878,9 @@ function frameSetup(frame,opts){
   doc.documentElement.classList.toggle('kotoba-dark',effTheme()==='dark');
   if(effTheme()==='dark')darkenDoc(doc);
   // Body rect already includes CSS zoom; documentElement.scrollHeight never shrinks below the frame itself.
-  const resize=()=>{if(opts.autoHeight===false)return;const h=Math.ceil(doc.body.getBoundingClientRect().bottom+8);frame.style.height=Math.max(opts.min||60,h)+'px';};
+  // An auto-height frame never needs its own scrollbar; one appearing and vanishing as the height settles re-wraps the text and makes the entry flicker.
+  if(opts.autoHeight!==false)doc.documentElement.style.overflow='hidden';
+  const resize=()=>{if(opts.autoHeight===false)return;const h=Math.max(opts.min||60,Math.ceil(doc.body.getBoundingClientRect().bottom+8));if(Math.abs(h-(parseFloat(frame.style.height)||0))>=1)frame.style.height=h+'px';};
   resize();
   try{new ResizeObserver(resize).observe(doc.body);}catch(e){}
   doc.querySelectorAll('img').forEach(img=>img.addEventListener('load',resize));
@@ -1086,8 +1103,8 @@ async function openEntry(target,existing){
   }
   el.querySelector('[data-act="bookmark"]').onclick=handle(()=>saveFromEntry(true));
   el.querySelector('[data-act="more"]').onclick=handle(()=>menuSheet(state.key,[
-    {label:'Larger text',icon:'text',run:()=>{settings.zoom=Math.min(2.6,+(settings.zoom+0.15).toFixed(2));saveLocalSettings();current.doc.documentElement.style.zoom=settings.zoom;setTimeout(current.resize,30);toast('Text size '+Math.round(settings.zoom*100)+'%',1200);}},
-    {label:'Smaller text',icon:'text',run:()=>{settings.zoom=Math.max(0.7,+(settings.zoom-0.15).toFixed(2));saveLocalSettings();current.doc.documentElement.style.zoom=settings.zoom;setTimeout(current.resize,30);toast('Text size '+Math.round(settings.zoom*100)+'%',1200);}},
+    {label:'Larger text',icon:'text',run:()=>{settings.zoom=Math.min(2.6,+(settings.zoom+0.15).toFixed(2));saveLocalSettings();setDocZoom(current.doc,settings.zoom);setTimeout(current.resize,30);toast('Text size '+Math.round(settings.zoom*100)+'%',1200);}},
+    {label:'Smaller text',icon:'text',run:()=>{settings.zoom=Math.max(0.7,+(settings.zoom-0.15).toFixed(2));saveLocalSettings();setDocZoom(current.doc,settings.zoom);setTimeout(current.resize,30);toast('Text size '+Math.round(settings.zoom*100)+'%',1200);}},
     {label:settings.vertical?'Horizontal text':'Vertical text (縦書き)',icon:'vertical',run:()=>{settings.vertical=!settings.vertical;saveLocalSettings();return load({rec:state.rec,dict:state.dict,key:state.key,anchor:state.anchor,alternatives:state.alternatives,highlight:state.highlight,whole:state.whole},false);}},
     {label:state.whole?'Show only this entry':'Show whole page',icon:'expand',run:()=>{state.whole=!state.whole;renderFocus();}},
     ...(current.units.length>1?[{label:'Other entries on this page…',icon:'book',run:async()=>{
@@ -1456,7 +1473,7 @@ function showSelbar(){
   const bar=$('selbar');
   const reading=selection.opts&&selection.opts.reader;
   bar.innerHTML=[
-    ['lookup','search','Look up'],...(window.Kotoba&&Kotoba.plecoLookup&&chineseHeadword(selection.text)?[['pleco','book','Pleco']]:[]),...(reading?[['highlight','edit','Highlight']]:[['search','book','Search']]),['copy','copy','Copy'],['card','star','Save'],...(reading?[['sentence','text','Sentence']]:[]),['translate','share','Translate'],['share','share','Share'],
+    ['lookup','search','Look up'],...(window.Kotoba&&Kotoba.plecoLookup&&chineseHeadword(selection.text)?[['pleco','book','Pleco']]:[]),...(reading?[['highlight','edit','Highlight']]:[['search','book','Search']]),['copy','copy','Copy'],['card','star','Save'],...(reading?[['sentence','text','Sentence']]:[]),['translate','share','Translate'],...(window.__askAbout?[['ask','ask','Ask']]:[]),['share','share','Share'],
   ].map(([a,i,l])=>`<button data-sel="${a}">${icon(i)}${l}</button>`).join('');
   bar.hidden=false;
   bar.querySelectorAll('[data-sel]').forEach(b=>{
@@ -1486,9 +1503,10 @@ window.selectionAction=(action)=>handle(async()=>{
   if(action==='share'){Kotoba.share(text);return;}
   if(action==='translate'){Kotoba.translate(text);clearSelections();return;}
   if(action==='pleco'){Kotoba.plecoLookup(text);clearSelections();return;}
+  if(action==='ask'){clearSelections();window.__askAbout({text,context:sel.context||'',source:readerSourceNote()});return;}
   if(action==='sentence'){clearSelections();await saveSentence({text:sel.context||text,note:readerSourceNote()});return;}
   if(action==='search'){clearSelections();closeAllOverlays();showTab('search');$('q').value=text.slice(0,100);$('q-clear').hidden=false;search.mode='headword';document.querySelectorAll('#modes [data-mode]').forEach(x=>x.classList.toggle('on',x.dataset.mode==='headword'));await runSearch();remember();return;}
-  if(action==='lookup'){await lookupSheet(text,sel);return;}
+  if(action==='lookup'){await lookupSheet(text,sel,{zoom:sel&&sel.opts&&sel.opts.reader?readerHooks.zoom():0});return;}
   if(action==='card'){
     const src=sel.opts&&sel.opts.source?sel.opts.source():null;
     if(text.length<=24){
@@ -1518,6 +1536,7 @@ async function lookupSheet(text,sel,extra={}){
       s.sheet.querySelector('#lk-search').after(read);read.onclick=()=>Kotoba.plecoRead(missingContext);
     }
     s.sheet.querySelector('#lk-card').onclick=()=>{closeSheet(s);openSaveSheet({review:true,kind:'selection',headword:text.slice(0,60),back:'',context:sel&&sel.context||''});};
+    askButton(s.sheet.querySelector('#lk-search'),{text:text.slice(0,200),context:sel&&sel.context||'',lang:extra.lang||'',source:extra.book||''});
     return;
   }
   let index=0;
@@ -1547,7 +1566,8 @@ async function lookupSheet(text,sel,extra={}){
     s.sheet.querySelector('#lk-tabs').innerHTML=items.map((x,n)=>`<button class="chip small ${n===i?'on':''}" data-t="${n}">${esc(shortName(x.dictionary))}${nth(n)}</button>`).join('');
     s.sheet.querySelectorAll('#lk-tabs [data-t]').forEach(b=>b.onclick=()=>show(+b.dataset.t));
     await new Promise(res=>{frame.onload=res;frame.src=`/d/${it.dict}/${it.rec}.entry`;});
-    wired=frameSetup(frame,{dict:it.dict,autoHeight:false,onLink:async(href)=>{const ref=await api('reference',{dict:it.dict,ref:href});if(ref.rec){closeSheet(s);openEntry({rec:ref.rec,dict:it.dict,key:ref.key||'',anchor:ref.anchor||''});}},source:()=>({dict:it.dict,dictName:it.dictionary,key:r.key,page:it.page,info:focusUnit?unitInfo(focusUnit,r.key):null})});
+    // extra.zoom scales the entry text with the page it was opened from (a book read at a larger size).
+    wired=frameSetup(frame,{dict:it.dict,autoHeight:false,zoom:extra.zoom?+(settings.zoom*extra.zoom).toFixed(2):0,onLink:async(href)=>{const ref=await api('reference',{dict:it.dict,ref:href});if(ref.rec){closeSheet(s);openEntry({rec:ref.rec,dict:it.dict,key:ref.key||'',anchor:ref.anchor||''});}},source:()=>({dict:it.dict,dictName:it.dictionary,key:r.key,page:it.page,info:focusUnit?unitInfo(focusUnit,r.key):null})});
     if(!wired)return;
     const f=findFocus(wired.doc,r.key,'');focusUnit=f.focus;focusIdx=f.units.indexOf(f.focus);if(!kanjiHead(it.dict,r.key))applyFocus(wired.doc,f.focus,f.units);
     const fit=()=>{frame.style.height=Math.min(window.innerHeight*0.55,Math.max(160,wired.doc.body.getBoundingClientRect().bottom+10))+'px';};
@@ -1585,8 +1605,16 @@ async function lookupSheet(text,sel,extra={}){
       b.after(read);read.onclick=()=>Kotoba.plecoRead(context);
     }
   }
+  askButton(s.sheet.querySelector('#lk-open'),{text:r.matched||r.key,kind:'word',context:context||'',lang:extra.lang||'',source:extra.book||''});
   s.sheet.querySelector('#lk-card').onclick=handle(()=>{const it=items[index];closeSheet(s);return saveLookupResult(it,r.key,sel&&sel.context||'',items,true,extra.book||'',focusIdx);});
   await show(0);
+}
+
+/** "Ask" beside a lookup's other buttons (the Mac, where web/ask.js provides it). */
+function askButton(after,o){
+  if(!window.__askAbout)return;
+  const b=document.createElement('button');b.className='btn wide';b.innerHTML=`${icon('ask')} Ask`;
+  after.after(b);b.onclick=()=>window.__askAbout(o);
 }
 
 /** Loads an entry into a hidden frame to extract its focused unit and parts, then opens the save sheet. */
@@ -1776,7 +1804,7 @@ async function renderFolders(){
 async function openFolder(folderId,folders){
   const folder=folderId?folders.find(f=>f.id===folderId):{id:0,name:'All saved words'};
   const el=document.createElement('div');
-  el.innerHTML=`<div class="bar"><button class="icon-btn" data-a="back">${icon('back')}</button><div class="title"><b>${esc(folder.name)}</b><small data-f="count"></small></div><button class="icon-btn" data-a="view" aria-label="List or grid"></button><button class="icon-btn" data-a="review" aria-label="Review this folder">${icon('card')}</button><button class="icon-btn" data-a="more">${icon('more')}</button></div>
+  el.innerHTML=`<div class="bar"><button class="icon-btn" data-a="back">${icon('back')}</button><div class="title"><b>${esc(folder.name)}</b><small data-f="count"></small></div><button class="icon-btn" data-a="view" aria-label="List or grid"></button><button class="icon-btn" data-a="review" aria-label="Review this folder">${icon('card')}</button>${document.documentElement.classList.contains('desktop')?`<button class="icon-btn" data-a="select" aria-label="Select words" title="Select words (or right-click a word)">${icon('check')}</button>`:''}<button class="icon-btn" data-a="more">${icon('more')}</button></div>
     <div class="searchline"><div class="field">${icon('search')}<input data-f="q" type="search" placeholder="Filter" autocomplete="off"></div></div>
     <div class="chips" style="padding:6px 14px 8px" data-f="filters"></div>
     <div class="scroll" data-f="list"></div>
@@ -1791,6 +1819,16 @@ async function openFolder(folderId,folders){
   viewBtn.onclick=()=>{view=view==='list'?'grid':'list';try{localStorage.setItem('folderView',view);}catch(e){}setViewIcon();render();};
   el.querySelector('[data-a="back"]').onclick=()=>{if(selecting){selecting=false;selected.clear();render();return;}popPage();};
   el.querySelector('[data-a="review"]').onclick=handle(()=>startReview(folderId));
+  const selBtn=el.querySelector('[data-a="select"]');   // Mac: a plain button instead of the phone's long-press
+  if(selBtn)selBtn.onclick=()=>{selecting=!selecting;if(!selecting)selected.clear();render();};
+  let lastPicked=-1;
+  const onKey=(e)=>{   // Mac: Cmd/Ctrl+A selects every word shown, Esc leaves selection
+    if(!el.isConnected){document.removeEventListener('keydown',onKey);return;}
+    if(!selecting||e.target.closest&&e.target.closest('input,textarea'))return;
+    if((e.metaKey||e.ctrlKey)&&e.key==='a'){e.preventDefault();items.forEach(i=>selected.add(i.id));render();}
+    else if(e.key==='Escape'){selecting=false;selected.clear();render();}
+  };
+  document.addEventListener('keydown',onKey);
   el.querySelector('[data-a="more"]').onclick=handle(()=>menuSheet(folder.name,[
     {label:'Select items',icon:'check',run:()=>{selecting=true;render();}},
     {label:'Sort: '+(sort==='updated'?'recent first':sort==='headword'?'A → Z':'by due date')+' (change)',icon:'refresh',run:()=>{sort=sort==='updated'?'headword':sort==='headword'?'due':'updated';load();}},
@@ -1818,7 +1856,8 @@ async function openFolder(folderId,folders){
     return `<span class="state rev">${fmtDue(it.due)}</span>`;
   };
   function render(){
-    f('count').textContent=`${items.length} ${items.length===1?'item':'items'}`;
+    f('count').textContent=selecting?`${selected.size} selected of ${items.length}`:`${items.length} ${items.length===1?'item':'items'}`;
+    if(selBtn)selBtn.classList.toggle('on',selecting);
     f('list').innerHTML=!items.length?'':view==='grid'?`<div class="wl-grid">${items.map((it,i)=>`<button class="wl-cell item-cell ${selected.has(it.id)?'selected':''}" data-i="${i}">${selecting?`<span class="check">${icon('check')}</span>`:''}<span>${esc(it.headword)}</span>${it.reading&&it.reading!==it.headword?`<small>${esc(it.reading)}</small>`:''}</button>`).join('')}</div>`:'';
     if(items.length&&view==='list')f('list').innerHTML=items.map((it,i)=>`<button class="item-row ${selected.has(it.id)?'selected':''}" data-i="${i}">${selecting?`<span class="check">${icon('check')}</span>`:''}<span class="ib"><span class="hw">${esc(it.headword)}</span>${it.reading?`<span class="rd">${esc(it.reading)}</span>`:''}<p>${esc(it.back||it.context||'')}</p><span class="meta" style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap">${stateBadge(it)}${it.dict_name?`<span class="tag muted">${esc(shortName(it.dict_name))}</span>`:''}${!folderId?`<span class="tag muted">${esc(it.folder)}</span>`:''}</span></span></button>`).join('');
     if(!items.length)f('list').innerHTML=
@@ -1829,16 +1868,26 @@ async function openFolder(folderId,folders){
       b.addEventListener('touchstart',()=>{timer=setTimeout(()=>{timer=null;if(!selecting){selecting=true;selected.add(it.id);render();}},480);},{passive:true});
       b.addEventListener('touchend',()=>{if(timer)clearTimeout(timer);},{passive:true});
       b.addEventListener('touchmove',()=>{if(timer)clearTimeout(timer);timer=null;},{passive:true});
-      b.onclick=handle(()=>{
-        if(selecting){selected.has(it.id)?selected.delete(it.id):selected.add(it.id);if(!selected.size)selecting=false;render();return;}
+      b.addEventListener('contextmenu',(e)=>{   // Mac: right-click a word to start selecting with it
+        if(!document.documentElement.classList.contains('desktop'))return;
+        e.preventDefault();selecting=true;selected.add(it.id);lastPicked=+b.dataset.i;render();
+      });
+      b.onclick=handle((ev)=>{
+        const i=+b.dataset.i;
+        if(!selecting&&ev&&(ev.metaKey||ev.ctrlKey||ev.shiftKey)){selecting=true;selected.add(it.id);lastPicked=i;render();return;}   // Mac: modifier-click starts selecting
+        if(selecting){
+          if(ev&&ev.shiftKey&&lastPicked>=0){for(let k=Math.min(i,lastPicked);k<=Math.max(i,lastPicked);k++)selected.add(items[k].id);}   // Shift-click: a range
+          else{selected.has(it.id)?selected.delete(it.id):selected.add(it.id);if(!selected.size)selecting=false;}
+          lastPicked=i;render();return;}
         return openItem(it.id,load);
       });
     });
     const bar=f('selectbar');bar.hidden=!selecting;
     if(selecting){
-      bar.innerHTML=`<button data-s="all">${icon('check')}All</button><button data-s="move">${icon('move')}Move</button><button data-s="copy">${icon('copy')}Copy to</button><button data-s="card">${icon('card')}Suspend</button><button data-s="delete" class="danger">${icon('trash')}Delete</button>`;
+      bar.innerHTML=`<button data-s="done">${icon('back')}Done</button><button data-s="all">${icon('check')}All</button><button data-s="move">${icon('move')}Move</button><button data-s="copy">${icon('copy')}Copy to</button><button data-s="card">${icon('card')}Suspend</button><button data-s="delete" class="danger">${icon('trash')}Delete</button>`;
       bar.querySelectorAll('[data-s]').forEach(b=>b.onclick=handle(async()=>{
         const ids=[...selected];const a=b.dataset.s;
+        if(a==='done'){selecting=false;selected.clear();render();return;}
         if(a==='all'){if(selected.size===items.length)selected.clear();else items.forEach(i=>selected.add(i.id));render();return;}
         if(!ids.length){toast('Select some items first');return;}
         if(a==='move'||a==='copy'){
@@ -2018,6 +2067,8 @@ async function startReview(folder){
     const sentence=it.kind==='sentence';
     const img=it.image?`<img class="card-image" src="${it.image}" alt="">`:'';
     const front=sentence?`<div class="front sentence">${img}<div class="sentence-text">${esc(it.headword)}</div>${audioBtn&&(settings.audio_front||revealed)?audioBtn:''}</div>`:`<div class="front"><div class="word">${esc(it.headword)}</div>${audioBtn&&(settings.audio_front||revealed)?audioBtn:''}${settings.front_reading&&it.reading?`<div class="ctx">${esc(it.reading)}</div>`:''}${it.context&&!revealed?`<div class="ctx">${esc(it.context).replace(new RegExp(esc(it.headword).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g'),'<b>$&</b>')}</div>`:''}</div>`;
+    // The previous card's scroll position would otherwise hide this one (a short card sits above the viewport).
+    if(!revealed)f('card').scrollTop=0;
     if(!revealed){
       f('card').innerHTML=front;
       f('actions').innerHTML=`<div class="reveal"><button class="btn primary" id="reveal">Show answer</button></div>`;

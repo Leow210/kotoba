@@ -56,6 +56,12 @@ public final class VlOcr implements Ocr.BlockReader {
         return engine;
     }
 
+    @Override public synchronized void release(){
+        if(engine==null)return;
+        try{engine.close();}catch(Throwable ignored){}
+        engine=null;
+    }
+
     /** Timings of the last reads, for tuning (ms): image, first answer, total. */
     public static volatile String lastTimings="";
 

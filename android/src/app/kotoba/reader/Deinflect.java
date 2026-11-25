@@ -24,6 +24,8 @@ public final class Deinflect {
         public final int strength;// total characters explained by rules; weak single-kana rules score low
         public final List<String> via;// intermediate forms passed through (食べさせる for 食べさせた)
         public String suffixNote="";// e.g. "する verb" when the headword is the noun alone
+        /** Japanese: the word classes the rules assumed for the base (V1, V5, VS, VK, ADJ bits), 0 when not tracked. */
+        public int wordClass;
         Candidate(String base,List<Step> steps,int strength){this(base,steps,strength,new ArrayList<String>());}
         Candidate(String base,List<Step> steps,int strength,List<String> via){this.base=base;this.steps=steps;this.strength=strength;this.via=via;}
         /** Grammar in plain words: "polite · past". */
@@ -91,11 +93,41 @@ public final class Deinflect {
         ja("ておく","て",V5,TE,"ておく","do in advance");ja("でおく","で",V5,TE,"でおく","do in advance");
         ja("てある","て",V5,TE,"てある","has been done");ja("てくる","て",VK,TE,"てくる","come to / start to");ja("ていく","て",V5,TE,"ていく","go on doing");
         ja("てください","て",0,TE,"てください","polite request");ja("でください","で",0,TE,"でください","polite request");
+        // Casual contractions: やっとく (ておく), 読んじゃ (では), 行っちまう (てしまう), 持ってく (ていく).
+        ja("とく","て",V5,TE,"とく","do in advance (casual ～とく)");ja("どく","で",V5,TE,"どく","do in advance (casual ～とく)");
+        ja("ちまう","て",V5,TE,"ちまう","completion (casual ～ちまう)");ja("じまう","で",V5,TE,"じまう","completion (casual ～ちまう)");
+        ja("てく","て",V5,TE,"てく","go on doing (casual ～てく)");ja("でく","で",V5,TE,"でく","go on doing (casual ～てく)");
+        ja("ては","て",0,TE,"ては","if / when (～ては)");ja("では","で",0,TE,"では","if / when (～ては)");
+        ja("ちゃ","て",0,TE,"ちゃ","if / when (casual ～ちゃ = ～ては)");ja("じゃ","で",0,TE,"じゃ","if / when (casual ～ちゃ = ～ては)");
+        // Auxiliary verbs after the te-form: trying, giving and receiving.
+        Object[][] teAux={{"みる",V1,"try doing (～てみる)"},{"もらう",V5,"have someone do (～てもらう)"},{"いただく",V5,"humbly have someone do (～ていただく)"},
+            {"あげる",V1,"do for someone (～てあげる)"},{"やる",V5,"do for someone (～てやる)"},{"くれる",V1,"someone does for me (～てくれる)"},
+            {"くださる",V5,"someone kindly does (～てくださる)"},{"ほしい",ADJ,"want someone to (～てほしい)"}};
+        for(Object[] a:teAux){ja("て"+a[0],"て",(Integer)a[1],TE,"て"+a[0],(String)a[2]);ja("で"+a[0],"で",(Integer)a[1],TE,"で"+a[0],(String)a[2]);}
+        // Honorific -aru verbs take い, not り, before ます and in the imperative: いらっしゃいます, おっしゃいませ, ください.
+        String[][] politeEnds={{"ます","polite"},{"ました","polite past"},{"ません","polite negative"},{"ませんでした","polite negative past"},{"ましょう","polite volitional “let’s”"},{"まして","polite te-form"},{"ませ","polite imperative (～ませ)"}};
+        for(String stem:new String[]{"いらっしゃ","おっしゃ","仰っしゃ","仰しゃ","くださ","下さ","なさ","為さ","ござ","御座"}){
+            for(String[] e:politeEnds)ja(stem+"い"+e[0],stem+"る",0,V5,e[0],e[1]);
+            if(!stem.startsWith("ござ")&&!stem.startsWith("御座"))ja(stem+"い",stem+"る",0,V5,"い","imperative (honorific ～い)");
+        }
         // Negative
         verb("ない",A,"ない","しない","こない",ADJ,ANY_VERB,"ない","negative");
         verb("ず",A,"ず","せず","こず",0,ANY_VERB,"ず","negative (written)");
         verb("ないで",A,"ないで","しないで","こないで",0,ANY_VERB,"ないで","without doing / please don’t");
         verb("なくて",A,"なくて","しなくて","こなくて",0,ANY_VERB,"なくて","negative te-form");
+        // Contracted obligation / condition after ない (食べなきゃ, 行かなくちゃ, 高くなきゃ).
+        ja("なきゃ","ない",0,ADJ,"なきゃ","must / if not (～なきゃ = ～なければ)");ja("なけりゃ","ない",0,ADJ,"なけりゃ","must / if not (～なけりゃ = ～なければ)");
+        ja("なくちゃ","ない",0,ADJ,"なくちゃ","must (～なくちゃ = ～なくては)");ja("なくては","ない",0,ADJ,"なくては","must / if not (～なくては)");
+        // Literary and colloquial negatives: 知らぬ, 知らざる, 知らねば, 知らずに, 知らん.
+        verb("ぬ",A,"ぬ","せぬ","こぬ",0,ANY_VERB,"ぬ","negative (literary ～ぬ)");
+        verb("ざる",A,"ざる","せざる","こざる",0,ANY_VERB,"ざる","negative (literary ～ざる)");
+        verb("ねば",A,"ねば","せねば","こねば",0,ANY_VERB,"ねば","negative conditional “unless” (～ねば)");
+        verb("ずに",A,"ずに","せずに","こずに",0,ANY_VERB,"ずに","without doing (～ずに)");
+        verb("ん",A,"ん","せん","こん",0,ANY_VERB,"ん","negative (colloquial ～ん)");
+        // べき / べし attach to the dictionary form (行くべき, 来るべき); する also as すべき.
+        for(String[] b:new String[][]{{"べき","should (～べき)"},{"べし","should (literary ～べし)"},{"べく","in order to (～べく)"},{"べからず","must not (～べからず)"}}){
+            ja(b[0],"",0,ANY_VERB,b[0],b[1]);ja("す"+b[0],"する",0,VS,b[0],b[1]);
+        }
         // Potential / passive / causative
         ja("られる","る",V1,V1,"られる","passive or potential");
         for(int i=0;i<U.length;i++){ja(E[i]+"る",U[i],V1,V5,"える","potential");ja(A[i]+"れる",U[i],V1,V5,"れる","passive");ja(A[i]+"せる",U[i],V1,V5,"せる","causative");ja(A[i]+"される",U[i],V1,V5,"される","causative-passive");ja(A[i]+"せられる",U[i],V1,V5,"せられる","causative-passive");}
@@ -142,11 +174,61 @@ public final class Deinflect {
             ArrayList<Step> next=new ArrayList<>(steps.size()+1);
             next.add(new Step(r.suffix,r.label));next.addAll(steps);
             int s=strength+r.in.length();
-            if((r.rulesOut&(V1|V5|VS|VK|ADJ))!=0&&seen.add(base+"|"+next.size()))out.add(new Candidate(base,next,s,via));
+            int cls=r.rulesOut&(V1|V5|VS|VK|ADJ);
+            if(cls!=0){
+                if(seen.add(base+"|"+next.size())){Candidate c=new Candidate(base,next,s,via);c.wordClass=cls;out.add(c);}
+                else for(Candidate c:out)if(c.base.equals(base)&&c.steps.size()==next.size())c.wordClass|=cls;// 入れた: ichidan past or potential of 入る
+            }
             ArrayList<String> nextVia=new ArrayList<>(via);nextVia.add(base);
             walk(base,r.rulesOut,next,s,out,seen,depth+1,nextVia);
         }
     }
+
+    /** Entry class for a dictionary entry that isn't a verb or i-adjective (noun, adverb, na-adjective, set phrase…). */
+    public static final int NONCONJ=64;
+    /** Entry class for a classical 上二/下二 verb (痴る 〘自ラ下二〙): its 終止形 ends in る but it never conjugates like 一段 (しない ≠ 痴る). */
+    public static final int CLASSICAL=128;
+    static final java.util.regex.Pattern POS=java.util.regex.Pattern.compile("[（(［〔｟〘]([^（(［〔｟〘）)］〕｠〙]{1,12}(?:[（(［][^）)］]{1,4}[）)］])?)[）)］〕｠〙]");
+    static final java.util.regex.Pattern POS_CHARS=java.util.regex.Pattern.compile("[自他動名形副感接続連体語代助詞造頭尾変口クシ上下一二五四段・\\u30A1-\\u30FA（）()［］]+");
+    static final java.util.regex.Pattern HEAD=java.util.regex.Pattern.compile("【([^】]{1,24})】");
+    /**
+     * The word classes a dictionary entry declares, read from the part-of-speech marks Japanese dictionaries print near the
+     * headword: 大辞林 （動ラ五［四］）, 明鏡 ［他五］, 三省堂 ｟自カ｠, 新明解 （他上一）, 例解 〘動カ変〙, 日国 〘自ラ五（四）〙, ［名・自他サ変］.
+     * With no mark, an entry whose written forms (【汁】) don't end in kana is taken as a noun. 0 when nothing tells.
+     */
+    public static int entryClass(String text,String key,List<String> words){
+        if(key!=null&&!key.isEmpty()&&key.codePoints().allMatch(c->c>=0x30A1&&c<=0x30FA||c==0x30FC||c=='・'))return NONCONJ;// シル: a loanword, never a verb
+        int cls=0;
+        if(text!=null){
+            String head=text.length()>600?text.substring(0,600):text;
+            java.util.regex.Matcher m=POS.matcher(head);
+            while(m.find()){
+                String t=m.group(1);
+                if(!POS_CHARS.matcher(t).matches()||!t.matches(".*[動自他名形副感連代].*"))continue;
+                for(String part:t.split("・"))cls|=posClass(part);
+            }
+            if(cls!=0)return cls;
+        }
+        ArrayList<String> forms=new ArrayList<>();
+        if(words!=null)forms.addAll(words);
+        if(forms.isEmpty()&&text!=null){java.util.regex.Matcher h=HEAD.matcher(text.length()>300?text.substring(0,300):text);if(h.find())for(String f:h.group(1).split("[・･]"))forms.add(f.replaceAll("[▽▼△×〈〉（）()]",""));}
+        if(forms.isEmpty())return 0;
+        for(String f:forms){if(f.isEmpty())return 0;char last=f.charAt(f.length()-1);if(last>=0x3041&&last<=0x3096)return 0;}
+        return NONCONJ;
+    }
+    static int posClass(String p){
+        if(p.contains("形動"))return NONCONJ;
+        if(p.startsWith("形"))return ADJ;
+        if(p.matches(".*(上一|下一).*"))return V1;// 大辞林 （動ア下一［下二］）: the modern class comes first
+        if(p.matches(".*(上二|下二).*"))return CLASSICAL;
+        if(p.matches(".*[五四].*|.*[ナラ]変.*"))return V5;
+        if(p.matches(".*サ(変)?$|.*サ変.*"))return VS;
+        if(p.matches(".*カ(変)?$|.*カ変.*"))return VK;
+        if(p.matches("^[名副感代連接助造].*"))return NONCONJ;
+        return 0;
+    }
+    /** Whether an entry's classes allow a candidate's assumed classes; unknown entries (0) always do. */
+    public static boolean classFits(int entry,int candidate){return entry==0||candidate==0||(entry&candidate)!=0;}
 
     // ---------------------------------------------------------------- Korean
 
@@ -306,9 +388,55 @@ public final class Deinflect {
                 out.add(new Form(f[0]+"봤어요",steps("아/어 봤어요",note("tried doing, past polite",f[1]))));
                 out.add(new Form(f[0]+"줬어요",steps("아/어 줬어요",note("did for someone, past polite",f[1]))));
             }
+            // Honorific 시 before any other ending: 끼시고요, 하시면, 오시는데요, 받으셨는데, 아시잖아요 (ㄹ drops), 추우시죠.
+            java.util.HashSet<String> have=new java.util.HashSet<>();
+            for(Form f:out)have.add(f.surface);
+            for(String[] e:euStem(stem)){
+                String b=e[0],n=e[1];
+                char lb=b.charAt(b.length()-1);
+                if(b.equals(stem)&&hangul(lb)&&jong(lb)==F('ㄹ')){b=b.substring(0,b.length()-1)+compose(cho(lb),jung(lb),0);n=note("ㄹ drops",n);}
+                for(Form f:koreanForms(b+"시",false)){
+                    if(f.steps.isEmpty()||f.steps.get(0).suffix.equals("다")||!have.add(f.surface))continue;
+                    ArrayList<Step> st=new ArrayList<>();st.add(new Step("으시",note("honorific (～시)",n)));st.addAll(f.steps);
+                    out.add(new Form(f.surface,st));
+                }
+            }
+        }
+        politeYo(out);
+        return out;
+    }
+    /** Endings that take a polite 요 when the sentence trails off after them: 먹고요, 가는데요, 좋지만요, 가면요, 갔고요. */
+    static final java.util.Set<String> YO_AFTER=new java.util.HashSet<>(java.util.Arrays.asList("고","지만","는데","ㄴ데","으면","으니까","아서/어서","아도/어도","어서"));
+    static void politeYo(List<Form> out){
+        java.util.HashSet<String> have=new java.util.HashSet<>();
+        for(Form f:out)have.add(f.surface);
+        for(int i=0,n=out.size();i<n;i++){
+            Form f=out.get(i);
+            if(f.steps.isEmpty()||!YO_AFTER.contains(f.steps.get(f.steps.size()-1).suffix)||!have.add(f.surface+"요"))continue;
+            ArrayList<Step> st=new ArrayList<>(f.steps);st.add(new Step("요","polite (～요)"));
+            out.add(new Form(f.surface+"요",st));
+        }
+    }
+    /**
+     * The word with a contracted 하 put back, and how it was contracted. After a vowel or ㄴ/ㄹ/ㅁ/ㅇ, 하 merges into the
+     * next ㄱ/ㄷ/ㅈ (원치 → 원하지, 간편케 → 간편하게, 흔타 → 흔하다); after ㄱ/ㅂ/ㅅ it drops (생각지 → 생각하지, 섭섭지 → 섭섭하지).
+     */
+    static List<String[]> restoreHa(String w){
+        ArrayList<String[]> out=new ArrayList<>();
+        int CH=CHO.indexOf('ㅊ'),KH=CHO.indexOf('ㅋ'),TH=CHO.indexOf('ㅌ'),J0=CHO.indexOf('ㅈ'),G0=CHO.indexOf('ㄱ'),D0=CHO.indexOf('ㄷ');
+        for(int i=1;i<w.length();i++){
+            char c=w.charAt(i),p=w.charAt(i-1);
+            if(!hangul(c)||!hangul(p))continue;
+            int ch=cho(c),pj=jong(p);
+            int plain=ch==CH?J0:ch==KH?G0:ch==TH?D0:-1;
+            if(plain>=0&&(pj==0||pj==F('ㄴ')||pj==F('ㄹ')||pj==F('ㅁ')||pj==F('ㅇ')))
+                out.add(new String[]{w.substring(0,i)+"하"+compose(plain,jung(c),jong(c))+w.substring(i+1),"하 merged into "+c+" (하"+compose(plain,jung(c),jong(c))+" → "+c+")"});
+            if((pj==F('ㄱ')||pj==F('ㅂ')||pj==F('ㅅ'))&&(ch==G0||ch==D0||ch==J0))
+                out.add(new String[]{w.substring(0,i)+"하"+w.substring(i),"하 dropped (하"+c+" → "+c+")"});
         }
         return out;
     }
+    static boolean isHonorific(Candidate c){for(Step s:c.steps)if(s.suffix.equals("으시"))return true;return false;}
     static String note(String label,String irregular){return irregular==null||irregular.isEmpty()?label:label+", "+irregular;}
 
     /**
@@ -336,24 +464,48 @@ public final class Deinflect {
                 }
             }
         }
-        // Noun + 하다 verbs whose dictionary only lists the noun (공부했어요 → 공부 + 하다).
-        if(found.isEmpty()){
-            for(int cut=w.length()-1;cut>=1;cut--){
-                char next=w.charAt(cut);
-                if(!hangul(next)||cho(next)!=CHO.indexOf('ㅎ'))continue;
-                String noun=w.substring(0,cut);
-                if(!isHeadword.test(noun))continue;
-                for(Form f:koreanForms(noun+"하",true)){
-                    if(!f.surface.equals(w))continue;
-                    ArrayList<Step> st=new ArrayList<>();st.add(new Step("하다","하다 verb"));st.addAll(f.steps);
-                    found.put(noun,new Candidate(noun,st,w.length()-cut));
+        // 하 contracted, as written Korean does: 원치 않다 = 원하지 않다, 간편케 = 간편하게, 생각지 = 생각하지.
+        // Not for a word the dictionary has as it is (가치 "value" isn't 가하다 + 지).
+        List<String[]> restored=found.isEmpty()&&!isHeadword.test(w)?restoreHa(w):java.util.Collections.emptyList();
+        for(String[] r:restored){
+            for(String headword:stemsLike.apply(r[0])){
+                if(!headword.endsWith("하다")||headword.length()<3)continue;
+                String stem=headword.substring(0,headword.length()-1);
+                for(Form f:koreanForms(stem,true)){
+                    if(!f.surface.equals(r[0]))continue;
+                    ArrayList<Step> st=new ArrayList<>();st.add(new Step("하",r[1]));st.addAll(f.steps);
+                    found.putIfAbsent(headword,new Candidate(headword,st,w.length()));
                     break;
                 }
-                if(!found.isEmpty())break;
+            }
+            if(!found.isEmpty())break;
+        }
+        // Noun + 하다 verbs whose dictionary only lists the noun (공부했어요 → 공부 + 하다), also with 하 contracted.
+        if(found.isEmpty()){
+            ArrayList<String[]> forms=new ArrayList<>();forms.add(new String[]{w,null});forms.addAll(restored);
+            outer:
+            for(String[] x:forms){
+                String t=x[0];
+                for(int cut=t.length()-1;cut>=1;cut--){
+                    char next=t.charAt(cut);
+                    if(!hangul(next)||cho(next)!=CHO.indexOf('ㅎ'))continue;
+                    String noun=t.substring(0,cut);
+                    if(!isHeadword.test(noun))continue;
+                    for(Form f:koreanForms(noun+"하",true)){
+                        if(!f.surface.equals(t))continue;
+                        ArrayList<Step> st=new ArrayList<>();st.add(new Step("하다","하다 verb"));
+                        if(x[1]!=null)st.add(new Step("하",x[1]));
+                        st.addAll(f.steps);
+                        found.put(noun,new Candidate(noun,st,w.length()-cut));
+                        break outer;
+                    }
+                }
             }
         }
         boolean verbFound=!found.isEmpty();
-        out.addAll(found.values());
+        // A plain reading beats one that needs honorific 시: 마시고 is 마시다 + 고 before 마다 + 시 + 고.
+        for(Candidate c:found.values())if(!isHonorific(c))out.add(c);
+        for(Candidate c:found.values())if(isHonorific(c))out.add(c);
         // Nouns with particles: 학교에서 → 학교 + 에서.
         String[][] particles={{"에서","at / from (에서)"},{"에게","to (에게)"},{"한테","to (한테)"},{"께서","subject, honorific (께서)"},{"으로","by / toward (으로)"},{"로","by / toward (로)"},{"부터","from (부터)"},{"까지","until (까지)"},{"보다","than (보다)"},{"처럼","like (처럼)"},{"하고","and / with (하고)"},{"이랑","and / with (이랑)"},{"랑","and / with (랑)"},
             {"이에요","is (이에요)"},{"예요","is (예요)"},{"입니다","is, formal (입니다)"},{"이다","is (이다)"},{"이","subject (이)"},{"가","subject (가)"},{"은","topic (은)"},{"는","topic (는)"},{"을","object (을)"},{"를","object (를)"},{"에","to / at (에)"},{"의","possessive (의)"},{"도","also (도)"},{"만","only (만)"},{"와","and (와)"},{"과","and (과)"},{"들","plural (들)"}};

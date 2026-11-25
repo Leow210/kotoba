@@ -303,6 +303,8 @@ img,svg{max-height:calc(100vh - ${2*m+12}px)!important;object-fit:contain}`;
 body{height:100vh!important;padding:${m+10}px ${m}px ${m+26}px!important;max-height:none!important}
 img,svg{max-height:calc(100vh - ${2*m+36}px)!important;max-width:${vStep()}px!important;object-fit:contain}`;
     }else if(state.vertical){
+      // iPad: the page doesn't scroll by itself (WebKit there draws nothing for it); the reader moves it by touch (dragScroll).
+      if(state.dragScroll)css+=`html{overflow:hidden!important;height:100%!important}`;
       css+=`body{height:100vh!important;padding:${m+10}px ${m}px ${m+26}px!important;max-height:none!important}
 img,svg{max-height:calc(100vh - ${2*m}px)!important}`;
     }else{
@@ -325,6 +327,9 @@ html,body{-webkit-user-select:text!important;user-select:text!important}`;
       const wm=getComputedStyle(doc.body).writingMode||'';
       state.vertical=/^vertical/.test(wm)||/^vertical/.test(getComputedStyle(doc.documentElement).writingMode||'')||(meta.writing==='vertical'&&false);
     }else state.vertical=settings.writing==='vertical';
+    // WebKit on iPadOS draws nothing for a wide vertical page that scrolls by itself, but draws it fine when the page can't
+    // scroll and is moved from code (as paged mode does): there, vertical scroll mode follows the finger instead (dragScroll).
+    state.dragScroll=state.vertical&&!state.paged&&/\b(ipad|remote)\b/.test(document.documentElement.className);
     st.textContent=readerCss();
     el.dataset.rtheme=settings.rtheme;
     const th=RTHEMES[settings.rtheme]||RTHEMES.light;
@@ -484,10 +489,36 @@ html,body{-webkit-user-select:text!important;user-select:text!important}`;
       selection={text,doc,opts:{reader:true,source:()=>({key:'',dictName:'',info:null})},context:sentenceAround(sel),range:sel.getRangeAt(0).cloneRange()};
       showSelbar();
     });
-    let touch=null;
-    doc.addEventListener('touchstart',e=>{const t=e.touches[0];touch={x:t.clientX,y:t.clientY,time:Date.now(),frac:fraction()};},{passive:true});
+    let touch=null,glide=0;
+    doc.addEventListener('touchstart',e=>{
+      const t=e.touches[0];touch={x:t.clientX,y:t.clientY,time:Date.now(),frac:fraction()};
+      cancelAnimationFrame(glide);
+      if(state.dragScroll){touch.left=scroller().scrollLeft;touch.track=[{x:t.clientX,t:touch.time}];}
+    },{passive:true});
+    // iPad vertical scroll mode (see applyStyle): the page follows the finger sideways, then glides on a little.
+    doc.addEventListener('touchmove',e=>{
+      if(!touch||!state.dragScroll||e.touches.length!==1||doc.getSelection().toString())return;
+      const t=e.touches[0],dx=t.clientX-touch.x;
+      if(!touch.dragging&&(Math.abs(dx)<8||Math.abs(dx)<Math.abs(t.clientY-touch.y)))return;
+      touch.dragging=true;touch.swiped=true;
+      scroller().scrollLeft=touch.left-dx;
+      touch.track.push({x:t.clientX,t:Date.now()});if(touch.track.length>6)touch.track.shift();
+    },{passive:true});
+    doc.addEventListener('wheel',e=>{
+      // A trackpad or mouse on the iPad: the wheel moves through the text (down = on in the book).
+      if(!state.dragScroll)return;
+      e.preventDefault();cancelAnimationFrame(glide);
+      scroller().scrollLeft+=Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:-e.deltaY;
+    },{passive:false});
     doc.addEventListener('touchend',e=>{
       if(!touch)return;
+      if(touch.dragging){
+        const a=touch.track[0],b=touch.track[touch.track.length-1];
+        let v=b.t>a.t&&Date.now()-b.t<80?(b.x-a.x)/(b.t-a.t):0;// px per ms, 0 when the finger stopped before letting go
+        const s=scroller();
+        const step=()=>{v*=0.95;if(Math.abs(v)<0.03)return;s.scrollLeft-=v*16;glide=requestAnimationFrame(step);};
+        if(Math.abs(v)>0.1)glide=requestAnimationFrame(step);
+      }
       const t=e.changedTouches[0];const dx=t.clientX-touch.x,dy=t.clientY-touch.y,dt=Date.now()-touch.time;
       const horizontal=Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)*1.5&&dt<700;
       if(horizontal&&(state.paged||!state.vertical)&&!doc.getSelection().toString()){
@@ -511,14 +542,50 @@ html,body{-webkit-user-select:text!important;user-select:text!important}`;
       const x=e.clientX,y=e.clientY,w=frame.clientWidth;
       // With the controls open, a tap on the page just closes them.
       if(chromeShown()){toggleChrome(false);return;}
-      if(state.paged&&(x<w*0.22||x>w*0.78)){
-        const forward=rtl()?x<w*0.22:x>w*0.78;
+      // Pages turn from a tap in the margin beside the text, or further in only where no word is under the finger: a tap
+      // on a word near the edge looks it up.
+      const edge=Math.max(40,settings.margin+8);
+      const side=x<edge?-1:x>w-edge?1:(x<w*0.22||x>w*0.78)&&!onText(doc,x,y)?(x<w/2?-1:1):0;
+      if(state.paged&&side){
+        const forward=rtl()?side<0:side>0;
         turn(forward?1:-1);return;
       }
       // A tap on a word opens the dictionary right away.
       if((window.KotobaHover?KotobaHover.clickLookup():settings.tapLookup)&&tapLookup(doc,x,y))return;
       toggleChrome(true);
     });
+  }
+  /**
+   * Marks a looked-up word with boxes the size of its characters; returns them, to remove when the dictionary closes. (The
+   * CSS highlight API paints the whole line height in WebKit, which in vertical text spills into the gap between columns.)
+   */
+  function markRange(doc,range){
+    const sc=doc.scrollingElement||doc.documentElement,dark=settings.rtheme==='dark'||settings.rtheme==='black';
+    const marks=[];
+    for(const q of range.getClientRects()){
+      if(q.width<1||q.height<1)continue;
+      const m=doc.createElement('div');
+      // Page coordinates (scrollLeft is negative in vertical text, which the same sum handles); blended so the text shows through.
+      m.style.cssText=`position:absolute;left:${q.left+sc.scrollLeft}px;top:${q.top+sc.scrollTop}px;width:${q.width}px;height:${q.height}px;`+
+        `background:${dark?'rgba(222,184,74,.5)':'rgba(236,196,80,.75)'};mix-blend-mode:${dark?'screen':'multiply'};border-radius:3px;pointer-events:none;z-index:5`;
+      doc.documentElement.appendChild(m);marks.push(m);
+    }
+    return marks;
+  }
+  /** The book's text size against the default, so the dictionary's text grows with it. */
+  function bookZoom(){return settings.fontSize/READER_DEFAULTS.fontSize;}
+  /** Whether a tap at x,y is on a character of the text (not blank page or margin). */
+  function onText(doc,x,y){
+    const r=doc.caretRangeFromPoint&&doc.caretRangeFromPoint(x,y);
+    if(!r||r.startContainer.nodeType!==3)return false;
+    const t=r.startContainer,o=r.startOffset;
+    for(const i of [o,o-1]){
+      if(i<0||i>=t.length||!t.nodeValue[i].trim())continue;
+      const q=doc.createRange();q.setStart(t,i);q.setEnd(t,i+1);
+      const b=q.getBoundingClientRect();
+      if(x>=b.left-4&&x<=b.right+4&&y>=b.top-4&&y<=b.bottom+4)return true;
+    }
+    return false;
   }
   function followLink(href){
     if(/^https?:/i.test(href)){toast('Web links are disabled in offline mode');return;}
@@ -572,13 +639,20 @@ html,body{-webkit-user-select:text!important;user-select:text!important}`;
         let remaining=len,cur=node,start=off;
         while(cur&&remaining>0){const avail=cur.nodeValue.length-start;if(avail>=remaining){range.setEnd(cur,start+remaining);remaining=0;}else{remaining-=avail;cur=walker.nextNode&&null;break;}}
         if(remaining>0)range.setEnd(node,node.nodeValue.length);
-        const W=frame.contentWindow;
-        if(W.CSS&&W.CSS.highlights&&W.Highlight){W.CSS.highlights.set('kotoba-tap',new W.Highlight(range));}
+        const marks=markRange(doc,range);
         const sel={text:res.matched,doc,opts:{reader:true},context:contextFor(range)};
-        await lookupSheet(res.matched,sel,{onClose:()=>{try{W.CSS.highlights.delete('kotoba-tap');}catch(e){}},book:book.title});
-      }catch(e){console.error(e);await lookupSheet(res.matched,{context:''});}
+        await lookupSheet(res.matched,sel,{onClose:()=>{marks.forEach(m=>m.remove());repaintDoc(doc);},book:book.title,zoom:bookZoom()});
+      }catch(e){console.error(e);await lookupSheet(res.matched,{context:''},{zoom:bookZoom()});}
     })();
     return true;
+  }
+  /** WebKit on iPadOS can keep painting a removed highlight; hiding and showing the document at once forces a redraw (the scroll position is kept). */
+  function repaintDoc(doc){
+    try{
+      const root=doc.documentElement,sc=doc.scrollingElement||root,l=sc.scrollLeft,t=sc.scrollTop,d=root.style.display;
+      root.style.display='none';void root.offsetHeight;root.style.display=d;
+      sc.scrollLeft=l;sc.scrollTop=t;
+    }catch(e){}
   }
   function contextFor(range){
     try{const sel=range.startContainer.ownerDocument.getSelection();const saved=sel.rangeCount?sel.getRangeAt(0):null;sel.removeAllRanges();sel.addRange(range);const c=sentenceAround(sel);sel.removeAllRanges();if(saved)sel.addRange(saved);return c;}catch(e){return '';}
@@ -655,6 +729,7 @@ html,body{-webkit-user-select:text!important;user-select:text!important}`;
   };
   readerHooks.active=()=>pageStack.length&&pageStack[pageStack.length-1].el===el;
   readerHooks.bookTitle=book.title;
+  readerHooks.zoom=bookZoom;
 
   // ---------- bookmarks, contents, settings ----------
   async function updateBookmarkIcon(){
@@ -786,4 +861,4 @@ async function dictionarySearchSheet(initial,source){
   setTimeout(()=>input.focus(),280);
   if(initial)run();
 }
-const readerHooks={highlight:()=>false,active:()=>false,bookTitle:''};
+const readerHooks={highlight:()=>false,active:()=>false,bookTitle:'',zoom:()=>0};

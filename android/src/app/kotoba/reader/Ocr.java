@@ -66,14 +66,16 @@ public final class Ocr {
     public interface BlockReader {
         boolean handles(String lang);
         String read(Bitmap crop,String lang) throws Exception;
+        /** Frees the model (it is loaded again on the next read); called when background reading has been idle. */
+        default void release(){}
     }
     public static volatile BlockReader blockReader;
     /** Korean word spacing for recognized text (optional model, see Spacing). */
     public static volatile Spacing spacing;
-
-    /** Bumped when the spacing rules change, so pages are respaced from their recognized text. */
     /** True when the block reader spaces text itself (HunyuanOCR on the Mac): then the spacing model is left out while that reader is available. */
     public static volatile boolean readerSpaces;
+
+    /** Bumped when the spacing rules change, so pages are respaced from their recognized text. */
     static final int SPACING=5;
     /**
      * Redoes the Korean spacing of a page's bubbles (once per SPACING version). Each bubble keeps the recognizer's own
@@ -82,9 +84,9 @@ public final class Ocr {
     static boolean respace(JSONObject c,String lang) throws Exception {
         Spacing sp=spacing;
         if(!"ko".equals(lang)||sp==null||!sp.available()||c.optInt("spaced")==SPACING)return false;
+        boolean own=readerSpaces&&blocksFor(lang);
         JSONArray blocks=c.optJSONArray("blocks");
         if(blocks!=null)for(int i=0;i<blocks.length();i++){
-        boolean own=readerSpaces&&blocksFor(lang);
             JSONObject b=blocks.getJSONObject(i);
             String raw=b.optString("raw",b.optString("text",""));
             // A bubble the block reader re-read ("paddle" holds the first pass) keeps that reader's own spacing, which follows the picture.
@@ -159,14 +161,52 @@ public final class Ocr {
     static void waitUntilStill(){
         while(System.currentTimeMillis()-lastTouch<2500){try{Thread.sleep(150);}catch(InterruptedException e){return;}}
     }
+
+    /**
+     * When the model may read in the background (setting "ocr_refine"): "page" only the page being read, "auto" (the
+     * default) that page and the next, "charging" two pages ahead but only while charging. Set by MainActivity.
+     */
+    public static volatile java.util.function.Supplier<String> refineMode=()->"auto";
+    /** Whether the app is on screen; the model never reads while it isn't. */
+    public static volatile boolean foreground=true;
+    static String mode(){String m=refineMode.get();return m==null?"auto":m;}
+
+    /** Why background reading should wait: the phone is hot, the battery is low, or "charging" mode and not plugged in. */
+    boolean throttled(){
+        android.content.Intent b=context.registerReceiver(null,new android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED));
+        boolean charging=false;int pct=100;
+        if(b!=null){
+            int st=b.getIntExtra(android.os.BatteryManager.EXTRA_STATUS,-1);
+            charging=st==android.os.BatteryManager.BATTERY_STATUS_CHARGING||st==android.os.BatteryManager.BATTERY_STATUS_FULL;
+            int level=b.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL,-1),scale=b.getIntExtra(android.os.BatteryManager.EXTRA_SCALE,100);
+            if(level>=0)pct=level*100/scale;
+        }
+        if("charging".equals(mode())&&!charging)return true;
+        if(!charging&&pct<20)return true;
+        if(android.os.Build.VERSION.SDK_INT>=29){
+            android.os.PowerManager pm=(android.os.PowerManager)context.getSystemService(Context.POWER_SERVICE);
+            if(pm!=null&&pm.getCurrentThermalStatus()>=android.os.PowerManager.THERMAL_STATUS_MODERATE)return true;
+        }
+        return false;
+    }
+
+    /** Blocks until the page is still, the app is on screen and the phone is cool enough; false if interrupted. */
+    boolean waitUntilAllowed(){
+        while(true){
+            waitUntilStill();
+            if(foreground&&!throttled())return true;
+            try{Thread.sleep(3000);}catch(InterruptedException e){return false;}
+        }
+    }
     Comics comics;Routes.Host host;
     final java.util.concurrent.LinkedBlockingDeque<Object[]> refineQueue=new java.util.concurrent.LinkedBlockingDeque<>();
     final java.util.Set<String> queued=java.util.Collections.synchronizedSet(new java.util.HashSet<>());
     Thread refiner;
 
     void prefetch(long chapter,int index,String lang){
-        // The next two pages, read ahead while this one is being read (only pages that exist).
-        for(int i=1;i<=2;i++)queue(chapter,index+i,lang,false);
+        // Pages read ahead while this one is being read (only pages that exist); none in "page" mode.
+        String m=mode();
+        for(int i=1;i<=("page".equals(m)?0:"charging".equals(m)?2:1);i++)queue(chapter,index+i,lang,false);
     }
     synchronized void queue(long chapter,int index,String lang,boolean first){
         String k=chapter+":"+index+":"+lang;
@@ -177,7 +217,11 @@ public final class Ocr {
             refiner=new Thread(()->{
                 while(true){
                     Object[] j;
-                    try{j=refineQueue.takeFirst();}catch(InterruptedException e){return;}
+                    try{
+                        j=refineQueue.pollFirst(60,java.util.concurrent.TimeUnit.SECONDS);
+                        // Idle for a minute: let the model go (about 1.4 GB, and its GPU context).
+                        if(j==null){BlockReader r=blockReader;if(r!=null)r.release();j=refineQueue.takeFirst();}
+                    }catch(InterruptedException e){return;}
                     try{refine((Long)j[0],(Integer)j[1],(String)j[2]);}catch(Throwable e){android.util.Log.w("Kotoba","OCR refine failed",e);}
                     finally{queued.remove(j[0]+":"+j[1]+":"+j[2]);}
                 }
@@ -195,7 +239,7 @@ public final class Ocr {
         if(res==null)return;
         byte[] image=(byte[])res[0];
         if(c==null||c.optInt("v")!=VERSION){
-            waitUntilStill();
+            if(!waitUntilAllowed())return;
             synchronized(this){c=recognize(image,lang).put("v",VERSION);}
             db.execSQL("INSERT OR REPLACE INTO ocr_cache(chapter,page,lang,data) VALUES(?,?,?,?)",new Object[]{chapter,index,lang,c.toString()});
         }
@@ -207,8 +251,10 @@ public final class Ocr {
             JSONArray blocks=c.getJSONArray("blocks");
             for(int i=0;i<blocks.length();i++){
                 JSONObject b=blocks.getJSONObject(i);
-                // Each bubble takes the GPU for ~2.5 s: none starts while the page is moving.
-                waitUntilStill();
+                // Each bubble takes the GPU for ~2.5 s: none starts while the page is moving, the app is in the
+                // background or the phone is hot, and a short rest between bubbles keeps the GPU from running flat out.
+                if(!waitUntilAllowed())return;
+                try{Thread.sleep(400);}catch(InterruptedException e){return;}
                 String better=readBlock(bmp,b.getInt("x"),b.getInt("y"),b.getInt("w"),b.getInt("h"),b.optString("raw",b.optString("text","")),lang);
                 if(better!=null)b.put("paddle",b.optString("raw",b.optString("text",""))).put("text",better).put("raw",better);
             }

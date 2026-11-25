@@ -56,7 +56,7 @@ public class Sync {
 
     /** Latest local change, to skip writing an unchanged file. */
     public long lastChange() throws Exception {
-        return Store.rows(db,"SELECT max(coalesce((SELECT max(changed) FROM items),0),coalesce((SELECT max(changed) FROM folders),0),coalesce((SELECT max(at) FROM sync_deleted),0),coalesce((SELECT max(reviewed)*1000 FROM reviews),0),coalesce((SELECT max(changed) FROM known),0)) m").getJSONObject(0).getLong("m");
+        return Store.rows(db,"SELECT max(coalesce((SELECT max(changed) FROM items),0),coalesce((SELECT max(changed) FROM folders),0),coalesce((SELECT max(at) FROM sync_deleted),0),coalesce((SELECT max(reviewed)*1000 FROM reviews),0),coalesce((SELECT max(changed) FROM known),0),coalesce((SELECT max(changed) FROM listen_pos),0)) m").getJSONObject(0).getLong("m");
     }
 
     /** This device's sync file. */
@@ -75,6 +75,7 @@ public class Sync {
         out.put("reviews",Store.rows(db,"SELECT i.uid item,r.rating,r.reviewed,r.before,r.after_due FROM reviews r JOIN items i ON i.id=r.item_id"));
         out.put("deleted",Store.rows(db,"SELECT uid,kind,at FROM sync_deleted"));
         out.put("known",Store.rows(db,"SELECT lang,norm,word,known,changed FROM known"));
+        out.put("listen",Store.rows(db,"SELECT book,chapter,sec,changed FROM listen_pos"));
         JSONObject settings=new JSONObject();
         for(String k:new String[]{"new_per_day","retention"}){String v=store.setting(k,"");if(!v.isEmpty())settings.put(k,v);}
         out.put("settings",settings);
@@ -169,6 +170,16 @@ public class Sync {
                 JSONArray local=Store.rows(db,"SELECT changed FROM known WHERE lang=? AND norm=?",k.getString("lang"),k.getString("norm"));
                 if(local.length()>0&&local.getJSONObject(0).getLong("changed")>=k.getLong("changed"))continue;
                 db.execSQL("INSERT OR REPLACE INTO known(lang,norm,word,known,changed) VALUES(?,?,?,?,?)",new Object[]{k.getString("lang"),k.getString("norm"),k.optString("word",k.getString("norm")),k.optInt("known",1),k.getLong("changed")});
+                updated++;
+            }
+
+            // Audiobook places: the newer one wins, so playing on either device carries on from where the other stopped.
+            JSONArray listen=in.optJSONArray("listen");
+            if(listen!=null)for(int i=0;i<listen.length();i++){
+                JSONObject p=listen.getJSONObject(i);
+                JSONArray local=Store.rows(db,"SELECT changed FROM listen_pos WHERE book=? AND chapter=?",p.getString("book"),Integer.toString(p.getInt("chapter")));
+                if(local.length()>0&&local.getJSONObject(0).getLong("changed")>=p.getLong("changed"))continue;
+                db.execSQL("INSERT OR REPLACE INTO listen_pos(book,chapter,sec,changed) VALUES(?,?,?,?)",new Object[]{p.getString("book"),p.getInt("chapter"),p.getInt("sec"),p.getLong("changed")});
                 updated++;
             }
 

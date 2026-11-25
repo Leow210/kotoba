@@ -28,7 +28,7 @@ public final class Listening {
             File f=new File(dir,"set.json");
             if(!f.isFile()||!validId(dir.getName()))continue;
             try{
-                JSONObject s=new JSONObject(Files.readString(f.toPath(),StandardCharsets.UTF_8));
+                JSONObject s=new JSONObject(new String(Files.readAllBytes(f.toPath()),StandardCharsets.UTF_8));
                 JSONArray groups=s.optJSONArray("groups");int lines=0;String cover="";
                 if(groups!=null)for(int i=0;i<groups.length();i++){
                     JSONObject g=groups.getJSONObject(i);
@@ -51,7 +51,7 @@ public final class Listening {
         for(File dir:dirs){
             File f=new File(dir,"book.json");
             if(!f.isFile()||!validId(dir.getName()))continue;
-            try{out.put(new JSONObject(Files.readString(f.toPath(),StandardCharsets.UTF_8)).put("id",dir.getName()));}catch(Exception ignored){}
+            try{out.put(new JSONObject(new String(Files.readAllBytes(f.toPath()),StandardCharsets.UTF_8)).put("id",dir.getName()));}catch(Exception ignored){}
         }
         return out;
     }
@@ -61,7 +61,7 @@ public final class Listening {
         if(!validId(id))throw new Exception("No such set.");
         File f=new File(new File(root,id),"set.json");
         if(!f.isFile())throw new Exception("This set isn’t on this device.");
-        return new JSONObject(Files.readString(f.toPath(),StandardCharsets.UTF_8)).put("id",id);
+        return new JSONObject(new String(Files.readAllBytes(f.toPath()),StandardCharsets.UTF_8)).put("id",id);
     }
 
     /** A file inside a set (audio, icons), or null. */
