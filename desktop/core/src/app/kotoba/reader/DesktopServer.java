@@ -131,6 +131,7 @@ public class DesktopServer {
             case "video.sub":return new JSONObject().put("text",videoSub(new File(d.getString("path")),d.optInt("stream",-1),d.optString("file","")));
             case "video.ocr":return videoOcr(new File(d.getString("path")),d.getDouble("time"),d.optString("lang","ja"));
             case "video.still":return new JSONObject().put("image",videoStill(new File(d.getString("path")),d.getDouble("time")));
+            case "video.thumb":return new JSONObject().put("image",videoThumb(new File(d.getString("path")),d.getDouble("time")));
             case "lyrics.importPaths":{
                 JSONArray ps=d.getJSONArray("paths");int ok=0;String last="",err="";
                 for(int i=0;i<ps.length();i++){
@@ -355,6 +356,22 @@ public class DesktopServer {
         if(!Double.isFinite(time)||time<0)throw new IllegalArgumentException("Invalid video position");
         Process p=new ProcessBuilder(tool("ffmpeg"),"-v","error","-ss",Double.toString(time),"-i",video.getPath(),
             "-an","-sn","-frames:v","1","-vf","scale='min(720,iw)':-2","-q:v","6","-f","image2pipe","-vcodec","mjpeg","pipe:1")
+            .redirectError(ProcessBuilder.Redirect.DISCARD).start();
+        byte[] image;
+        try(InputStream in=p.getInputStream()){image=readAll(in);}
+        if(p.waitFor()!=0||image.length==0)throw new Exception("Couldn’t read this video frame");
+        return "data:image/jpeg;base64,"+java.util.Base64.getEncoder().encodeToString(image);
+    }
+
+    /**
+     * A small frame for the seek bar's hover preview: the keyframe at or before this time (only keyframes are decoded,
+     * so it's quick even far into a long episode), 320 px wide.
+     */
+    String videoThumb(File video,double time) throws Exception {
+        if(!video.isFile())throw new IllegalArgumentException("Video file not found");
+        if(!Double.isFinite(time)||time<0)throw new IllegalArgumentException("Invalid video position");
+        Process p=new ProcessBuilder(tool("ffmpeg"),"-v","error","-skip_frame","nokey","-noaccurate_seek","-ss",Double.toString(time),"-i",video.getPath(),
+            "-an","-sn","-dn","-frames:v","1","-vf","scale=320:-2","-q:v","5","-f","image2pipe","-vcodec","mjpeg","pipe:1")
             .redirectError(ProcessBuilder.Redirect.DISCARD).start();
         byte[] image;
         try(InputStream in=p.getInputStream()){image=readAll(in);}

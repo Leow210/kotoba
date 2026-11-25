@@ -186,6 +186,8 @@ function cancelHover(){
 }
 function onHover(e){
   lastHoverPoint={x:e.clientX,y:e.clientY};
+  // Dragging across a line selects it (for Translate / Copy) rather than looking words up.
+  if(e.buttons&1)return;
   if(!KotobaHover.matches(e)){cancelHover();return;}
   const span=e.target.closest('.ch');if(!span)return;
   const lineEl=span.closest('[data-cue]');if(!lineEl)return;
@@ -316,8 +318,7 @@ function showEntry(P,n){
   const it=P.items&&P.items[n];if(!it)return;
   P.tab=n;
   P.el.querySelectorAll('.p-tab').forEach(t=>t.classList.toggle('on',+t.dataset.n===n));
-  const dark=(()=>{try{const t=JSON.parse(localStorage.getItem('settings')||'{}').theme;return t==='dark'||t==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches;}catch(e){return false;}})();
-  document.documentElement.classList.toggle('k-dark',dark);
+  const dark=applyDark();
   const f=document.createElement('iframe');f.src=`/d/${it.dict}/${it.rec}.entry`;
   if(dark)f.style.visibility='hidden';
   P.el.querySelector('.p-entry').replaceChildren(f);
@@ -336,6 +337,12 @@ function showEntry(P,n){
     const h=heads.find(e=>{const t=clean(e.textContent);return t&&(t.includes(clean(key||''))||shown&&t.includes(clean(shown)));});
     if(h){const r=h.getBoundingClientRect();if(r.top>40)f.contentWindow.scrollTo(0,r.top-8);}
   });
+}
+/** The main window's theme (same saved settings) for the popups; true when dark. */
+function applyDark(){
+  const dark=(()=>{try{const t=JSON.parse(localStorage.getItem('settings')||'{}').theme;return t==='dark'||t==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches;}catch(e){return false;}})();
+  document.documentElement.classList.toggle('k-dark',dark);
+  return dark;
 }
 function fitFrame(P){
   const f=P.el.querySelector('.p-entry iframe');if(!f||!f.contentDocument)return;
@@ -500,6 +507,159 @@ let seeking=false;
 $('seek').addEventListener('input',()=>{seeking=true;$('time').textContent=`${fmt($('seek').value/1000*st.d)} / ${fmt(st.d)}`;});
 $('seek').addEventListener('change',()=>{send({cmd:'seek',t:$('seek').value/1000*st.d});seeking=false;});
 $('volume').addEventListener('input',()=>send({cmd:'volume',v:+$('volume').value}));
+
+// ---------- seek bar preview: a frame, the time and the subtitle line wherever the pointer is on the bar ----------
+const thumbs=new Map(),pv={k:null};let thumbBusy=false,thumbWant=null;
+/** Frames are fetched for buckets of the timeline (2 s, or longer for long videos) and kept for this window. */
+const thumbKey=(t)=>{const step=Math.max(2,st.d/600);return Math.round(Math.floor(t/step)*step*10)/10;};
+function paintThumb(){
+  const src=thumbs.get(pv.k),img=$('pv-img');if(!src)return;
+  if(img.getAttribute('src')!==src)img.src=src;
+  img.classList.remove('wait');
+}
+$('pv-img').addEventListener('load',function(){if(this.naturalWidth)$('preview').style.setProperty('--pv-ar',this.naturalWidth+'/'+this.naturalHeight);},{once:true});
+async function loadThumb(){
+  if(thumbBusy)return;
+  const k=thumbWant;
+  if(k===null)return;
+  if(thumbs.has(k)){if(k===pv.k)paintThumb();return;}
+  thumbBusy=true;
+  try{thumbs.set(k,(await api('video.thumb',{path:videoPath,time:k})).image);}catch(e){thumbs.set(k,'');}
+  thumbBusy=false;
+  if(thumbs.size>600)thumbs.delete(thumbs.keys().next().value);
+  if(k===pv.k)paintThumb();
+  if(thumbWant!==k)loadThumb();
+}
+function previewAt(frac){
+  if(!st.d)return;
+  frac=Math.min(1,Math.max(0,frac));
+  const t=frac*st.d,box=$('preview'),seek=$('seek').getBoundingClientRect(),bar=$('bar').getBoundingClientRect();
+  box.hidden=false;
+  $('pv-time').textContent=fmt(t);
+  const c=st.cues.length?cueAt(st.cues,t+st.delay):null;
+  $('pv-line').textContent=c?c.text.replace(/\n/g,' '):'';
+  const x=seek.left+6+frac*(seek.width-12)-bar.left,w=box.offsetWidth;
+  box.style.left=Math.min(bar.width-w,Math.max(0,x-w/2))+'px';
+  pv.k=thumbKey(t);thumbWant=pv.k;
+  if(thumbs.get(pv.k))paintThumb();else{$('pv-img').classList.add('wait');loadThumb();}
+}
+const seekFrac=(e)=>{const r=$('seek').getBoundingClientRect();return (e.clientX-r.left-6)/(r.width-12);};
+$('seek').addEventListener('mousemove',(e)=>previewAt(seekFrac(e)));
+$('seek').addEventListener('input',()=>previewAt($('seek').value/1000));
+$('seek').addEventListener('mouseleave',()=>{if(!seeking)$('preview').hidden=true;});
+$('seek').addEventListener('change',()=>{if(!$('seek').matches(':hover'))$('preview').hidden=true;});
+
+// ---------- selecting subtitles: Translate or Copy what's selected ----------
+const SEL_AREAS='#sub-main,#sub-second,#t-list .t-text';
+let selPaused=false,selecting=false;
+const selHost=(n)=>{const el=n&&(n.nodeType===3?n.parentElement:n);return el&&el.closest?el.closest(SEL_AREAS):null;};
+/** The selected text if the selection is in a subtitle line or the transcript (times left out, lines kept). */
+function subSelection(){
+  const s=getSelection();if(!s||s.isCollapsed||!s.rangeCount)return null;
+  const r=s.getRangeAt(0);
+  const a=selHost(r.startContainer),b=selHost(r.endContainer);
+  if(!a&&!b)return null;
+  const frag=r.cloneContents();
+  frag.querySelectorAll('.t-time').forEach(x=>x.remove());
+  frag.querySelectorAll('br').forEach(x=>x.replaceWith('\n'));
+  frag.querySelectorAll('.t-row').forEach(x=>x.append('\r'));
+  // A line break inside one subtitle joins without a space in Chinese or Japanese, with one elsewhere;
+  // separate transcript lines stay on lines of their own.
+  const text=frag.textContent.replace(/([぀-ヿ㐀-鿿])[ \t]*\n[ \t]*([぀-ヿ㐀-鿿])/g,'$1$2').replace(/[ \t]*\n[ \t]*/g,' ')
+    .replace(/\s*\r\s*/g,'\n').trim();
+  if(!text)return null;
+  const host=a||b,cueEl=host.closest('[data-cue]')||host.closest('.t-row');
+  const cue=cueEl&&cueEl.dataset.cue!==''&&cueEl.dataset.cue!==undefined&&cueEl.dataset.cue[0]!=='k'?st.cues[+cueEl.dataset.cue]:null;
+  return {text,range:r,cue:host.id==='sub-second'?null:cue};
+}
+/** The lines around a subtitle, for the local model's context (it translates idioms better with the scene). */
+function cueContext(cue){
+  if(!cue)return '';
+  return st.cues.slice(Math.max(0,cue.i-3),cue.i+4).filter(c=>c!==cue).map(c=>c.text.replace(/\n/g,' ')).join('\n');
+}
+function hideSelbar(){$('selbar').hidden=true;}
+function showSelbar(){
+  const sel=subSelection();
+  if(!sel){hideSelbar();return;}
+  const bar=$('selbar'),r=sel.range.getBoundingClientRect();
+  bar.hidden=false;
+  const w=bar.offsetWidth,h=bar.offsetHeight;
+  bar.style.left=Math.min(innerWidth-w-10,Math.max(10,(r.left+r.right)/2-w/2))+'px';
+  let top=r.top-h-10;if(top<10)top=r.bottom+10;
+  bar.style.top=top+'px';
+}
+function resumeAfterSelection(){if(selPaused){selPaused=false;send({cmd:'play'});}}
+document.addEventListener('mousedown',(e)=>{
+  if(e.target.closest('#selbar,#trpop'))return;
+  hideSelbar();
+  // Clicking the picture plays/pauses by itself, so closing here doesn't also resume.
+  if(!$('trpop').hidden)closeTranslation(!e.target.closest('#hit'));
+  selecting=e.button===0&&!!e.target.closest(SEL_AREAS);
+});
+document.addEventListener('mousemove',(e)=>{
+  // Hold the line still while it's being selected, or it may change under the pointer.
+  if(selecting&&(e.buttons&1)&&!st.paused&&getSelection().toString()){send({cmd:'pause'});selPaused=true;}
+});
+document.addEventListener('mouseup',()=>{if(!selecting)return;selecting=false;setTimeout(()=>{if(subSelection()){hidePop();showSelbar();}},0);});
+document.addEventListener('selectionchange',()=>{if(!selecting&&!$('selbar').hidden&&!subSelection())hideSelbar();});
+$('selbar').addEventListener('mousedown',(e)=>e.preventDefault());
+$('selbar').addEventListener('click',(e)=>{
+  const b=e.target.closest('[data-s]');if(!b)return;
+  const sel=subSelection();if(!sel){hideSelbar();return;}
+  if(b.dataset.s==='copy'){navigator.clipboard.writeText(sel.text).catch(()=>{});osd('Copied');hideSelbar();getSelection().removeAllRanges();resumeAfterSelection();return;}
+  hideSelbar();
+  translateSelection(sel);
+});
+const ENGINE_NAMES={llm:'Gemma (on this Mac)',cloud:'Google Cloud',google:'Google (free)'};
+let trTok=0;
+async function translateSelection(sel){
+  let cfg=null;try{cfg=await api('translate.config',{});}catch(e){}
+  if(!cfg||cfg.engine==='google-web'){
+    const tl=cfg?({'zh-Hans':'zh-CN','zh-Hant':'zh-TW'}[cfg.to]||cfg.to):'en';
+    send({cmd:'open',url:'https://translate.google.com/?sl=auto&tl='+tl+'&op=translate&text='+encodeURIComponent(sel.text)});return;
+  }
+  if(!st.paused){send({cmd:'pause'});selPaused=true;}
+  applyDark();
+  const P=$('trpop'),context=cueContext(sel.cue);
+  P.innerHTML=`<div class="p-head"><b class="tr-title">Translation</b><select class="tr-engine" title="Translate with">${Object.entries(ENGINE_NAMES).map(([k,v])=>`<option value="${k}"${k===cfg.engine?' selected':''}>${v}</option>`).join('')}</select><button class="p-close" data-t="close" title="Close (Esc)">×</button></div>
+    <div class="tr-src">${esc(sel.text)}</div><div class="tr-out busy" aria-live="polite"></div><div class="tr-note"></div>
+    <div class="p-actions"><button data-t="copy">Copy translation</button><button data-t="copysrc">Copy original</button></div>`;
+  P.hidden=false;
+  const r=sel.range.getBoundingClientRect(),place=()=>{
+    const w=P.offsetWidth,h=P.offsetHeight;
+    P.style.left=Math.min(innerWidth-w-12,Math.max(12,(r.left+r.right)/2-w/2))+'px';
+    let top=r.top-h-14;if(top<12)top=Math.min(innerHeight-h-12,r.bottom+14);
+    P.style.top=Math.max(12,top)+'px';
+  };
+  place();
+  let result='';
+  const run=async()=>{
+    const engine=P.querySelector('.tr-engine').value,tok=++trTok,out=P.querySelector('.tr-out');
+    out.classList.add('busy');P.querySelector('.tr-note').textContent='';
+    out.textContent=engine==='llm'&&!cfg.running?'Loading the model… (the first time takes a little while)':'Translating…';place();
+    try{
+      const res=await api('translate',{text:sel.text,engine,context});
+      if(tok!==trTok)return;
+      result=res.text;out.classList.remove('busy');out.textContent=res.text;
+      if(engine==='llm')cfg.running=true;
+      P.querySelector('.tr-note').textContent=`${ENGINE_NAMES[engine]}${res.model?' ('+res.model+')':''} · ${cfg.languages[res.from]||res.from||''} → ${cfg.languages[res.to||cfg.to]||res.to||cfg.to}${context&&engine==='llm'?' · with the lines around it as context':''}${res.note?' · '+res.note:''}`;
+    }catch(e){if(tok!==trTok)return;out.classList.remove('busy');out.textContent=e.message;}
+    place();
+  };
+  P.querySelector('.tr-engine').onchange=run;
+  P.onclick=(e)=>{
+    const b=e.target.closest('[data-t]');if(!b)return;
+    if(b.dataset.t==='close')closeTranslation();
+    if(b.dataset.t==='copy'&&result){navigator.clipboard.writeText(result).catch(()=>{});osd('Copied translation');}
+    if(b.dataset.t==='copysrc'){navigator.clipboard.writeText(sel.text).catch(()=>{});osd('Copied');}
+  };
+  run();
+}
+
+function closeTranslation(resume=true){
+  trTok++;$('trpop').hidden=true;
+  if(resume)resumeAfterSelection();else selPaused=false;
+}
 function lineJump(dir){
   const t=st.t+st.delay;
   if(!st.cues.length)return send({cmd:'seekBy',t:dir*5});
@@ -627,6 +787,13 @@ send({cmd:'ready'});
 
 document.addEventListener('keydown',(e)=>{
   if(e.target.tagName==='INPUT'&&e.target.type!=='range'||e.target.tagName==='SELECT')return;
+  // ⌘C copies a selected line (C alone saves a sentence card).
+  if(e.metaKey||e.ctrlKey){
+    const sel=(e.key==='c'||e.key==='C')&&subSelection();
+    if(sel){e.preventDefault();navigator.clipboard.writeText(sel.text).catch(()=>{});osd('Copied');}
+    return;
+  }
+  if(e.key==='Escape'&&(!$('trpop').hidden||!$('selbar').hidden)){e.preventDefault();hideSelbar();if(!$('trpop').hidden)closeTranslation();else resumeAfterSelection();getSelection().removeAllRanges();return;}
   const k=e.key.length===1?e.key.toLowerCase():e.key;
   const run={' ':()=>send({cmd:'toggle'}),'ArrowLeft':()=>send({cmd:'seekBy',t:e.shiftKey?-1:-5}),'ArrowRight':()=>send({cmd:'seekBy',t:e.shiftKey?1:5}),
     'ArrowUp':()=>send({cmd:'volume',v:Math.min(130,st.vol+5)}),'ArrowDown':()=>send({cmd:'volume',v:Math.max(0,st.vol-5)}),

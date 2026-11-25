@@ -121,6 +121,7 @@ final class PlayerWindow: NSWindowController, NSWindowDelegate, WKScriptMessageH
         case "frame": video.command(["frame-step"])
         case "lookupInMain": if let w = m["word"] as? String { app?.showInMain(word: w) }
         case "title": if let t = m["title"] as? String { window?.title = t }
+        case "open": if let s = m["url"] as? String, let u = URL(string: s), ["http", "https"].contains(u.scheme ?? "") { NSWorkspace.shared.open(u) }
         default: break
         }
     }
