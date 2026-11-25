@@ -1,0 +1,18 @@
+/* Kotoba on iPad: what only works on the Mac is left out. */
+html.ipad .tabbar [data-tab="video"],
+html.ipad .tabbar [data-tab="music"],
+html.ipad .translation-settings,
+html.ipad .remote-settings-row{display:none!important}
+html.ipad,html.ipad body{overscroll-behavior:none;-webkit-text-size-adjust:100%}
+html.ipad .tabbar{padding-left:env(safe-area-inset-left)}
+
+/* Reading: the sidebar and the page's controls come and go together. The page keeps the full width, so showing the sidebar
+   (it slides over the left edge) never re-flows the text. */
+html.ipad:has(.reader-page,.comic-page) #pages{left:0}
+html.ipad:has(.reader-page,.comic-page) .tabbar{z-index:30;box-shadow:2px 0 16px rgba(0,0,0,.2);transition:transform .22s ease}
+html.ipad:has(.reader-page.bare,.comic-page.bare) .tabbar{transform:translateX(-105%);pointer-events:none}
+/* Sheets opened while reading (settings, dictionary, chapters, menus) go over the sidebar, not under it: it covered their left edge. */
+html.ipad:has(.reader-page,.comic-page) #sheets{z-index:31}
+html.ipad .reader-page:not(.bare) .rd-top,html.ipad .reader-page:not(.bare) .rd-bottom,
+html.ipad .comic-page:not(.bare) .rd-top,html.ipad .comic-page:not(.bare) .rd-bottom{padding-left:calc(var(--side) + 6px);box-sizing:border-box}
+html.ipad .ipad-font{width:auto;min-width:44px;padding:0 6px;font-size:16px;font-weight:700;letter-spacing:-.5px;color:var(--ink)}

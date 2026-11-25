@@ -1,0 +1,55 @@
+name: Kotoba
+options:
+  bundleIdPrefix: app.kotoba
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+    CLANG_ENABLE_OBJC_ARC: YES
+    CLANG_ENABLE_MODULES: NO
+    GCC_OPTIMIZATION_LEVEL: "2"   # the translated core is slow unoptimized; this applies to Debug builds too
+    GCC_WARN_INHIBIT_ALL_WARNINGS: YES
+    TARGETED_DEVICE_FAMILY: "2"   # iPad
+    J2OBJC: /Volumes/XcodeDisk/work/j2objc/dist   # on the Extreme SSD with Xcode; change it if J2ObjC lives elsewhere
+targets:
+  Kotoba:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+      - path: ../build/objc
+        compilerFlags: ["-w"]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.kotoba.reader.ipad
+        PRODUCT_NAME: Kotoba
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Kotoba
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
+        SWIFT_OBJC_BRIDGING_HEADER: Sources/Kotoba-Bridging-Header.h
+        HEADER_SEARCH_PATHS: "$(J2OBJC)/include $(SRCROOT)/../build/objc"
+        LIBRARY_SEARCH_PATHS: "$(inherited)"
+        "LIBRARY_SEARCH_PATHS[sdk=iphoneos*]": "$(J2OBJC)/lib/iphone"
+        "LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]": "$(J2OBJC)/lib/simulator"
+        OTHER_LDFLAGS: "-ObjC -ljre_emul -ljson -lsqlite3 -lz -liconv -licucore"
+        ENABLE_BITCODE: NO
+    preBuildScripts: []
+    postCompileScripts:
+      - name: Copy the interface
+        script: |
+          DEST="$TARGET_BUILD_DIR/$CONTENTS_FOLDER_PATH"
+          mkdir -p "$DEST/assets" "$DEST/web"
+          # The phone's interface without its OCR models (the iPad reads text with Apple's recognizer).
+          rsync -a --delete --exclude ocr "$SRCROOT/../../android/assets/" "$DEST/assets/"
+          # The Mac's layout, hover and settings scripts, then the iPad bridge.
+          for f in desktop.css hover-modifier.js desktop-after.js; do cp "$SRCROOT/../../desktop/web/$f" "$DEST/web/"; done
+          cp "$SRCROOT/web/ipad.js" "$SRCROOT/web/ipad.css" "$DEST/web/"
+        basedOnDependencyAnalysis: false
