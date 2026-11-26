@@ -398,7 +398,8 @@ async function runSearch(append=false){
     const page=g.readingText?`<span class="pg">${esc(g.readingText)}</span>`:'';
     // A written word from a kana search (けんのう → 献納) has its own rank; the kana's rank is only for kana-only rows.
     const rank=g.word?(g.items.map(it=>it.ranks&&it.ranks[g.key]).find(Boolean)):(g.items.find(it=>it.rank)||{}).rank;
-    const tags=freqBars(rank)+g.items.map(it=>`<span class="tag ${it.kind==='kanji'?'kanji':''}">${esc(shortName(it.dictionary))}</span>`).join('');
+    // The rank is written beside the bars (touch screens can't show their tooltip).
+    const tags=freqBars(rank)+(rank?`<span class="frank">${Number(rank).toLocaleString()}</span>`:'')+g.items.map(it=>`<span class="tag ${it.kind==='kanji'?'kanji':''}">${esc(shortName(it.dictionary))}</span>`).join('');
     const snip=first.snippet?`<div class="snip">${snippetHtml(first.snippet)}</div>`:'';
     return `<button class="row" data-g="${i}"><div class="line"><div class="hw">${esc(g.key)}${page}</div><div class="meta">${tags}</div></div>${snip}</button>`;
   }).join('');
@@ -1542,7 +1543,7 @@ async function lookupSheet(text,sel,extra={}){
   let index=0;
   const items=r.items;
   const formNote=r.explain?`<div class="form-note"><b>${esc(r.matched)}</b> → ${esc(r.key)} · ${esc(r.explain)}</div>`:'';
-  const s=openSheet(`${formNote}<div class="lk-units" id="lk-alts" hidden></div><div class="dict-tabs" id="lk-tabs" ${items.length<2?'hidden':''}></div><div class="lk-units" id="lk-units" hidden></div><div class="sheet-body" style="padding:0"><iframe class="lookup-frame" id="lk-frame"></iframe></div><div class="sheet-foot"><button class="btn wide" id="lk-open">${icon('book')} Open</button><button class="btn primary wide" id="lk-card">${icon('star')} Save</button></div>`,{title:r.key,tall:false,onClose:extra.onClose,anchor:extra.anchor});
+  const s=openSheet(`${formNote}<div class="lk-units" id="lk-alts" hidden></div><div class="dict-tabs" id="lk-tabs" ${items.length<2?'hidden':''}></div><div class="lk-units" id="lk-units" hidden></div><div class="fq-row lk-freq" id="lk-freq" hidden></div><div class="sheet-body" style="padding:0"><iframe class="lookup-frame" id="lk-frame"></iframe></div><div class="sheet-foot"><button class="btn wide" id="lk-open">${icon('book')} Open</button><button class="btn primary wide" id="lk-card">${icon('star')} Save</button></div>`,{title:r.key,tall:false,onClose:extra.onClose,anchor:extra.anchor});
   const frame=s.sheet.querySelector('#lk-frame');
   // Korean can break down several ways (수장이 = 수다 + -장이, or 수장 + 이; 담도 whole, or 담 + 도): each is a chip, and
   // the one tapped is looked up instead.
@@ -1572,6 +1573,13 @@ async function lookupSheet(text,sel,extra={}){
     const f=findFocus(wired.doc,r.key,'');focusUnit=f.focus;focusIdx=f.units.indexOf(f.focus);if(!kanjiHead(it.dict,r.key))applyFocus(wired.doc,f.focus,f.units);
     const fit=()=>{frame.style.height=Math.min(window.innerHeight*0.55,Math.max(160,wired.doc.body.getBoundingClientRect().bottom+10))+'px';};
     fit();
+    // The word's rank in the frequency lists of this dictionary's language, as on the entry page.
+    const fi=focusUnit?unitInfo(focusUnit,r.key):{},lang=parentOf((dictById(it.dict)||{}).grp);
+    api('freq',{key:fi.word||r.key,reading:fi.reading||''}).catch(()=>[]).then(rows=>{
+      if(index!==i)return;
+      const fr=rows.filter(x=>parentOf((dictById(x.dict)||{}).grp)===lang),fb=s.sheet.querySelector('#lk-freq');
+      fb.innerHTML=freqChips(fr);fb.hidden=!fr.length;
+    });
     // One page holding several entries for this word (朝鮮語辞典: 비운1 否運, 비운2 悲運, 비운3 飛雲): a chip for each, and All.
     const base=(w)=>norm(String(w||'').replace(/[0-9０-９①-⑳\s]/g,''));
     const same=f.focus?f.units.filter(u=>base(unitInfo(u,r.key).word)===base(r.key)):[];
